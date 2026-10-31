@@ -258,6 +258,9 @@ func (l *Live) Array(ctx context.Context) (model.Array, error) {
 	progress := 0.0
 	if resyncSize > 0 {
 		progress = float64(resync) / float64(resyncSize) * 100
+		if progress > 100 {
+			progress = 100
+		}
 	}
 	running := varIni.get("", "mdResync") != "0" && varIni.get("", "mdResync") != ""
 	action := varIni.get("", "mdResyncAction")
@@ -693,8 +696,9 @@ func (l *Live) ParityHistory(ctx context.Context) ([]model.ParityCheck, error) {
 		duration, _ := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64)
 		speed, _ := strconv.ParseFloat(strings.TrimSpace(parts[2]), 64)
 		errors, _ := strconv.Atoi(strings.TrimSpace(parts[4]))
+		date, _ := time.Parse("02-01-2006 15:04:05", strings.TrimSpace(parts[0]))
 		out = append(out, model.ParityCheck{
-			Duration: duration, Speed: speed, Status: parts[3], Errors: errors,
+			Date: date, Duration: duration, Speed: speed, Status: parts[3], Errors: errors,
 			Action: parts[5],
 		})
 	}

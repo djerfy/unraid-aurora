@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { AppShell, BootScreen } from "./components/layout/AppShell";
+import { AppShell, BootScreen, ErrorScreen } from "./components/layout/AppShell";
 import { useApp } from "./app/AppDataProvider";
 import { PAGE_META } from "./components/layout/nav";
 import { DashboardPage } from "./pages/Dashboard";
@@ -17,8 +17,11 @@ import { LoginPage } from "./pages/Login";
 import { NotFoundPage } from "./pages/NotFound";
 
 function ProtectedShell() {
-  const { session } = useApp();
-  if (!session) return <BootScreen message="Restoring your session" />;
+  const { session, error, refresh } = useApp();
+  if (!session) {
+    if (error) return <ErrorScreen error={error} onRetry={refresh} />;
+    return <BootScreen message="Restoring your session" />;
+  }
   if (!session.authenticated) return <Navigate to="/login" replace />;
   return <AppShell />;
 }

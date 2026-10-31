@@ -103,6 +103,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [authenticated]);
 
   const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["session"] });
     void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
   }, [queryClient]);
 
