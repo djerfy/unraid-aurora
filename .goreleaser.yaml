@@ -52,5 +52,6 @@ changelog:
       - "^chore:"
 
 release:
+  name_template: "Aurora v{{ .Version }}"
   prerelease: auto
   draft: false
