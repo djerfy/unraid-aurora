@@ -2,6 +2,10 @@
   <img src="docs/assets/unraid-logo-gradient.svg" alt="Unraid" width="260" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml"><img src="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+</p>
+
 # Aurora
 
 **A modern, independent control plane for Unraid.**
@@ -84,6 +88,23 @@ make build-tmp    # amd64 binary for Unraid → /tmp/aurora-linux-amd64
 
 The backend deliberately has no fixture or demo mode. UI-only work can use the API contract and the typed
 models; integration tests use an in-memory provider double confined to `_test.go` files.
+
+## Releases
+
+A push to a `v*` tag builds the embedded UI and publishes a single **linux/amd64** binary with
+GoReleaser:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow can also be started manually (`workflow_dispatch`); it then produces a snapshot build and
+uploads `aurora_*_linux_amd64` plus `checksums.txt` as a workflow artifact. The local equivalent is:
+
+```bash
+make build-tmp      # /tmp/aurora-linux-amd64
+```
 
 ## Authentication
 

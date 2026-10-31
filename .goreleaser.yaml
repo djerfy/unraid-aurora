@@ -1,0 +1,56 @@
+version: 2
+
+project_name: aurora
+
+before:
+  hooks:
+    - npm --prefix frontend ci
+    - npm --prefix frontend run build
+    - rm -rf backend/internal/webui/dist
+    - cp -R frontend/dist backend/internal/webui/dist
+
+builds:
+  - id: aurora
+    dir: backend
+    main: ./cmd/aurorad
+    binary: aurora
+    no_unique_dist_dir: true
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    goamd64:
+      - v1
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+
+archives:
+  - id: aurora
+    formats:
+      - binary
+    name_template: aurora_{{ .Version }}_linux_amd64
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  prerelease: auto
+  draft: false
