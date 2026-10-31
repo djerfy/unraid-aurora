@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  CheckCircle2,
   Eye,
   EyeOff,
   LockKeyhole,
@@ -219,15 +218,6 @@ export function LoginPage() {
               {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
-
-          <div className="mt-6 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
-            <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
-            <span>
-              Aurora validates the <code className="code-chip">root</code> account against the host's{" "}
-              <code className="code-chip">/etc/shadow</code>, exactly like the Unraid webGUI. Your password is
-              verified locally and never stored.
-            </span>
-          </div>
 
           <div className={cn("mt-8 flex items-center justify-between border-t border-line pt-4 text-[10px] text-subtle")}>
             <button type="button" onClick={() => setTheme(resolvedTheme)} className="hover:text-ink">
