@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml"><img src="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="License: AGPL v3" /></a>
 </p>
 
 # Aurora
@@ -261,5 +262,9 @@ directory; they are not a runtime mode.
 
 ## License
 
-This redevelopment study is provided as-is. The original Unraid webGUI is licensed under GPL-2.0 by Lime
-Technology; consult its repository before redistributing derived assets.
+Aurora is free software released under the **GNU Affero General Public License v3.0**. See
+[`LICENSE`](LICENSE) for the full text.
+
+Unraid and the Unraid logo are trademarks of Lime Technology, Inc. Aurora is an independent project, not
+affiliated with or endorsed by Lime Technology. The original Unraid webGUI is distributed under GPL-2.0; its
+state formats and public documentation were used as a compatibility reference.
