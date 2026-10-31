@@ -226,19 +226,19 @@ export function AppShell() {
       <div
         className={
           collapsed
-            ? "relative z-10 min-h-dvh transition-[padding] duration-300 lg:pl-[82px]"
-            : "relative z-10 min-h-dvh transition-[padding] duration-300 lg:pl-[264px]"
+            ? "relative z-10 flex min-h-dvh flex-col transition-[padding] duration-300 lg:pl-[82px]"
+            : "relative z-10 flex min-h-dvh flex-col transition-[padding] duration-300 lg:pl-[264px]"
         }
       >
         <Topbar onOpenCommand={() => setCommandOpen(true)} onOpenMobile={() => setMobileOpen(true)} />
 
-        <main className="mx-auto w-full max-w-[1560px] px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+        <main className="w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8">
           <div key={location.pathname} className="animate-fade-up">
             <Outlet />
           </div>
         </main>
 
-        <footer className="mx-auto flex w-full max-w-[1560px] flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-[10.5px] text-subtle sm:px-6 lg:px-8">
+        <footer className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-[10.5px] text-subtle sm:px-6 lg:px-8">
           <span>
             Aurora · an independent, modern control plane for Unraid. Session {session?.user ?? "root"}.
           </span>
