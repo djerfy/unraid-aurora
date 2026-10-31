@@ -24,6 +24,24 @@ operational model and rebuilds the experience around it:
 - **Live host only**: Aurora reads the real Unraid state (`/var/local/emhttp`) and real system services. If it
   is not running on an Unraid host, it does not start.
 
+## Screenshots
+
+> Illustrative captures using anonymized sample data. No real server details are exposed.
+
+| | |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Storage](docs/screenshots/storage.png) |
+| **Dashboard** — health, CPU, memory, array, network, workload | **Storage** — disks, I/O, capacity and parity |
+| ![Containers](docs/screenshots/docker.png) | ![Virtual machines](docs/screenshots/vms.png) |
+| **Containers** — live resources, ports and lifecycle | **Virtual machines** — KVM workloads and passthrough |
+| ![Network](docs/screenshots/network.png) | ![Notifications](docs/screenshots/notifications.png) |
+| **Network** — interfaces, tunnels and services | **Notifications** — a calm operational inbox |
+| ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login.png) |
+| **Settings** — themes, accents and native auth | **Login** — root credentials checked against the host |
+
+More captures in [`docs/screenshots`](docs/screenshots): shares, pools, parity history, container logs,
+command palette, light theme, users, plugins, logs and mobile layouts.
+
 ## Requirements
 
 - Unraid 7.x (the state files and `/etc/shadow` must be readable).
