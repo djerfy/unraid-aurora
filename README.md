@@ -36,7 +36,7 @@ operational model and rebuilds the experience around it:
 | **Containers** — live resources, ports and lifecycle | **Virtual machines** — KVM workloads and passthrough |
 | ![Network](docs/screenshots/network.png) | ![Notifications](docs/screenshots/notifications.png) |
 | **Network** — interfaces, tunnels and services | **Notifications** — a calm operational inbox |
-| ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login.png) |
+| ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login-native.png) |
 | **Settings** — themes, accents and native auth | **Login** — root credentials checked against the host |
 
 More captures in [`docs/screenshots`](docs/screenshots): shares, pools, parity history, container logs,
