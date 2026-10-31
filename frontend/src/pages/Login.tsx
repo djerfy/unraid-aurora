@@ -112,18 +112,6 @@ export function LoginPage() {
               One calm surface for your array, containers, virtual machines and network — with live telemetry
               and deliberate controls.
             </p>
-            <div className="mt-8 grid grid-cols-3 gap-6 border-t border-white/[0.07] pt-5 text-left">
-              {[
-                { value: "root", label: "only account" },
-                { value: "2s", label: "telemetry interval" },
-                { value: "0", label: "passwords stored" },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <p className="num text-[18px] font-semibold text-white/90">{stat.value}</p>
-                  <p className="mt-0.5 text-[9.5px] uppercase tracking-[0.12em] text-white/35">{stat.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
