@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/unraid-logo-gradient.svg" alt="Unraid" width="260" />
+</p>
+
 # Aurora
 
 **A modern, independent control plane for Unraid.**
