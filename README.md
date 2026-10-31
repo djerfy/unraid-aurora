@@ -71,6 +71,7 @@ make test         # Go unit + HTTP integration tests (run anywhere)
 make vet
 make dev-ui       # Vite on :5173, proxies /api to :8484
 make dev-api      # requires an Unraid host with /var/local/emhttp
+make build-tmp    # amd64 binary for Unraid → /tmp/aurora-linux-amd64
 ```
 
 The backend deliberately has no fixture or demo mode. UI-only work can use the API contract and the typed

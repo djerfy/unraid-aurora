@@ -2,8 +2,9 @@ SHELL := /bin/bash
 NPM   := npm
 GO    := go
 BIN   := bin/aurora
+TMP_BIN ?= /tmp/aurora-linux-amd64
 
-.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean
+.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp
 
 all: build
 
@@ -22,6 +23,9 @@ backend:
 
 run: build
 	./$(BIN)
+
+build-tmp:
+	AURORA_TMP_BIN=$(TMP_BIN) ./scripts/build-tmp.sh
 
 dev-api:
 	cd backend && $(GO) run ./cmd/aurorad
