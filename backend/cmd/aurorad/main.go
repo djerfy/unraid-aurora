@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"log/slog"
@@ -48,6 +49,13 @@ func main() {
 		cfg.Addr = *addr
 	}
 
+	certificate, err := tls.LoadX509KeyPair(cfg.TLSCert, cfg.TLSKey)
+	if err != nil {
+		log.Error("cannot load the TLS certificate", "cert", cfg.TLSCert, "key", cfg.TLSKey, "error", err,
+			"hint", "generate the certificate in Unraid or set AURORA_TLS_CERT/AURORA_TLS_KEY")
+		os.Exit(1)
+	}
+
 	p, err := provider.NewLive(cfg.StateDir, cfg.BootDir, cfg.DockerSocket, cfg.DataDir)
 	if err != nil {
 		log.Error("cannot read the Unraid host", "error", err,
@@ -72,16 +80,20 @@ func main() {
 		WriteTimeout:   0,
 		IdleTimeout:    120 * time.Second,
 		MaxHeaderBytes: 1 << 20,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{certificate},
+			MinVersion:   tls.VersionTLS12,
+		},
 	}
 
 	log.Info("aurora is starting",
 		"addr", cfg.Addr, "version", version,
 		"auth", "native root/shadow", "readOnly", cfg.ReadOnly,
-		"stateDir", cfg.StateDir,
+		"stateDir", cfg.StateDir, "tls", cfg.TLSCert,
 	)
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("http server stopped", "error", err)
 			stop()
 		}

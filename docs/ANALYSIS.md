@@ -354,6 +354,7 @@ Any rewrite must either **reimplement the state engine** (large, risky) or **rea
 | | Original | Aurora |
 |---|---|---|
 | Server language | PHP 8 + bash | Go 1.27 (stdlib + crypt) |
+| Transport | nginx + PHP-FPM | In-process Go HTTPS (TLS 1.2+) |
 | Routing | Filesystem + nginx | Explicit Go 1.22+ `ServeMux` patterns |
 | UI | PHP templates + jQuery | React 19 + TypeScript |
 | Realtime | nchan + PHP pollers | SSE + in-process sampler |

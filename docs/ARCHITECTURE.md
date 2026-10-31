@@ -19,7 +19,7 @@ aurorad
   ├── metrics.NewHub(provider)
   │     └── goroutine: sample every 2 s → fan-out to SSE subscribers
   ├── api.New(...)                  middleware + routes
-  └── http.Server
+  └── http.Server (TLS 1.2+)
         ├── /api/v1/*               JSON + SSE
         └── /*                      embedded React SPA
 ```
@@ -139,7 +139,7 @@ Errors are consistent:
 
 ### Session
 
-- Cookie `aurora_session`, `HttpOnly`, `SameSite=Lax`, `Secure` when TLS or `X-Forwarded-Proto: https`.
+- Cookie `aurora_session`, `HttpOnly`, `SameSite=Lax`, `Secure` (Aurora has no plaintext listener).
 - Value = base64url(JSON `{u,exp,n}`) + "." + base64url(HMAC-SHA256).
 - Secret generated with `crypto/rand` at process start. Restarting invalidates sessions; that is deliberate
   for a local control plane (no secret at rest).
@@ -167,7 +167,8 @@ Content-Security-Policy: default-src 'self'; img-src 'self' data:;
 ```
 
 The only inline style usage is CSS variables and React `style` props (`style-src` allows it); scripts are
-external or module chunks.
+external or module chunks. TLS is terminated by the Go process with the Unraid certificate bundle; there is
+no HTTP listener.
 
 ### Actions
 
@@ -267,6 +268,7 @@ The UI can be developed separately: Vite proxies `/api` to `:8484`, including th
 |---|---|
 | Invalid env | exit code 2 with a precise message |
 | Missing `/var/local/emhttp/var.ini` | exit 1 with an explicit "not an Unraid host" message |
+| Missing or unreadable TLS bundle | exit 1 with the certificate path and a generation hint |
 | Shadow entry unreadable | login rejected; the UI never reveals which step failed |
 | Docker socket unavailable | empty container list, error logged by handler |
 | `virsh` absent | empty VM list |
@@ -301,8 +303,9 @@ Description=Aurora control plane
 After=network-online.target docker.service
 
 [Service]
-ExecStart=/usr/local/bin/aurora -addr 127.0.0.1:8484
+ExecStart=/usr/local/bin/aurora -addr :8484
 Environment=AURORA_STATE_DIR=/var/local/emhttp
+Environment=AURORA_TLS_CERT=/boot/config/ssl/certs/certificate_bundle.pem
 EnvironmentFile=/etc/aurora.env
 Restart=on-failure
 User=root
@@ -311,5 +314,6 @@ User=root
 WantedBy=multi-user.target
 ```
 
-Aurora needs root for shadow access, the Docker socket, `emcmd`, `mdcmd` and `virsh`. Bind to loopback and
-expose through a TLS reverse proxy; the root login is the only authentication boundary.
+Aurora needs root for shadow access, the Docker socket, `emcmd`, `mdcmd` and `virsh`. It serves HTTPS
+directly with Unraid's self-signed bundle and has no plaintext HTTP listener; the root login is the only
+authentication boundary.
