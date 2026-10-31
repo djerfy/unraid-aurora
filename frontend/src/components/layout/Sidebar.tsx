@@ -10,7 +10,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn, Avatar, Progress, Tooltip } from "../ui/primitives";
+import { cn, Avatar, Progress } from "../ui/primitives";
 import { AuroraWordmark } from "./Brand";
 import { NAV_GROUPS, NAV_ITEMS } from "./nav";
 import { useApp } from "../../app/AppDataProvider";
@@ -52,48 +52,40 @@ export function Sidebar({
         collapsed ? "w-[82px]" : "w-[264px]",
       )}
     >
-      <div className={cn("flex h-16 shrink-0 items-center border-b border-line", collapsed ? "justify-center px-3" : "justify-between px-4")}>
+      <div className={cn("flex h-16 shrink-0 items-center border-b border-line", collapsed ? "justify-between px-2" : "justify-between px-4")}>
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="rounded-lg text-left transition-opacity hover:opacity-80"
+          className="shrink-0 rounded-lg text-left transition-opacity hover:opacity-80"
           aria-label="Aurora home"
         >
           <AuroraWordmark compact={collapsed} />
         </button>
-        {!collapsed ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Collapse sidebar"
-            className="grid size-8 place-items-center rounded-lg text-subtle transition hover:bg-[var(--surface-3)] hover:text-ink"
-          >
-            <PanelLeftClose className="size-4" />
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={cn(
+            "grid shrink-0 place-items-center rounded-lg text-subtle transition hover:bg-[var(--surface-3)] hover:text-ink",
+            collapsed ? "size-7" : "size-8",
+          )}
+        >
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+        </button>
       </div>
-
-      {collapsed ? (
-        <div className="flex justify-center pt-3">
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Expand sidebar"
-            className="grid size-8 place-items-center rounded-lg text-subtle transition hover:bg-[var(--surface-3)] hover:text-ink"
-          >
-            <PanelLeftOpen className="size-4" />
-          </button>
-        </div>
-      ) : null}
 
       {snapshot ? (
         collapsed ? (
-          <div className="mx-3 mt-4 flex flex-col items-center gap-1 rounded-xl border border-line bg-[var(--surface-2)] py-3">
-            <Tooltip content={`${snapshot.system.name} · online`}>
-              <span className="status-dot live" />
-            </Tooltip>
-            <span className="num mt-1 text-[9px] text-subtle">{formatUptime(snapshot.system.uptime)}</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            title={`${snapshot.system.name} · Unraid ${snapshot.system.version} · ${formatUptime(snapshot.system.uptime)} uptime`}
+            aria-label={`${snapshot.system.name}, online`}
+            className="mx-auto mt-4 grid size-10 place-items-center rounded-xl border border-line bg-[var(--surface-2)] transition hover:border-line-strong hover:bg-[var(--surface-3)]"
+          >
+            <span className={cn("status-dot", live ? "live" : "muted")} />
+          </button>
         ) : (
           <button
             type="button"
@@ -146,9 +138,11 @@ export function Sidebar({
                       key={item.to}
                       to={item.to}
                       end={item.to === "/"}
+                      title={collapsed ? item.label : undefined}
+                      aria-label={collapsed ? item.label : undefined}
                       className={({ isActive }) =>
                         cn(
-                          "group/nav relative flex items-center rounded-[10px] py-2 text-[12.5px] font-medium transition-all duration-200",
+                          "group/nav relative flex w-full items-center rounded-[10px] py-2 text-[12.5px] font-medium transition-all duration-200",
                           collapsed ? "justify-center px-0" : "gap-2.5 px-2.5",
                           isActive
                             ? "bg-[var(--surface-3)] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
@@ -178,13 +172,7 @@ export function Sidebar({
                       )}
                     </NavLink>
                   );
-                  return collapsed ? (
-                    <Tooltip key={item.to} content={item.label}>
-                      {link}
-                    </Tooltip>
-                  ) : (
-                    link
-                  );
+                  return link;
                 })}
               </div>
             </div>
@@ -192,25 +180,22 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className={cn("shrink-0 border-t border-line p-3", collapsed && "px-2")}>
+      <div className={cn("shrink-0 border-t border-line", collapsed ? "p-2" : "p-3")}>
         {!collapsed ? (
-          <button
-            type="button"
-            onClick={onOpenCommand}
-            className="mb-2.5 flex w-full items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-subtle transition hover:border-line-strong hover:text-muted"
-          >
-            <Command className="size-3" />
-            <span className="flex-1 text-left">Quick actions</span>
-            <kbd className="rounded border border-line bg-[var(--surface)] px-1 font-mono text-[9px]">⌘K</kbd>
-          </button>
-        ) : null}
-
-        <div className={cn("flex items-center gap-2.5 rounded-xl p-1.5", collapsed ? "justify-center" : "hover:bg-[var(--surface-2)]")}>
-          <Avatar name={session?.user ?? "admin"} color="var(--accent)" size={30} />
-          {!collapsed ? (
-            <>
+          <>
+            <button
+              type="button"
+              onClick={onOpenCommand}
+              className="mb-2.5 flex w-full items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-subtle transition hover:border-line-strong hover:text-muted"
+            >
+              <Command className="size-3" />
+              <span className="flex-1 text-left">Quick actions</span>
+              <kbd className="rounded border border-line bg-[var(--surface)] px-1 font-mono text-[9px]">⌘K</kbd>
+            </button>
+            <div className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-[var(--surface-2)]">
+              <Avatar name={session?.user ?? "root"} color="var(--accent)" size={30} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[12px] font-medium text-ink">{session?.user ?? "admin"}</p>
+                <p className="truncate text-[12px] font-medium text-ink">{session?.user ?? "root"}</p>
                 <p className="truncate text-[10px] text-subtle">Host administrator</p>
               </div>
               <button
@@ -222,9 +207,33 @@ export function Sidebar({
               >
                 <LogOut className="size-3.5" />
               </button>
-            </>
-          ) : null}
-        </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <Avatar name={session?.user ?? "root"} color="var(--accent)" size={30} />
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onOpenCommand}
+                title="Quick actions (⌘K)"
+                aria-label="Quick actions"
+                className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-2)] hover:text-ink"
+              >
+                <Command className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={signOut}
+                title="Sign out"
+                aria-label="Sign out"
+                className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
