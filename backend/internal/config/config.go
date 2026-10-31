@@ -13,8 +13,10 @@ type Config struct {
 	BootDir      string
 	DockerSocket string
 	DataDir      string
-	TLSCert      string
+	TLSCert      string // explicit override; empty derives from the server name
+	TLSCertDir   string
 	TLSKey       string
+	ServerName   string // optional override for certificate lookup
 	SessionTTL   time.Duration
 	Version      string
 	ReadOnly     bool
@@ -27,7 +29,9 @@ func Load(version string) (Config, error) {
 		BootDir:      env("AURORA_BOOT_DIR", "/boot"),
 		DockerSocket: env("AURORA_DOCKER_SOCKET", "/var/run/docker.sock"),
 		DataDir:      env("AURORA_DATA_DIR", "/var/lib/aurora"),
-		TLSCert:      env("AURORA_TLS_CERT", "/boot/config/ssl/certs/certificate_bundle.pem"),
+		TLSCert:      env("AURORA_TLS_CERT", ""),
+		TLSCertDir:   env("AURORA_TLS_CERT_DIR", "/boot/config/ssl/certs"),
+		ServerName:   env("AURORA_SERVER_NAME", ""),
 		SessionTTL:   24 * time.Hour,
 		Version:      version,
 		ReadOnly:     envBool("AURORA_READ_ONLY", false),
@@ -46,13 +50,10 @@ func Load(version string) (Config, error) {
 	if cfg.StateDir == "" {
 		return cfg, fmt.Errorf("AURORA_STATE_DIR must not be empty")
 	}
-	if cfg.TLSCert == "" {
-		return cfg, fmt.Errorf("AURORA_TLS_CERT must not be empty")
+	if cfg.TLSCertDir == "" {
+		return cfg, fmt.Errorf("AURORA_TLS_CERT_DIR must not be empty")
 	}
 	cfg.TLSKey = env("AURORA_TLS_KEY", "")
-	if cfg.TLSKey == "" {
-		cfg.TLSKey = cfg.TLSCert
-	}
 	return cfg, nil
 }
 

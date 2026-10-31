@@ -4,32 +4,34 @@ import "testing"
 
 func TestTLSDefaults(t *testing.T) {
 	t.Setenv("AURORA_TLS_CERT", "")
-	if _, err := Load("test"); err == nil {
-		t.Fatal("empty AURORA_TLS_CERT must be rejected")
-	}
-
-	t.Setenv("AURORA_TLS_CERT", "/tmp/certificate_bundle.pem")
-	t.Setenv("AURORA_TLS_KEY", "")
 	cfg, err := Load("test")
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if cfg.TLSCert != "/tmp/certificate_bundle.pem" {
-		t.Fatalf("cert = %q", cfg.TLSCert)
+	if cfg.TLSCert != "" {
+		t.Fatalf("cert should be derived, got %q", cfg.TLSCert)
 	}
-	if cfg.TLSKey != cfg.TLSCert {
-		t.Fatalf("key should default to the bundle path, got %q", cfg.TLSKey)
+	if cfg.TLSCertDir != "/boot/config/ssl/certs" {
+		t.Fatalf("cert dir = %q", cfg.TLSCertDir)
+	}
+	if cfg.TLSKey != "" {
+		t.Fatalf("key should follow the resolved bundle, got %q", cfg.TLSKey)
 	}
 }
 
-func TestTLSKeyOverride(t *testing.T) {
-	t.Setenv("AURORA_TLS_CERT", "/tmp/cert.pem")
-	t.Setenv("AURORA_TLS_KEY", "/tmp/key.pem")
+func TestTLSOverrides(t *testing.T) {
+	t.Setenv("AURORA_TLS_CERT", "/tmp/custom_bundle.pem")
+	t.Setenv("AURORA_TLS_KEY", "/tmp/custom_key.pem")
+	t.Setenv("AURORA_TLS_CERT_DIR", "/tmp/certs")
+	t.Setenv("AURORA_SERVER_NAME", "custom")
 	cfg, err := Load("test")
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if cfg.TLSKey != "/tmp/key.pem" {
-		t.Fatalf("key = %q", cfg.TLSKey)
+	if cfg.TLSCert != "/tmp/custom_bundle.pem" || cfg.TLSKey != "/tmp/custom_key.pem" {
+		t.Fatalf("unexpected TLS override: %+v", cfg)
+	}
+	if cfg.TLSCertDir != "/tmp/certs" || cfg.ServerName != "custom" {
+		t.Fatalf("unexpected cert lookup override: %+v", cfg)
 	}
 }

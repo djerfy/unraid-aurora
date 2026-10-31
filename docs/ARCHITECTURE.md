@@ -167,8 +167,7 @@ Content-Security-Policy: default-src 'self'; img-src 'self' data:;
 ```
 
 The only inline style usage is CSS variables and React `style` props (`style-src` allows it); scripts are
-external or module chunks. TLS is terminated by the Go process with the Unraid certificate bundle; there is
-no HTTP listener.
+external or module chunks. TLS is terminated by the Go process with the Unraid `<server>_unraid_bundle.pem`; there is no HTTP listener.
 
 ### Actions
 
@@ -305,7 +304,8 @@ After=network-online.target docker.service
 [Service]
 ExecStart=/usr/local/bin/aurora -addr :8484
 Environment=AURORA_STATE_DIR=/var/local/emhttp
-Environment=AURORA_TLS_CERT=/boot/config/ssl/certs/certificate_bundle.pem
+# Certificate defaults to /boot/config/ssl/certs/<server>_unraid_bundle.pem
+Environment=AURORA_TLS_CERT_DIR=/boot/config/ssl/certs
 EnvironmentFile=/etc/aurora.env
 Restart=on-failure
 User=root
@@ -315,5 +315,5 @@ WantedBy=multi-user.target
 ```
 
 Aurora needs root for shadow access, the Docker socket, `emcmd`, `mdcmd` and `virsh`. It serves HTTPS
-directly with Unraid's self-signed bundle and has no plaintext HTTP listener; the root login is the only
-authentication boundary.
+directly with Unraid's self-signed `<server>_unraid_bundle.pem` and has no plaintext HTTP listener; the root
+login is the only authentication boundary.

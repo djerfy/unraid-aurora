@@ -6,10 +6,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -49,9 +51,15 @@ func main() {
 		cfg.Addr = *addr
 	}
 
-	certificate, err := tls.LoadX509KeyPair(cfg.TLSCert, cfg.TLSKey)
+	certPath, keyPath, err := resolveTLS(cfg)
 	if err != nil {
-		log.Error("cannot load the TLS certificate", "cert", cfg.TLSCert, "key", cfg.TLSKey, "error", err,
+		log.Error("cannot locate the TLS certificate", "error", err,
+			"certDir", cfg.TLSCertDir, "hint", "generate the certificate in Unraid or set AURORA_TLS_CERT/AURORA_TLS_KEY")
+		os.Exit(1)
+	}
+	certificate, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		log.Error("cannot load the TLS certificate", "cert", certPath, "key", keyPath, "error", err,
 			"hint", "generate the certificate in Unraid or set AURORA_TLS_CERT/AURORA_TLS_KEY")
 		os.Exit(1)
 	}
@@ -89,7 +97,7 @@ func main() {
 	log.Info("aurora is starting",
 		"addr", cfg.Addr, "version", version,
 		"auth", "native root/shadow", "readOnly", cfg.ReadOnly,
-		"stateDir", cfg.StateDir, "tls", cfg.TLSCert,
+		"stateDir", cfg.StateDir, "tls", certPath,
 	)
 
 	go func() {
@@ -106,4 +114,55 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("graceful shutdown failed", "error", err)
 	}
+}
+
+// resolveTLS finds the Unraid certificate bundle. The standard location is
+// /boot/config/ssl/certs/<server>_unraid_bundle.pem, where <server> is the
+// Unraid server name from var.ini (or the host name as a fallback).
+func resolveTLS(cfg config.Config) (certPath, keyPath string, err error) {
+	certPath = cfg.TLSCert
+	if certPath == "" {
+		name := cfg.ServerName
+		if name == "" {
+			name = serverNameFromState(cfg.StateDir)
+		}
+		if name == "" {
+			name, _ = os.Hostname()
+		}
+		name = filepath.Base(strings.TrimSpace(name))
+		if name == "" || name == "." || name == ".." {
+			return "", "", fmt.Errorf("cannot determine the Unraid server name")
+		}
+		certPath = filepath.Join(cfg.TLSCertDir, name+"_unraid_bundle.pem")
+		if _, statErr := os.Stat(certPath); statErr != nil {
+			// Old or renamed servers can leave a single bundle behind. Use it
+			// only when the choice is unambiguous.
+			matches, _ := filepath.Glob(filepath.Join(cfg.TLSCertDir, "*_unraid_bundle.pem"))
+			if len(matches) == 1 {
+				certPath = matches[0]
+			} else {
+				return "", "", fmt.Errorf("expected %s (server name %q): %w", certPath, name, statErr)
+			}
+		}
+	}
+	keyPath = cfg.TLSKey
+	if keyPath == "" {
+		keyPath = certPath
+	}
+	return certPath, keyPath, nil
+}
+
+func serverNameFromState(stateDir string) string {
+	raw, err := os.ReadFile(filepath.Join(stateDir, "var.ini"))
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		key, value, ok := strings.Cut(line, "=")
+		if !ok || strings.TrimSpace(key) != "NAME" {
+			continue
+		}
+		return strings.Trim(strings.TrimSpace(value), `"'`)
+	}
+	return ""
 }
