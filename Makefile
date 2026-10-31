@@ -25,7 +25,20 @@ run: build
 	./$(BIN)
 
 build-tmp:
-	AURORA_TMP_BIN=$(TMP_BIN) ./scripts/build-tmp.sh
+	@set -e; \
+	root="$(CURDIR)"; \
+	restore=$$(mktemp -d); \
+	cleanup() { cd "$$root"; rm -rf backend/internal/webui/dist; if [ -d "$$restore/dist" ]; then cp -R "$$restore/dist" backend/internal/webui/dist; fi; rm -rf "$$restore"; }; \
+	trap cleanup EXIT; \
+	if [ -d backend/internal/webui/dist ]; then cp -R backend/internal/webui/dist "$$restore/dist"; fi; \
+	$(MAKE) --no-print-directory ui; \
+	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags "-s -w" -o $(TMP_BIN) ./cmd/aurorad; \
+	cd "$$root"; \
+	echo; \
+	echo "binary: $(TMP_BIN)"; \
+	file $(TMP_BIN); \
+	ls -lh $(TMP_BIN); \
+	shasum -a 256 $(TMP_BIN) 2>/dev/null || sha256sum $(TMP_BIN)
 
 dev-api:
 	cd backend && $(GO) run ./cmd/aurorad
