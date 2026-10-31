@@ -1,0 +1,100 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+
+export type ThemeMode = "dark" | "light" | "system";
+export type Accent = "ember" | "violet" | "cyan" | "emerald" | "amber";
+export type Density = "comfortable" | "compact";
+
+type Preferences = {
+  theme: ThemeMode;
+  accent: Accent;
+  density: Density;
+};
+
+type ThemeContextValue = Preferences & {
+  resolvedTheme: "dark" | "light";
+  setTheme: (theme: ThemeMode) => void;
+  setAccent: (accent: Accent) => void;
+  setDensity: (density: Density) => void;
+  setPreferences: (prefs: Partial<Preferences>) => void;
+};
+
+const STORAGE_KEY = "aurora.theme";
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function readStored(): Preferences {
+  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable" };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<Preferences>;
+    return {
+      theme: parsed.theme ?? fallback.theme,
+      accent: parsed.accent ?? fallback.accent,
+      density: parsed.density ?? fallback.density,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function systemTheme(): "dark" | "light" {
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [prefs, setPrefs] = useState<Preferences>(readStored);
+  const [system, setSystem] = useState<"dark" | "light">(systemTheme);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => setSystem(media.matches ? "light" : "dark");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  const resolvedTheme = prefs.theme === "system" ? system : prefs.theme;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", resolvedTheme === "dark");
+    root.classList.toggle("light", resolvedTheme === "light");
+    root.dataset.accent = prefs.accent;
+    root.dataset.density = prefs.density;
+    root.style.colorScheme = resolvedTheme;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    } catch {
+      // Storage can be unavailable; the UI still works for this session.
+    }
+  }, [prefs, resolvedTheme]);
+
+  const setTheme = useCallback((theme: ThemeMode) => setPrefs((p) => ({ ...p, theme })), []);
+  const setAccent = useCallback((accent: Accent) => setPrefs((p) => ({ ...p, accent })), []);
+  const setDensity = useCallback((density: Density) => setPrefs((p) => ({ ...p, density })), []);
+  const setPreferences = useCallback(
+    (next: Partial<Preferences>) => setPrefs((p) => ({ ...p, ...next })),
+    [],
+  );
+
+  const value = useMemo(
+    () => ({ ...prefs, resolvedTheme, setTheme, setAccent, setDensity, setPreferences }),
+    [prefs, resolvedTheme, setTheme, setAccent, setDensity, setPreferences],
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error("useTheme must be used inside ThemeProvider");
+  return ctx;
+}

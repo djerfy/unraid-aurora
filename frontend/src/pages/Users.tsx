@@ -1,0 +1,333 @@
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  Check,
+  Clock3,
+  FolderTree,
+  KeyRound,
+  Lock,
+  RefreshCw,
+  Minus,
+  Search,
+  ShieldCheck,
+  UserCog,
+  Users,
+} from "lucide-react";
+import { PageHeader } from "../components/layout/PageHeader";
+import { Drawer, Menu } from "../components/ui/overlays";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  InputBase,
+} from "../components/ui/primitives";
+import { useApp } from "../app/AppDataProvider";
+import { formatDateTime, relativeTime } from "../lib/format";
+import type { User } from "../lib/types";
+
+export function UsersPage() {
+  const { snapshot, refresh } = useApp();
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<User | null>(null);
+
+  if (!snapshot) return null;
+  const users = snapshot.users;
+  const admins = users.filter((user) => user.role === "administrator");
+  const readOnly = users.filter((user) => user.role === "read-only");
+  const shares = new Set(users.flatMap((user) => user.shares));
+
+  const filtered = useMemo(
+    () =>
+      users.filter((user) => {
+        if (!query.trim()) return true;
+        const haystack = `${user.name} ${user.description} ${user.role}`.toLowerCase();
+        return haystack.includes(query.toLowerCase());
+      }),
+    [users, query],
+  );
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="System"
+        title="Users"
+        description="Accounts with access to the web interface, SMB shares and NFS exports."
+        meta={
+          <>
+            <Badge tone="accent" dot>{users.length} accounts</Badge>
+            <span className="chip">{admins.length} administrators</span>
+          </>
+        }
+        actions={
+          <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
+            Refresh
+          </Button>
+        }
+      />
+
+      <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+        <Stat icon={<Users className="size-4" />} label="Accounts" value={String(users.length)} hint="local users" />
+        <Stat icon={<ShieldCheck className="size-4" />} label="Administrators" value={String(admins.length)} hint="full web UI access" />
+        <Stat icon={<Lock className="size-4" />} label="Read-only" value={String(readOnly.length)} hint="restricted shares" />
+        <Stat icon={<FolderTree className="size-4" />} label="Scoped shares" value={String(shares.size)} hint="across all accounts" />
+      </div>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+          <div>
+            <h2 className="text-[13px] font-semibold text-ink">Local accounts</h2>
+            <p className="mt-0.5 text-[10.5px] text-subtle">Managed by Unraid · permissions apply to SMB and NFS</p>
+          </div>
+          <InputBase
+            value={query}
+            onChange={setQuery}
+            placeholder="Search users…"
+            icon={<Search className="size-3.5" />}
+            className="w-52"
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <EmptyState icon={<Users className="size-5" />} title="No users match your search" description="Try another name or clear the filter." />
+        ) : (
+          <>
+            <div className="hidden grid-cols-[minmax(0,2fr)_120px_minmax(0,2fr)_140px_40px] gap-4 border-b border-line bg-[var(--surface-2)]/40 px-5 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle lg:grid">
+              <span>Account</span>
+              <span>Role</span>
+              <span>Share access</span>
+              <span>Last active</span>
+              <span />
+            </div>
+            <div className="divide-y divide-line/60">
+              {filtered.map((user) => (
+                <div
+                  key={user.name}
+                  className="grid grid-cols-1 gap-3 px-5 py-3.5 transition hover:bg-[var(--surface-2)]/40 lg:grid-cols-[minmax(0,2fr)_120px_minmax(0,2fr)_140px_40px] lg:items-center lg:gap-4"
+                >
+                  <button type="button" onClick={() => setSelected(user)} className="flex min-w-0 items-center gap-3 text-left">
+                    <Avatar name={user.name} color={user.color} size={34} />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-[12.5px] font-medium text-ink">{user.name}</span>
+                        {user.root ? <Badge tone="accent">root</Badge> : null}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10px] text-subtle">{user.description}</span>
+                    </span>
+                  </button>
+
+                  <div>
+                    <Badge tone={user.role === "administrator" ? "violet" : user.role === "disabled" ? "neutral" : "info"}>
+                      {user.role}
+                    </Badge>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(user.shares ?? []).length === 0 ? (
+                      <span className="text-[10px] text-subtle">No access</span>
+                    ) : (user.shares ?? [])[0] === "all" ? (
+                      <Badge tone="neutral">All shares</Badge>
+                    ) : (
+                      <>
+                        {(user.shares ?? []).slice(0, 2).map((share) => (
+                          <span key={share} className="chip text-[9.5px]">{share}</span>
+                        ))}
+                        {(user.shares ?? []).length > 2 ? <span className="text-[9.5px] text-subtle">+{(user.shares ?? []).length - 2}</span> : null}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10.5px] text-muted">
+                    <Clock3 className="size-3 text-subtle" />
+                    {user.lastActive ? relativeTime(user.lastActive) : "never"}
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Menu
+                      trigger={
+                        <IconButton label={`Actions for ${user.name}`} size="sm">
+                          <span className="text-[15px] leading-none">⋯</span>
+                        </IconButton>
+                      }
+                      items={[
+                        { label: "View profile", onSelect: () => setSelected(user) },
+                        { label: "Share permissions", onSelect: () => setSelected(user) },
+                      ]}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <Card className="card-pad">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[13px] font-semibold text-ink">Share access matrix</h2>
+              <p className="mt-0.5 text-[10.5px] text-subtle">Which account can reach which share</p>
+            </div>
+            <Badge tone="neutral">{snapshot.shares.length} shares</Badge>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="pb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Share</th>
+                  {users.map((user) => (
+                    <th key={user.name} className="pb-2 text-center text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">
+                      {user.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/60">
+                {snapshot.shares.slice(0, 7).map((share) => (
+                  <tr key={share.name} className="text-[11px]">
+                    <td className="py-2.5">
+                      <span className="flex items-center gap-2 text-soft"><FolderTree className="size-3.5 text-subtle" /> {share.name}</span>
+                    </td>
+                    {users.map((user) => {
+                      const access = (user.shares ?? []).includes("all") || (user.shares ?? []).includes(share.name);
+                      return (
+                        <td key={user.name} className="py-2.5 text-center">
+                          {access ? (
+                            <span className="inline-grid size-5 place-items-center rounded-full bg-[var(--success-soft)] text-[var(--success)]">
+                              <Check className="size-3" />
+                            </span>
+                          ) : (
+                            <span className="inline-grid size-5 place-items-center rounded-full text-subtle/50">
+                              <Minus className="size-3" />
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card className="card-pad">
+          <h2 className="text-[13px] font-semibold text-ink">Access model</h2>
+          <p className="mt-0.5 text-[10.5px] text-subtle">How permissions are applied</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-soft">Administrators</span>
+                <Badge tone="violet">{admins.length}</Badge>
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">Full web interface access, array control and settings.</p>
+            </div>
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-soft">Read-only</span>
+                <Badge tone="info">{readOnly.length}</Badge>
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">Scoped share access without array or system changes.</p>
+            </div>
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium text-soft">Disabled</span>
+                <Badge tone="neutral">{users.filter((user) => user.role === "disabled").length}</Badge>
+              </div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">Retained accounts that cannot authenticate.</p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-line p-3 text-[10px] leading-relaxed text-muted">
+            <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
+            Passwords are validated by Unraid; Aurora never stores credentials.
+          </div>
+        </Card>
+      </div>
+
+      <Drawer
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title={selected?.name ?? ""}
+        subtitle={selected?.description}
+      >
+        {selected ? (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4 rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
+              <Avatar name={selected.name} color={selected.color} size={52} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-[14px] font-semibold text-ink">{selected.name}</p>
+                  <Badge tone={selected.role === "administrator" ? "violet" : "info"}>{selected.role}</Badge>
+                </div>
+                <p className="mt-1 text-[10.5px] text-muted">UID {selected.uid} · member of users</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Info label="Role" value={selected.role} />
+              <Info label="UID" value={String(selected.uid)} />
+              <Info label="Last active" value={selected.lastActive ? formatDateTime(selected.lastActive) : "Never"} />
+              <Info label="Account type" value={selected.root ? "System" : "Local"} />
+            </div>
+
+            <div>
+              <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+                <KeyRound className="size-3.5" /> Share access
+              </h3>
+              <div className="mt-2 overflow-hidden rounded-xl border border-line">
+                {(selected.shares ?? []).length === 0 ? (
+                  <p className="px-3 py-3 text-[11px] text-muted">This account has no share access.</p>
+                ) : (selected.shares ?? [])[0] === "all" ? (
+                  <div className="flex items-center justify-between px-3 py-2.5 text-[11px]">
+                    <span className="text-soft">All shares</span>
+                    <Badge tone="success">read / write</Badge>
+                  </div>
+                ) : (
+                  (selected.shares ?? []).map((share) => (
+                    <div key={share} className="flex items-center justify-between border-b border-line/60 px-3 py-2.5 text-[11px] last:border-0">
+                      <span className="flex items-center gap-2 text-soft"><FolderTree className="size-3.5 text-subtle" /> {share}</span>
+                      <Badge tone="info">{selected.role === "read-only" ? "read only" : "read / write"}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
+              <p className="flex items-center gap-1.5 font-medium text-soft"><UserCog className="size-3.5" /> Account management</p>
+              <p className="mt-1.5">
+                Users are managed by Unraid itself. Aurora mirrors the account list and validates permissions,
+                but never stores passwords.
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
+    </>
+  );
+}
+
+function Stat({ icon, label, value, hint }: { icon: ReactNode; label: string; value: string; hint: string }) {
+  return (
+    <Card className="card-pad">
+      <div className="flex items-center gap-2">
+        <span className="grid size-6 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-muted">{icon}</span>
+        <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">{label}</p>
+      </div>
+      <p className="num mt-3 text-[21px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-1.5 text-[10px] text-muted">{hint}</p>
+    </Card>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-[var(--surface-2)]/50 px-3 py-2">
+      <p className="text-[9px] uppercase tracking-[0.1em] text-subtle">{label}</p>
+      <p className="mt-1 truncate text-[11px] text-soft">{value}</p>
+    </div>
+  );
+}
+

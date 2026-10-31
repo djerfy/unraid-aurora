@@ -1,0 +1,842 @@
+import { useMemo, useState, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Activity,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  CircleAlert,
+  Database,
+  FolderTree,
+  Gauge,
+  HardDrive,
+  Info,
+  Pause,
+  Play,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Thermometer,
+} from "lucide-react";
+import { PageHeader } from "../components/layout/PageHeader";
+import { AreaChart, BarChart, Ring, SegmentBar } from "../components/ui/charts";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  InputBase,
+  Progress,
+  Switch,
+  Tabs,
+  cn,
+} from "../components/ui/primitives";
+import { Drawer, Menu } from "../components/ui/overlays";
+import { useApp } from "../app/AppDataProvider";
+import { useAction } from "../lib/useAction";
+import { useToast } from "../app/ToastProvider";
+import {
+  formatBytes,
+  formatDateTime,
+  formatDuration,
+  formatPercent,
+  formatSpeed,
+  relativeTime,
+} from "../lib/format";
+import type { Disk, Share } from "../lib/types";
+
+const TABS = [
+  { value: "array", label: "Array" },
+  { value: "shares", label: "Shares" },
+  { value: "pools", label: "Pools" },
+  { value: "parity", label: "Parity" },
+];
+
+export function StoragePage() {
+  const { snapshot, metrics, history, refresh } = useApp();
+  const action = useAction();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") ?? "array";
+  const [selectedDisk, setSelectedDisk] = useState<Disk | null>(null);
+  const [selectedShare, setSelectedShare] = useState<Share | null>(null);
+  const [showIO, setShowIO] = useState(true);
+  const [query, setQuery] = useState("");
+
+  if (!snapshot) return null;
+  const { array, disks, shares, pools } = snapshot;
+  const parity = array.parity;
+
+  const dataDisks = disks.filter((disk) => disk.type === "Data");
+  const parityDisks = disks.filter((disk) => disk.type === "Parity");
+  const cacheDisks = disks.filter((disk) => disk.type === "Cache");
+  const flash = disks.find((disk) => disk.type === "Flash");
+
+  const filteredShares = useMemo(
+    () =>
+      shares.filter(
+        (share) =>
+          share.name.toLowerCase().includes(query.toLowerCase()) ||
+          share.comment.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [shares, query],
+  );
+
+  const eta = parity.running && parity.speed > 0
+    ? ((100 - parity.progress) / 100) * (parity.lastCheck?.size || array.total) / parity.speed
+    : 0;
+
+  const tabAction = (value: string) => {
+    const next = new URLSearchParams(params);
+    next.set("tab", value);
+    setParams(next, { replace: true });
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Infrastructure"
+        title="Storage"
+        description="Your array, shares and cache pools — with live health, throughput and parity telemetry."
+        meta={
+          <>
+            <Badge tone={array.state === "STARTED" ? "success" : "neutral"} dot>
+              Array {array.state.toLowerCase()}
+            </Badge>
+            <Badge tone={array.status === "protected" ? "violet" : "warning"}>
+              {array.status === "protected" ? "Parity protected" : "Unprotected"}
+            </Badge>
+            <span className="chip">{disks.length} devices</span>
+          </>
+        }
+        actions={
+          <>
+            <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
+              Refresh
+            </Button>
+            {parity.running ? (
+              <Button
+                variant="primary"
+                icon={<Pause className="size-3.5" />}
+                loading={action.isPending}
+                onClick={() =>
+                  action.mutate({
+                    kind: parity.paused ? "parity.resume" : "parity.pause",
+                    success: parity.paused ? "Parity check resumed" : "Parity check paused",
+                  })
+                }
+              >
+                {parity.paused ? "Resume check" : "Pause check"}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                icon={<Play className="size-3.5" />}
+                loading={action.isPending}
+                onClick={() =>
+                  action.mutate({ kind: "parity.start", success: "Parity check started" })
+                }
+              >
+                Start parity check
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      <div className="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard
+          icon={<HardDrive className="size-4" />}
+          label="Array capacity"
+          value={formatBytes(array.used)}
+          detail={`of ${formatBytes(array.total)} · ${formatBytes(array.free)} free`}
+        >
+          <SegmentBar
+            height={5}
+            segments={[
+              ...dataDisks.map((disk, index) => ({
+                value: Math.max(1, disk.used),
+                color: disk.status === "standby"
+                  ? "var(--surface-3)"
+                  : `color-mix(in srgb, var(--accent) ${86 - index * 7}%, var(--surface-3))`,
+                label: disk.name,
+              })),
+              { value: Math.max(1, array.free), color: "var(--surface-3)", label: "free" },
+            ]}
+            className="mt-3"
+          />
+        </SummaryCard>
+
+        <SummaryCard
+          icon={<ShieldCheck className="size-4" />}
+          label="Protection"
+          value={parity.configured ? `${parity.disks.length}× parity` : "None"}
+          detail={
+            parity.lastCheck
+              ? `Last check ${relativeTime(parity.lastCheck.date)} · ${parity.lastCheck.errors} errors`
+              : "No parity check recorded"
+          }
+        >
+          <div className="mt-3 flex items-center gap-1.5">
+            <span className={cn("status-dot", parity.errors > 0 ? "danger" : "live")} />
+            <span className="text-[10.5px] text-muted">
+              {parity.errors > 0 ? `${parity.errors} sync errors` : "No sync errors detected"}
+            </span>
+          </div>
+        </SummaryCard>
+
+        <SummaryCard
+          icon={<Database className="size-4" />}
+          label="Cache pool"
+          value={pools[0] ? formatBytes(pools[0].used) : "—"}
+          detail={pools[0] ? `${pools[0].devices.length} devices · ${pools[0].fsType} · ${formatBytes(pools[0].free)} free` : "No cache pool"}
+        >
+          <Progress value={pools[0]?.usage ?? 0} height={5} className="mt-3" />
+        </SummaryCard>
+
+        <SummaryCard
+          icon={<Activity className="size-4" />}
+          label="Live throughput"
+          value={formatSpeed((metrics?.diskRead ?? 0) + (metrics?.diskWrite ?? 0))}
+          detail={`${formatSpeed(metrics?.diskRead ?? 0)} read · ${formatSpeed(metrics?.diskWrite ?? 0)} write`}
+        >
+          <AreaChart
+            series={[
+              { values: history.slice(-80).map((p) => p.diskRead), color: "var(--info)", label: "Read" },
+              { values: history.slice(-80).map((p) => p.diskWrite), color: "var(--violet)", label: "Write" },
+            ]}
+            height={30}
+            grid={false}
+            formatValue={(v) => formatSpeed(v)}
+            className="mt-1"
+          />
+        </SummaryCard>
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          items={TABS.map((item) => ({
+            ...item,
+            count:
+              item.value === "array"
+                ? disks.length
+                : item.value === "shares"
+                  ? shares.length
+                  : item.value === "pools"
+                    ? pools.length
+                    : undefined,
+          }))}
+          value={tab}
+          onChange={tabAction}
+        />
+        {tab === "shares" ? (
+          <div className="flex items-center gap-2">
+            <InputBase
+              value={query}
+              onChange={setQuery}
+              placeholder="Filter shares…"
+              icon={<Search className="size-3.5" />}
+              className="w-56"
+            />
+          </div>
+        ) : tab === "array" ? (
+          <label className="flex items-center gap-2 text-[11px] text-muted">
+            <Switch checked={showIO} onChange={setShowIO} label="Show live I/O" />
+            Show live I/O
+          </label>
+        ) : null}
+      </div>
+
+      {tab === "array" ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[10.5px] text-subtle">
+            <Info className="size-3.5" />
+            <span>Spin disks down to save energy. A spun-down disk wakes automatically on first access.</span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className="status-dot" /> {dataDisks.filter((d) => d.status === "active").length} active
+              <span className="status-dot muted" /> {dataDisks.filter((d) => d.status === "standby").length} standby
+            </span>
+          </div>
+
+          <Card>
+            <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+              <div>
+                <h2 className="text-[13px] font-semibold text-ink">Array devices</h2>
+                <p className="mt-0.5 text-[10.5px] text-subtle">Parity, data disks and pool members</p>
+              </div>
+              <Badge tone="neutral">{formatBytes(array.total)} usable</Badge>
+            </div>
+
+            <DiskGroup label="Parity" disks={parityDisks} showIO={showIO} onSelect={setSelectedDisk} />
+            <DiskGroup label="Data" disks={dataDisks} showIO={showIO} onSelect={setSelectedDisk} />
+            {cacheDisks.length ? (
+              <DiskGroup label="Cache pool" disks={cacheDisks} showIO={showIO} onSelect={setSelectedDisk} />
+            ) : null}
+            {flash ? <DiskGroup label="Boot" disks={[flash]} showIO={showIO} onSelect={setSelectedDisk} /> : null}
+          </Card>
+        </div>
+      ) : null}
+
+      {tab === "shares" ? (
+        filteredShares.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon={<FolderTree className="size-5" />}
+              title="No shares match your filter"
+              description="Try a different name or clear the search field."
+            />
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredShares.map((share) => (
+              <ShareCard key={share.name} share={share} onOpen={() => setSelectedShare(share)} />
+            ))}
+          </div>
+        )
+      ) : null}
+
+      {tab === "pools" ? (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {pools.map((pool) => {
+            const members = disks.filter((disk) => pool.devices.includes(disk.name));
+            return (
+              <Card key={pool.name} className="card-pad xl:col-span-2">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="grid size-7 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-[var(--info)]">
+                        <Database className="size-3.5" />
+                      </span>
+                      <div>
+                        <h2 className="text-[13px] font-semibold text-ink">{pool.name} pool</h2>
+                        <p className="text-[10.5px] text-subtle">{pool.fsType} · cache pool</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Badge tone={pool.status === "healthy" ? "success" : "warning"} dot>
+                    {pool.status}
+                  </Badge>
+                </div>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-[1fr_auto]">
+                  <div>
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <p className="num text-[24px] font-semibold leading-none text-ink">{formatBytes(pool.used)}</p>
+                        <p className="mt-1 text-[10.5px] text-subtle">of {formatBytes(pool.size)} · {formatBytes(pool.free)} free</p>
+                      </div>
+                      <span className="num text-xs text-muted">{formatPercent(pool.usage, 1)}</span>
+                    </div>
+                    <Progress value={pool.usage} height={7} className="mt-3" />
+                    <div className="mt-4 space-y-2">
+                      {members.map((disk) => (
+                        <div key={disk.id} className="flex items-center gap-3 rounded-xl border border-line bg-[var(--surface-2)]/60 px-3 py-2">
+                          <HardDrive className="size-4 text-subtle" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11.5px] font-medium text-soft">{disk.name}</p>
+                            <p className="truncate text-[9.5px] text-subtle">{disk.model}</p>
+                          </div>
+                          <span className="num text-[10px] text-muted">{disk.temp}°C</span>
+                          <Badge tone={disk.smart === "passed" ? "success" : "warning"}>
+                            {disk.smart === "passed" ? "Healthy" : "Check SMART"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Ring value={pool.usage} size={132} stroke={8}>
+                    <div className="text-center">
+                      <p className="num text-[24px] font-semibold leading-none text-ink">{Math.round(pool.usage)}%</p>
+                      <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">used</p>
+                    </div>
+                  </Ring>
+                </div>
+              </Card>
+            );
+          })}
+
+          <Card className="card-pad">
+            <div className="flex items-center gap-2">
+              <span className="grid size-7 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-[var(--violet)]">
+                <Gauge className="size-3.5" />
+              </span>
+              <h2 className="text-[13px] font-semibold text-ink">Cache strategy</h2>
+            </div>
+            <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
+              Shares configured with <span className="font-medium text-soft">Only</span> keep data on the
+              cache pool permanently. <span className="font-medium text-soft">Prefer</span> uses the pool as a
+              fast landing zone before the mover runs.
+            </p>
+            <div className="mt-4 space-y-2.5">
+              {shares
+                .filter((share) => share.cacheMode && share.cacheMode !== "no")
+                .map((share) => (
+                  <div key={share.name} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-soft">{share.name}</span>
+                    <span className="chip">{share.cacheMode}</span>
+                  </div>
+                ))}
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {tab === "parity" ? (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          <Card className="card-pad xl:col-span-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-[13px] font-semibold text-ink">Parity check</h2>
+                <p className="mt-0.5 text-[10.5px] text-subtle">
+                  {parity.running ? "Checking all data disks against parity" : "No check running"}
+                </p>
+              </div>
+              <Badge tone={parity.running ? (parity.paused ? "warning" : "accent") : "neutral"} dot pulse={parity.running && !parity.paused}>
+                {parity.paused ? "Paused" : parity.running ? "Running" : "Idle"}
+              </Badge>
+            </div>
+            <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+              <Ring value={parity.progress} size={150} stroke={10}>
+                <div className="text-center">
+                  <p className="num text-[30px] font-semibold leading-none text-ink">{parity.progress.toFixed(1)}%</p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">complete</p>
+                </div>
+              </Ring>
+              <div className="flex-1 space-y-3">
+                <DataRow label="Speed" value={formatSpeed(parity.speed)} />
+                <DataRow label="Position" value={formatBytes(parity.position)} />
+                <DataRow label="Elapsed" value={formatDuration(parity.elapsed)} />
+                <DataRow label="Remaining" value={eta > 0 ? formatDuration(eta) : "—"} />
+                <DataRow label="Sync errors" value={String(parity.errors)} tone={parity.errors > 0 ? "warning" : "success"} />
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
+              {parity.running ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    icon={parity.paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+                    loading={action.isPending}
+                    onClick={() =>
+                      action.mutate({
+                        kind: parity.paused ? "parity.resume" : "parity.pause",
+                        success: parity.paused ? "Parity check resumed" : "Parity check paused",
+                      })
+                    }
+                  >
+                    {parity.paused ? "Resume" : "Pause"}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    loading={action.isPending}
+                    onClick={() => action.mutate({ kind: "parity.stop", success: "Parity check stopped" })}
+                  >
+                    Stop check
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  icon={<Play className="size-3.5" />}
+                  loading={action.isPending}
+                  onClick={() => action.mutate({ kind: "parity.start", success: "Parity check started" })}
+                >
+                  Start check
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => toast({ kind: "info", title: "Parity scheduler", description: "Configure schedules from Settings → Scheduler." })}>
+                Schedule
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="card-pad xl:col-span-5">
+            <h2 className="text-[13px] font-semibold text-ink">Protection overview</h2>
+            <div className="mt-4 space-y-3">
+              <DataRow label="Parity devices" value={parity.disks.join(", ") || "None"} />
+              <DataRow label="Data disks" value={String(dataDisks.length)} />
+              <DataRow label="Last check" value={parity.lastCheck ? formatDateTime(parity.lastCheck.date) : "—"} />
+              <DataRow label="Last duration" value={parity.lastCheck ? formatDuration(parity.lastCheck.duration) : "—"} />
+              <DataRow label="Last speed" value={parity.lastCheck ? formatSpeed(parity.lastCheck.speed) : "—"} />
+              <DataRow label="Result" value={parity.lastCheck ? `${parity.lastCheck.errors} errors · ${parity.lastCheck.status}` : "—"} tone={parity.lastCheck?.errors ? "warning" : "success"} />
+            </div>
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/60 p-3 text-[10.5px] leading-relaxed text-muted">
+              <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
+              Parity protects against a single disk failure. Keep a current flash backup and verify SMART
+              status regularly.
+            </div>
+          </Card>
+
+          <Card className="card-pad xl:col-span-12">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[13px] font-semibold text-ink">Check history</h2>
+                <p className="mt-0.5 text-[10.5px] text-subtle">Speed across the last {parity.history.length} checks</p>
+              </div>
+              <Badge tone="neutral">{formatBytes(parity.lastCheck?.size ?? 0)} scanned</Badge>
+            </div>
+            <BarChart
+              values={[...(parity.history ?? [])].reverse().map((check) => check.speed)}
+              labels={[...(parity.history ?? [])].reverse().map((check) =>
+                new Date(check.date).toLocaleDateString([], { month: "short", day: "numeric" }),
+              )}
+              height={170}
+              formatValue={(value) => formatSpeed(value)}
+              showValues
+              className="mt-4"
+            />
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left">
+                <thead>
+                  <tr className="border-b border-line text-[9.5px] uppercase tracking-[0.1em] text-subtle">
+                    <th className="pb-2 font-medium">Date</th>
+                    <th className="pb-2 font-medium">Duration</th>
+                    <th className="pb-2 font-medium">Speed</th>
+                    <th className="pb-2 font-medium">Errors</th>
+                    <th className="pb-2 text-right font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line/60">
+                  {parity.history.map((check, index) => (
+                    <tr key={`${check.date}-${index}`} className="text-[11.5px]">
+                      <td className="py-2.5 text-soft">{formatDateTime(check.date)}</td>
+                      <td className="num py-2.5 text-muted">{formatDuration(check.duration)}</td>
+                      <td className="num py-2.5 text-muted">{formatSpeed(check.speed)}</td>
+                      <td className="num py-2.5 text-muted">{check.errors}</td>
+                      <td className="py-2.5 text-right">
+                        <Badge tone={check.status === "completed" ? "success" : "warning"}>
+                          {check.status === "completed" ? "Completed" : check.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      <Drawer
+        open={Boolean(selectedDisk)}
+        onClose={() => setSelectedDisk(null)}
+        title={selectedDisk ? `${selectedDisk.name} · ${selectedDisk.device}` : ""}
+        subtitle={selectedDisk?.model}
+        footer={
+          selectedDisk && selectedDisk.type !== "Parity" ? (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() =>
+                  action.mutate({
+                    kind: selectedDisk.status === "active" ? "disk.spindown" : "disk.spinup",
+                    target: selectedDisk.name,
+                    success: selectedDisk.status === "active" ? `${selectedDisk.name} spinning down` : `${selectedDisk.name} spinning up`,
+                  })
+                }
+              >
+                {selectedDisk.status === "active" ? "Spin down" : "Spin up"}
+              </Button>
+              <Button variant="primary" className="flex-1" onClick={() => navigate("/settings")}>
+                Device settings
+              </Button>
+            </div>
+          ) : null
+        }
+      >
+        {selectedDisk ? (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
+              <div>
+                <p className="num text-[22px] font-semibold text-ink">{formatBytes(selectedDisk.size)}</p>
+                <p className="mt-1 text-[10.5px] text-subtle">{selectedDisk.fsType} · {selectedDisk.type}</p>
+              </div>
+              <Badge tone={selectedDisk.smart === "passed" ? "success" : "warning"} dot>
+                SMART {selectedDisk.smart}
+              </Badge>
+            </div>
+            <Progress value={selectedDisk.size > 0 ? (selectedDisk.used / selectedDisk.size) * 100 : 0} height={7} />
+            <div className="grid grid-cols-2 gap-3">
+              <Detail label="Used" value={formatBytes(selectedDisk.used)} />
+              <Detail label="Free" value={formatBytes(selectedDisk.free)} />
+              <Detail label="Temperature" value={`${selectedDisk.temp}°C`} icon={<Thermometer className="size-3" />} />
+              <Detail label="Errors" value={String(selectedDisk.errors)} />
+              <Detail label="Serial" value={selectedDisk.serial} />
+              <Detail label="Firmware" value={selectedDisk.firmware} />
+              <Detail label="Spinup group" value={selectedDisk.spinupGroup || "—"} />
+              <Detail label="Encrypted" value={selectedDisk.luks ? "Yes" : "No"} />
+            </div>
+            {(selectedDisk.warnings ?? []).length > 0 ? (
+              <div className="rounded-xl border border-[color-mix(in_srgb,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--warning)]">
+                  <CircleAlert className="size-3.5" /> SMART warnings
+                </p>
+                <ul className="mt-1.5 space-y-1 text-[10.5px] text-muted">
+                  {(selectedDisk.warnings ?? []).map((warning) => (
+                    <li key={warning}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="rounded-xl border border-line p-3">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-subtle">Live I/O</p>
+              <div className="mt-2 flex gap-6">
+                <span className="num text-[11px] text-soft">{formatSpeed(selectedDisk.readBps)} read</span>
+                <span className="num text-[11px] text-soft">{formatSpeed(selectedDisk.writeBps)} write</span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
+
+      <Drawer
+        open={Boolean(selectedShare)}
+        onClose={() => setSelectedShare(null)}
+        title={selectedShare?.name ?? ""}
+        subtitle={selectedShare?.comment}
+      >
+        {selectedShare ? (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
+              <div>
+                <p className="num text-[22px] font-semibold text-ink">{formatBytes(selectedShare.used)}</p>
+                <p className="mt-1 text-[10.5px] text-subtle">of {formatBytes(selectedShare.size)}</p>
+              </div>
+              <span className="num text-sm text-soft">{formatPercent(selectedShare.usage, 1)}</span>
+            </div>
+            <Progress value={selectedShare.usage} height={7} />
+            <div className="flex flex-wrap gap-1.5">
+              <Badge tone={selectedShare.smb ? "info" : "neutral"}>SMB {selectedShare.smb ? "on" : "off"}</Badge>
+              <Badge tone={selectedShare.nfs ? "violet" : "neutral"}>NFS {selectedShare.nfs ? "on" : "off"}</Badge>
+              <Badge tone="accent">Cache {selectedShare.cacheMode}</Badge>
+              {selectedShare.exclusive ? <Badge tone="success">Exclusive</Badge> : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Detail label="Allocator" value={selectedShare.allocator} />
+              <Detail label="Split level" value={selectedShare.splitLevel} />
+              <Detail label="Pool" value={selectedShare.pool || "Array"} />
+              <Detail label="Security" value={selectedShare.security} />
+              <Detail label="Free" value={formatBytes(selectedShare.free)} />
+              <Detail label="Last modified" value={relativeTime(selectedShare.lastModified)} />
+            </div>
+            <div className="rounded-xl border border-line p-3 text-[10.5px] leading-relaxed text-muted">
+              Shares are virtual folders that span one or more disks. Allocation happens automatically and can
+              be tuned per share.
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+  detail,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Card className="card-pad">
+      <div className="flex items-center gap-2">
+        <span className="grid size-6 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-muted">
+          {icon}
+        </span>
+        <p className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-subtle">{label}</p>
+      </div>
+      <p className="num mt-3 text-[21px] font-semibold leading-none text-ink">{value}</p>
+      <p className="mt-1.5 text-[10.5px] text-muted">{detail}</p>
+      {children}
+    </Card>
+  );
+}
+
+function DiskGroup({
+  label,
+  disks,
+  showIO,
+  onSelect,
+}: {
+  label: string;
+  disks: Disk[];
+  showIO: boolean;
+  onSelect: (disk: Disk) => void;
+}) {
+  const action = useAction();
+  return (
+    <div>
+      <div className="flex items-center gap-2 border-b border-line bg-[var(--surface-2)]/45 px-5 py-1.5">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-subtle">{label}</span>
+        <span className="text-[9px] text-subtle/70">{disks.length}</span>
+      </div>
+      <div className="divide-y divide-line/60">
+        {disks.map((disk) => {
+          const usage = disk.size > 0 ? (disk.used / disk.size) * 100 : 0;
+          return (
+            <div
+              key={disk.id}
+              className="group grid grid-cols-[auto_1fr_auto] items-center gap-3 px-5 py-3 transition hover:bg-[var(--surface-2)]/45 sm:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_auto_auto_auto]"
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(disk)}
+                className="flex items-center gap-3 text-left"
+              >
+                <span className="relative grid size-9 place-items-center rounded-lg border border-line bg-[var(--surface-2)]">
+                  <HardDrive className="size-4" style={{ color: disk.color }} />
+                  <span
+                    className={cn(
+                      "absolute -right-0.5 -top-0.5 size-2 rounded-full border-2 border-[var(--surface)]",
+                      disk.status === "standby" ? "bg-[var(--subtle)]" : "bg-[var(--success)]",
+                    )}
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-medium text-ink">{disk.name}</span>
+                    <span className="font-mono text-[9px] text-subtle">/dev/{disk.device}</span>
+                  </span>
+                  <span className="block max-w-[230px] truncate text-[9.5px] text-subtle">{disk.model}</span>
+                </span>
+              </button>
+
+              <div className="hidden min-w-0 sm:block">
+                <div className="flex items-center justify-between text-[9.5px]">
+                  <span className="text-subtle">{formatBytes(disk.used)} / {formatBytes(disk.size)}</span>
+                  <span className="num text-muted">{usage > 0 ? `${usage.toFixed(0)}%` : "—"}</span>
+                </div>
+                <Progress value={usage} height={4} className="mt-1" tone={disk.status === "standby" ? "var(--subtle)" : undefined} />
+              </div>
+
+              <div className="hidden text-right sm:block">
+                <p className="num text-[10.5px] text-soft">{disk.temp > 0 ? `${disk.temp}°C` : "—"}</p>
+                <p className="text-[8.5px] uppercase tracking-[0.1em] text-subtle">{disk.status}</p>
+              </div>
+
+              <div className="hidden w-[76px] text-right md:block">
+                {showIO ? (
+                  <>
+                    <p className="num text-[9.5px] text-[var(--info)]">{formatSpeed(disk.readBps)}</p>
+                    <p className="num text-[9.5px] text-[var(--violet)]">{formatSpeed(disk.writeBps)}</p>
+                  </>
+                ) : (
+                  <Badge tone={disk.smart === "passed" ? "success" : "warning"}>
+                    {disk.smart === "passed" ? "SMART" : "Check"}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1">
+                <IconButton
+                  label={disk.status === "active" ? "Spin down" : "Spin up"}
+                  size="sm"
+                  onClick={() =>
+                    action.mutate({
+                      kind: disk.status === "active" ? "disk.spindown" : "disk.spinup",
+                      target: disk.name,
+                      success: disk.status === "active" ? `${disk.name} spinning down` : `${disk.name} spinning up`,
+                    })
+                  }
+                >
+                  {disk.status === "active" ? <ArrowDownToLine className="size-3.5" /> : <ArrowUpFromLine className="size-3.5" />}
+                </IconButton>
+                <Menu
+                  trigger={
+                    <IconButton label="Disk actions" size="sm">
+                      <span className="text-[14px] leading-none">⋯</span>
+                    </IconButton>
+                  }
+                  items={[
+                    { label: "View details", onSelect: () => onSelect(disk) },
+                    {
+                      label: disk.status === "active" ? "Spin down" : "Spin up",
+                      onSelect: () =>
+                        action.mutate({
+                          kind: disk.status === "active" ? "disk.spindown" : "disk.spinup",
+                          target: disk.name,
+                          success: disk.status === "active" ? `${disk.name} spinning down` : `${disk.name} spinning up`,
+                        }),
+                    },
+                    { label: "SMART report", onSelect: () => onSelect(disk) },
+                  ]}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ShareCard({ share, onOpen }: { share: Share; onOpen: () => void }) {
+  return (
+    <Card hover className="card-pad cursor-pointer" onClick={onOpen}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-[var(--accent)]">
+            <FolderTree className="size-4" />
+          </span>
+          <div>
+            <h3 className="text-[13px] font-semibold text-ink">{share.name}</h3>
+            <p className="mt-0.5 line-clamp-1 text-[10px] text-subtle">{share.comment}</p>
+          </div>
+        </div>
+        <span className="num text-[11px] text-muted">{share.usage.toFixed(0)}%</span>
+      </div>
+      <div className="mt-4">
+        <Progress value={share.usage} height={6} />
+        <div className="mt-2 flex justify-between font-mono text-[9.5px] text-subtle">
+          <span>{formatBytes(share.used)} used</span>
+          <span>{formatBytes(share.free)} free</span>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {share.smb ? <Badge tone="info">SMB</Badge> : null}
+        {share.nfs ? <Badge tone="violet">NFS</Badge> : null}
+        <Badge tone="neutral">cache {share.cacheMode}</Badge>
+        {share.exclusive ? <Badge tone="success">exclusive</Badge> : null}
+      </div>
+    </Card>
+  );
+}
+
+function DataRow({ label, value, tone }: { label: string; value: string; tone?: "warning" | "success" }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-[11px]">
+      <span className="text-muted">{label}</span>
+      <span
+        className={cn(
+          "num max-w-[65%] truncate text-right text-soft",
+          tone === "warning" && "text-[var(--warning)]",
+          tone === "success" && "text-[var(--success)]",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Detail({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-line bg-[var(--surface-2)]/50 px-3 py-2">
+      <p className="flex items-center gap-1 text-[9px] uppercase tracking-[0.1em] text-subtle">
+        {icon}
+        {label}
+      </p>
+      <p className="num mt-1 truncate text-[11px] text-soft">{value}</p>
+    </div>
+  );
+}

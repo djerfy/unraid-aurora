@@ -1,0 +1,17 @@
+# Build artifacts
+bin/
+frontend/dist/
+backend/internal/webui/dist/*
+!backend/internal/webui/dist/index.html
+node_modules/
+*.tsbuildinfo
+
+# Local state and secrets
+.env
+.env.*
+*.local
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
