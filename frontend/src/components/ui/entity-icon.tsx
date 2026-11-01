@@ -40,13 +40,15 @@ export function EntityIcon({
         borderColor: `color-mix(in srgb, ${color} 22%, transparent)`,
       }}
     >
-      <span className="absolute inset-0 grid place-items-center" aria-hidden="true">
-        {fallback ?? (
-          <span style={{ fontSize: Math.max(9, size * 0.3), fontWeight: 700 }}>
-            {initials(name)}
-          </span>
-        )}
-      </span>
+      {!loaded || failed || !src ? (
+        <span className="absolute inset-0 grid place-items-center" aria-hidden="true">
+          {fallback ?? (
+            <span style={{ fontSize: Math.max(9, size * 0.3), fontWeight: 700 }}>
+              {initials(name)}
+            </span>
+          )}
+        </span>
+      ) : null}
       {src && !failed ? (
         <img
           src={src}
