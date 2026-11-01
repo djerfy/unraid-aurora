@@ -137,8 +137,25 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_SESSION_TTL` | `24h` | Session lifetime (`time.ParseDuration`) |
 | `AURORA_READ_ONLY` | `false` | Disable every mutation |
 | `AURORA_LOG_LEVEL` | `info` | `debug` for verbose logs |
+| `AURORA_LOG_FILE` | stdout | Append logs to this file |
+| `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
+| `AURORA_DAEMON` | `false` | Detach and run in the background |
 
-Flags `-addr` and `-version` are also available.
+Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
+
+```bash
+# Foreground, JSON logs in a file
+./aurora -log-format json -log-file /var/log/aurora.log
+
+# Detached; defaults to /var/log/aurora.log
+./aurora -daemon
+
+# Detached with explicit JSON logging
+./aurora -daemon -log-format json -log-file /var/log/aurora.log
+```
+
+A daemon writes its standard streams to the log file (or `/dev/null` when logging is disabled)
+and prints the child PID before exiting.
 
 ## Data sources
 

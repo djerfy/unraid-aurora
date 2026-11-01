@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -27,8 +28,11 @@ var version = "0.1.0-dev"
 
 func main() {
 	var (
-		addr    = flag.String("addr", "", "listen address (overrides AURORA_ADDR)")
-		showVer = flag.Bool("version", false, "print version and exit")
+		addr      = flag.String("addr", "", "listen address (overrides AURORA_ADDR)")
+		logFile   = flag.String("log-file", envString("AURORA_LOG_FILE", ""), "append logs to this file instead of stdout")
+		logFormat = flag.String("log-format", envString("AURORA_LOG_FORMAT", "text"), "log format: text or json")
+		daemon    = flag.Bool("daemon", envBool("AURORA_DAEMON", false), "run in the background")
+		showVer   = flag.Bool("version", false, "print version and exit")
 	)
 	flag.Parse()
 	if *showVer {
@@ -36,11 +40,35 @@ func main() {
 		return
 	}
 
+	format, err := normalizeLogFormat(*logFormat)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "aurora:", err)
+		os.Exit(2)
+	}
+	logPath := strings.TrimSpace(*logFile)
+	if *daemon && logPath == "" {
+		// Without an explicit file a daemon would silently discard its logs.
+		logPath = "/var/log/aurora.log"
+	}
+	if *daemon && !isDaemonChild() {
+		if err := daemonize(logPath); err != nil {
+			fmt.Fprintln(os.Stderr, "aurora:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	level := slog.LevelInfo
 	if strings.EqualFold(os.Getenv("AURORA_LOG_LEVEL"), "debug") {
 		level = slog.LevelDebug
 	}
-	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	log, closeLog, err := newLogger(level, format, logPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "aurora:", err)
+		os.Exit(2)
+	}
+	defer closeLog()
+	slog.SetDefault(log)
 
 	cfg, err := config.Load(version)
 	if err != nil {
@@ -150,6 +178,25 @@ func resolveTLS(cfg config.Config) (certPath, keyPath string, err error) {
 		keyPath = certPath
 	}
 	return certPath, keyPath, nil
+}
+
+func envString(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+func envBool(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }
 
 func serverNameFromState(stateDir string) string {
