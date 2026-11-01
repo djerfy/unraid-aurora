@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml"><img src="https://github.com/djerfy/unraid-aurora/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+  <a href="https://github.com/djerfy/unraid-aurora/releases/latest"><img src="https://img.shields.io/github/v/release/djerfy/unraid-aurora?label=Version&color=ff6b4a" alt="Latest version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="License: AGPL v3" /></a>
 </p>
 
