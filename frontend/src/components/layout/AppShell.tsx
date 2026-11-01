@@ -73,6 +73,7 @@ export function AppShell() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isTerminal = location.pathname === "/terminal";
+  const isStandaloneConsole = location.pathname.startsWith("/vms/console/");
   const terminalPopout = isTerminal && searchParams.get("popout") === "1";
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -250,7 +251,7 @@ export function AppShell() {
 
   if (error) return <ErrorScreen error={error} onRetry={() => refresh()} />;
   if (!snapshot) return <BootScreen />;
-  if (terminalPopout) {
+  if (terminalPopout || isStandaloneConsole) {
     return (
       <div className="h-dvh w-screen overflow-hidden bg-[#08090d]">
         <Outlet />

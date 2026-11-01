@@ -1,86 +1,30 @@
-import { useEffect, useRef, useState } from "react";
-import { Monitor, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 import { Modal } from "../ui/overlays";
 import { Badge, Button } from "../ui/primitives";
+import { VMConsolePanel, type ConsoleStatus } from "./VMConsolePanel";
 import type { VM } from "../../lib/types";
 
-type ConsoleStatus = "connecting" | "connected" | "disconnected" | "error";
+const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
+  connecting: "warning",
+  connected: "success",
+  disconnected: "danger",
+  error: "danger",
+};
 
 export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
-  const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
-  const [message, setMessage] = useState("");
-  const [generation, setGeneration] = useState(0);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!vm || !host) return;
-
-    let cancelled = false;
-    let client: { disconnect: () => void; focus: () => void; scaleViewport: boolean; resizeSession: boolean } | null = null;
-    setStatus("connecting");
-    setMessage("");
-
-    void (async () => {
-      try {
-        const { default: RFB } = await import("@novnc/novnc");
-        if (cancelled) return;
-        host.replaceChildren();
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const url = `${protocol}://${window.location.host}/api/v1/vms/${encodeURIComponent(vm.id)}/console`;
-        const connection = new RFB(host, url, { shared: true });
-        // Scale the framebuffer to the panel instead of resizing the guest.
-        connection.scaleViewport = true;
-        connection.resizeSession = false;
-        connection.addEventListener("connect", () => {
-          if (cancelled) return;
-          setStatus("connected");
-          // Grab the keyboard as soon as the framebuffer is live, otherwise
-          // keystrokes stay in the surrounding page.
-          window.setTimeout(() => {
-            if (!cancelled) connection.focus({ preventScroll: true });
-          }, 50);
-        });
-        connection.addEventListener("disconnect", (event: Event) => {
-          if (cancelled) return;
-          const detail = (event as CustomEvent<{ clean?: boolean }>).detail;
-          setStatus("disconnected");
-          setMessage(detail?.clean ? "Session closed." : "The console connection was lost.");
-        });
-        connection.addEventListener("securityfailure", () => {
-          if (!cancelled) {
-            setStatus("error");
-            setMessage("The virtual machine rejected the console connection.");
-          }
-        });
-        connection.focusOnClick = true;
-        client = connection;
-        window.requestAnimationFrame(() => {
-          if (!cancelled) connection.focus({ preventScroll: true });
-        });
-      } catch (error) {
-        if (!cancelled) {
-          setStatus("error");
-          setMessage((error as Error).message);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      client?.disconnect();
-      host.replaceChildren();
-    };
-  }, [vm, generation]);
-
-  const focusConsole = () => {
-    const host = hostRef.current;
-    if (!host) return;
-    const canvas = host.querySelector("canvas");
-    canvas?.focus({ preventScroll: true });
-  };
+  const [token, setToken] = useState(0);
 
   if (!vm) return null;
+
+  const openWindow = () => {
+    window.open(
+      `${window.location.origin}/vms/console/${encodeURIComponent(vm.id)}`,
+      `aurora-vm-console-${vm.id}`,
+      "popup=yes,width=1280,height=900",
+    );
+  };
 
   return (
     <Modal
@@ -89,14 +33,22 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
       title={`Console · ${vm.name}`}
       description={`${(vm.consoleProtocol || "vnc").toUpperCase()} · ${vm.os}`}
       size="xl"
+      headerExtra={
+        <Badge tone={TONE[status]} dot pulse={status === "connecting"}>
+          {status}
+        </Badge>
+      }
       footer={
         <>
           <Button
             variant="secondary"
             icon={<RefreshCw className="size-3.5" />}
-            onClick={() => setGeneration((value) => value + 1)}
+            onClick={() => setToken((value) => value + 1)}
           >
             Reconnect
+          </Button>
+          <Button variant="secondary" icon={<ExternalLink className="size-3.5" />} onClick={openWindow}>
+            New window
           </Button>
           <Button variant="secondary" onClick={onClose}>
             Close
@@ -104,26 +56,12 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="flex items-center gap-2 text-[10.5px] text-muted">
-            <Monitor className="size-3.5" /> Live framebuffer · click the screen to capture the keyboard
-          </span>
-          <Badge
-            tone={status === "connected" ? "success" : status === "connecting" ? "warning" : "danger"}
-            dot
-            pulse={status === "connecting"}
-          >
-            {status}
-          </Badge>
-        </div>
-        <div
-          ref={hostRef}
-          onPointerDown={focusConsole}
-          className="grid h-[68vh] min-h-[420px] w-full place-items-center overflow-hidden rounded-xl border border-[#1f2230] bg-[#08090d]"
-        />
-        {message ? <p className="text-[10.5px] text-[var(--danger)]">{message}</p> : null}
-      </div>
+      <VMConsolePanel
+        vm={vm}
+        reconnectToken={token}
+        onStatus={(next) => setStatus(next)}
+        className="h-[68vh] w-full"
+      />
     </Modal>
   );
 }

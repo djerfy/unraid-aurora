@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/Dashboard";
 import { StoragePage } from "./pages/Storage";
 import { DockerPage } from "./pages/Docker";
 import { VMsPage } from "./pages/VMs";
+import { VMConsolePage } from "./pages/VMConsole";
 import { NetworkPage } from "./pages/Network";
 import { GPUsPage } from "./pages/GPUs";
 import { UsersPage } from "./pages/Users";
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/storage" element={<StoragePage />} />
           <Route path="/docker" element={<DockerPage />} />
           <Route path="/vms" element={<VMsPage />} />
+          <Route path="/vms/console/:id" element={<VMConsolePage />} />
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/gpus" element={<GPUsPage />} />
           <Route path="/users" element={<UsersPage />} />

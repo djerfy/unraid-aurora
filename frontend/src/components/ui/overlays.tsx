@@ -18,6 +18,7 @@ export function Modal({
   onClose,
   title,
   description,
+  headerExtra,
   children,
   footer,
   size = "md",
@@ -26,6 +27,7 @@ export function Modal({
   onClose: () => void;
   title: string;
   description?: string;
+  headerExtra?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
@@ -65,9 +67,12 @@ export function Modal({
             <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
             {description ? <p className="mt-0.5 text-xs text-muted">{description}</p> : null}
           </div>
-          <IconButton label="Close" size="sm" onClick={onClose}>
-            <X className="size-4" />
-          </IconButton>
+          <div className="flex shrink-0 items-center gap-2">
+            {headerExtra}
+            <IconButton label="Close" size="sm" onClick={onClose}>
+              <X className="size-4" />
+            </IconButton>
+          </div>
         </div>
         <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
         {footer ? <div className="flex justify-end gap-2 border-t border-line px-5 py-3.5">{footer}</div> : null}
