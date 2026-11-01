@@ -204,6 +204,14 @@ export type ContainerCreateOptions = {
   privileged: boolean;
 };
 
+export type ContainerUpdateEvent = {
+  step: string;
+  message: string;
+  progress: number;
+  done: boolean;
+  error: boolean;
+};
+
 export type ImageCheck = {
   image: string;
   local: string;

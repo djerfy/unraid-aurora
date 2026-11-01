@@ -141,6 +141,15 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 // environment and restart policy. The original container is stopped, renamed as
 // a backup and restored if any step fails.
 func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error {
+	return l.updateContainerConfig(ctx, id, cfg, nil)
+}
+
+func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig, report func(model.ContainerUpdateEvent)) error {
+	emit := func(step, message string) {
+		if report != nil {
+			report(model.ContainerUpdateEvent{Step: step, Message: message})
+		}
+	}
 	if err := ValidateContainerConfig(cfg); err != nil {
 		return err
 	}
@@ -203,6 +212,7 @@ func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.C
 		backupName = backupName[:200]
 	}
 	if running {
+		emit("stop", "Stopping "+name)
 		if _, err := l.dockerDo(ctx, http.MethodPost, "/containers/"+url.PathEscape(oldID)+"/stop?t=20", nil); err != nil {
 			return fmt.Errorf("stop container: %w", err)
 		}
@@ -212,6 +222,7 @@ func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.C
 		return fmt.Errorf("rename container: %w", err)
 	}
 
+	emit("create", "Recreating "+name)
 	created, createErr := l.dockerDo(ctx, http.MethodPost, "/containers/create?name="+url.QueryEscape(name), body)
 	if createErr != nil {
 		l.restoreContainer(ctx, oldID, name, running)
@@ -226,6 +237,7 @@ func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.C
 		return errors.New("docker did not return the replacement container id")
 	}
 	if running {
+		emit("start", "Starting "+name)
 		if _, err := l.dockerDo(ctx, http.MethodPost, "/containers/"+url.PathEscape(createdInfo.ID)+"/start", nil); err != nil {
 			_, _ = l.dockerDo(ctx, http.MethodDelete, "/containers/"+url.PathEscape(createdInfo.ID)+"?force=1", nil)
 			l.restoreContainer(ctx, oldID, name, running)
@@ -234,6 +246,7 @@ func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.C
 	}
 	// The new container is healthy; drop the backup. A failure here leaves a
 	// stopped backup but does not invalidate the successful update.
+	emit("cleanup", "Removing the previous container")
 	_, _ = l.dockerDo(ctx, http.MethodDelete, "/containers/"+url.PathEscape(oldID)+"?force=1", nil)
 	return nil
 }

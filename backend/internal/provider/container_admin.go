@@ -1,12 +1,12 @@
 package provider
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -168,23 +168,42 @@ func (l *Live) ensureImage(ctx context.Context, image string) error {
 }
 
 // UpdateContainerImage pulls the image again and recreates the container with
-// its current settings, so no Unraid template is required.
-func (l *Live) UpdateContainerImage(ctx context.Context, id string) error {
+// its current settings, so no Unraid template is required. Each stage is
+// reported to the caller so the UI can follow the operation live.
+func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(model.ContainerUpdateEvent)) error {
+	emit := func(event model.ContainerUpdateEvent) {
+		if report != nil {
+			report(event)
+		}
+	}
 	cfg, err := l.ContainerConfig(ctx, id)
 	if err != nil {
 		return err
 	}
-	if err := l.pullImage(ctx, cfg.Image); err != nil {
+	emit(model.ContainerUpdateEvent{Step: "pull", Message: "Pulling " + cfg.Image})
+	if err := l.pullImageWithProgress(ctx, cfg.Image, func(message string, percent float64) {
+		emit(model.ContainerUpdateEvent{Step: "pull", Message: message, Progress: percent})
+	}); err != nil {
 		return err
 	}
-	if err := l.UpdateContainerConfig(ctx, id, cfg); err != nil {
+	if err := l.updateContainerConfig(ctx, id, cfg, report); err != nil {
 		return err
 	}
 	l.setImageUpdate(cfg.Image, false)
+	emit(model.ContainerUpdateEvent{Step: "done", Message: "Container updated", Progress: 100, Done: true})
 	return nil
 }
 
 func (l *Live) pullImage(ctx context.Context, image string) error {
+	return l.pullImageWithProgress(ctx, image, nil)
+}
+
+type dockerPullLayer struct {
+	current uint64
+	total   uint64
+}
+
+func (l *Live) pullImageWithProgress(ctx context.Context, image string, report func(message string, percent float64)) error {
 	ref, err := parseImageRef(image)
 	if err != nil {
 		return err
@@ -202,23 +221,53 @@ func (l *Live) pullImage(ctx context.Context, image string) error {
 			headers["X-Registry-Auth"] = encoded
 		}
 	}
-	payload, err := l.dockerDoHeaders(ctx, http.MethodPost, "/images/create?"+query.Encode(), nil, headers)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker/images/create?"+query.Encode(), nil)
+	if err != nil {
+		return err
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	client := l.client
+	if client == nil {
+		client = &http.Client{}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("pull image %s: %w", image, err)
 	}
-	// A pull can fail after a 200 response; Docker reports it inside the stream.
-	for _, line := range bytes.Split(payload, []byte("\n")) {
-		if len(bytes.TrimSpace(line)) == 0 {
-			continue
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		payload, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		message := strings.TrimSpace(string(payload))
+		if message == "" {
+			message = resp.Status
 		}
+		return fmt.Errorf("pull image %s: %s", image, message)
+	}
+
+	layers := map[string]*dockerPullLayer{}
+	var lastMessage string
+	lastPercent := -1.0
+	decoder := json.NewDecoder(resp.Body)
+	for {
 		var event struct {
-			Error       string `json:"error"`
+			Status string `json:"status"`
+			ID     string `json:"id"`
+			Error  string `json:"error"`
+			Detail struct {
+				Current uint64 `json:"current"`
+				Total   uint64 `json:"total"`
+			} `json:"progressDetail"`
 			ErrorDetail struct {
 				Message string `json:"message"`
 			} `json:"errorDetail"`
 		}
-		if json.Unmarshal(line, &event) != nil {
-			continue
+		if err := decoder.Decode(&event); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("pull image %s: %w", image, err)
 		}
 		if event.ErrorDetail.Message != "" {
 			return fmt.Errorf("pull image %s: %s", image, event.ErrorDetail.Message)
@@ -226,8 +275,46 @@ func (l *Live) pullImage(ctx context.Context, image string) error {
 		if event.Error != "" {
 			return fmt.Errorf("pull image %s: %s", image, event.Error)
 		}
+		if event.ID != "" && event.Detail.Total > 0 {
+			layers[event.ID] = &dockerPullLayer{current: event.Detail.Current, total: event.Detail.Total}
+		}
+		if report == nil || event.Status == "" {
+			continue
+		}
+		message := event.Status
+		if event.ID != "" {
+			message = fmt.Sprintf("%s %s", event.Status, shortLayerID(event.ID))
+		}
+		var current, total uint64
+		for _, layer := range layers {
+			current += layer.current
+			total += layer.total
+		}
+		percent := 0.0
+		if total > 0 {
+			percent = float64(current) / float64(total) * 100
+			if percent > 99 {
+				percent = 99
+			}
+		}
+		if message == lastMessage && percent < lastPercent+2 {
+			continue
+		}
+		lastMessage = message
+		lastPercent = percent
+		report(message, percent)
+	}
+	if report != nil {
+		report("Image pulled", 100)
 	}
 	return nil
+}
+
+func shortLayerID(id string) string {
+	if len(id) > 12 {
+		return id[:12]
+	}
+	return id
 }
 
 func (l *Live) imageUpdate(image string) bool {

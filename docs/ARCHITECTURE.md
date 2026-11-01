@@ -127,6 +127,7 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `DELETE` | `/api/v1/docker/containers/{id}` | Remove a container (force stop first) |
 | `GET` | `/api/v1/docker/networks` | Docker networks for the create form |
 | `POST` | `/api/v1/docker/check-updates` | Compare local and registry image digests |
+| `POST` | `/api/v1/docker/containers/{id}/update` | Stream pull/recreate stages as NDJSON |
 | `GET` | `/api/v1/vms` | Virtual machines |
 | `GET` | `/api/v1/vms/{id}/icon` | Unraid OS icon for the VM |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
@@ -199,7 +200,7 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 | `array.start` / `array.stop` | `emcmd cmdStart=Start` / `cmdStop=Stop` |
 | `disk.spinup` / `disk.spindown` | `mdcmd spinup\|spindown <device>` |
 | `container.start/stop/restart` | `docker start\|stop\|restart <name>` |
-| `container.update` | pull the image, then stop → rename → create → start, with rollback |
+| `container.update` | pull the image, then stop → rename → create → start, with rollback; steps streamed to the UI |
 | container config `PUT` | Docker inspect → stop → rename → create → start, with rollback |
 | `vm.start/stop/pause/resume` | `virsh start\|shutdown\|suspend\|resume` |
 | `parity.start/stop/pause/resume` | `emcmd cmdCheck=...` |

@@ -320,6 +320,42 @@ func (s *Server) createContainer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
 }
 
+// updateContainerImage streams the pull/recreate stages as newline-delimited
+// JSON so the UI can display progress like the official webGUI.
+func (s *Server) updateContainerImage(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming", "streaming is not supported")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+
+	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+
+	encoder := json.NewEncoder(w)
+	emit := func(event model.ContainerUpdateEvent) {
+		if err := encoder.Encode(event); err == nil {
+			flusher.Flush()
+		}
+	}
+	id := r.PathValue("id")
+	err := s.provider.UpdateContainerImage(ctx, id, emit)
+	if err != nil {
+		s.log.Error("container image update failed", "id", id, "error", err)
+		emit(model.ContainerUpdateEvent{Step: "error", Message: err.Error(), Error: true, Done: true})
+		return
+	}
+	s.log.Info("container image updated", "id", id)
+}
+
 func (s *Server) removeContainer(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.ReadOnly {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")

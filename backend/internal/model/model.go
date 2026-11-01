@@ -232,6 +232,14 @@ type ContainerCreateOptions struct {
 	Privileged    bool              `json:"privileged"`
 }
 
+type ContainerUpdateEvent struct {
+	Step     string  `json:"step"`
+	Message  string  `json:"message"`
+	Progress float64 `json:"progress"`
+	Done     bool    `json:"done"`
+	Error    bool    `json:"error"`
+}
+
 type ImageCheck struct {
 	Image  string `json:"image"`
 	Local  string `json:"local"`

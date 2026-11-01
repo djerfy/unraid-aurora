@@ -913,7 +913,7 @@ func (l *Live) Perform(ctx context.Context, action model.Action) error {
 	case ActionContainerRestart:
 		return run("/usr/bin/docker", "restart", action.Target)
 	case ActionContainerUpdate:
-		return l.UpdateContainerImage(ctx, action.Target)
+		return l.UpdateContainerImage(ctx, action.Target, nil)
 	case ActionVMStart:
 		return run("/usr/bin/virsh", "start", action.Target)
 	case ActionVMStop:

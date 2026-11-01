@@ -69,6 +69,50 @@ export const api = {
     method: "POST",
     body: "{}",
   }),
+  updateContainer: async (
+    id: string,
+    onEvent: (event: import("./types").ContainerUpdateEvent) => void,
+  ) => {
+    const res = await fetch(`/api/v1/docker/containers/${encodeURIComponent(id)}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Aurora-Request": "aurora" },
+      body: "{}",
+      credentials: "same-origin",
+    });
+    if (!res.ok || !res.body) {
+      const payload = await res.json().catch(() => null);
+      const body = payload as { error?: { code?: string; message?: string } } | null;
+      throw new ApiError(
+        res.status,
+        body?.error?.code ?? "http_error",
+        body?.error?.message ?? res.statusText,
+      );
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let index = buffer.indexOf("\n");
+      while (index >= 0) {
+        const line = buffer.slice(0, index).trim();
+        buffer = buffer.slice(index + 1);
+        if (line) {
+          try {
+            onEvent(JSON.parse(line) as import("./types").ContainerUpdateEvent);
+          } catch {
+            // Ignore a truncated line; the next chunk completes it.
+          }
+        }
+        index = buffer.indexOf("\n");
+      }
+    }
+    if (buffer.trim()) {
+      onEvent(JSON.parse(buffer) as import("./types").ContainerUpdateEvent);
+    }
+  },
   containerConfig: (id: string) =>
     request<import("./types").ContainerConfig>(`/api/v1/docker/containers/${encodeURIComponent(id)}/config`),
   updateContainerConfig: (id: string, config: import("./types").ContainerConfig) =>

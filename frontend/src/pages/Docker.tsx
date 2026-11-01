@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { ContainerCreateModal } from "../components/containers/ContainerCreate";
+import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/containers/ContainerUpdateModal";
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
@@ -70,8 +71,8 @@ export function DockerPage() {
     }
   });
   const [query, setQuery] = useState("");
-  const [updating, setUpdating] = useState(false);
   const [editing, setEditing] = useState<Container | null>(null);
+  const [updateRun, setUpdateRun] = useState<ContainerUpdateRun | null>(null);
   const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<Container | null>(null);
   const [removeError, setRemoveError] = useState("");
@@ -123,20 +124,42 @@ export function DockerPage() {
     setParams(next, { replace: true });
   };
 
-  const updateAll = async () => {
-    if (updates.length === 0) return;
-    setUpdating(true);
-    try {
-      for (const container of updates) {
-        await api.action("container.update", container.name);
+  const runUpdates = async (targets: Container[]) => {
+    if (targets.length === 0 || updateRun?.running) return;
+    setUpdateRun({
+      names: targets.map((container) => container.name),
+      index: 0,
+      events: [],
+      running: true,
+      error: "",
+      done: false,
+    });
+    for (let index = 0; index < targets.length; index += 1) {
+      setUpdateRun((current) => (current ? { ...current, index, events: [] } : current));
+      let streamError = "";
+      try {
+        await api.updateContainer(targets[index].id, (event) => {
+          if (event.error) streamError = event.message;
+          setUpdateRun((current) =>
+            current ? { ...current, events: [...current.events.slice(-40), event] } : current,
+          );
+        });
+        if (streamError) throw new Error(streamError);
+      } catch (error) {
+        setUpdateRun((current) =>
+          current ? { ...current, running: false, error: (error as Error).message } : current,
+        );
+        void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+        return;
       }
-      await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
-      toast({ kind: "success", title: "Containers updated", description: `${updates.length} image${updates.length > 1 ? "s" : ""} refreshed.` });
-    } catch (error) {
-      toast({ kind: "error", title: "Update failed", description: (error as Error).message });
-    } finally {
-      setUpdating(false);
     }
+    setUpdateRun((current) => (current ? { ...current, running: false, done: true } : current));
+    void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    toast({
+      kind: "success",
+      title: targets.length > 1 ? "Containers updated" : `${targets[0].name} updated`,
+      description: `${targets.length} image${targets.length > 1 ? "s" : ""} pulled and recreated.`,
+    });
   };
 
   const checkUpdates = useMutation({
@@ -205,9 +228,9 @@ export function DockerPage() {
             <Button
               variant="secondary"
               icon={<ArrowDownToLine className="size-3.5" />}
-              loading={updating}
-              disabled={updates.length === 0}
-              onClick={() => void updateAll()}
+              loading={Boolean(updateRun?.running)}
+              disabled={updates.length === 0 || Boolean(updateRun?.running)}
+              onClick={() => void runUpdates(updates)}
             >
               Update all {updates.length > 0 ? `(${updates.length})` : ""}
             </Button>
@@ -293,6 +316,7 @@ export function DockerPage() {
               container={container}
               onOpen={() => openContainer(container)}
               onEdit={() => setEditing(container)}
+              onUpdate={() => void runUpdates([container])}
               onRemove={() => {
                 setRemoveError("");
                 setRemoving(container);
@@ -310,6 +334,7 @@ export function DockerPage() {
                 container={container}
                 onOpen={() => openContainer(container)}
                 onEdit={() => setEditing(container)}
+                onUpdate={() => void runUpdates([container])}
                 onRemove={() => {
                   setRemoveError("");
                   setRemoving(container);
@@ -328,12 +353,20 @@ export function DockerPage() {
           setEditing(container);
           closeContainer();
         }}
+        onUpdate={(container) => void runUpdates([container])}
         busy={action.isPending && action.variables?.target === selected?.name}
       />
 
       <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
 
       <ContainerCreateModal open={creating} onClose={() => setCreating(false)} />
+
+      <ContainerUpdateModal
+        run={updateRun}
+        onClose={() => {
+          if (!updateRun?.running) setUpdateRun(null);
+        }}
+      />
 
       <Modal
         open={Boolean(removing)}
@@ -377,12 +410,14 @@ function ContainerCard({
   container,
   onOpen,
   onEdit,
+  onUpdate,
   onRemove,
   busy,
 }: {
   container: Container;
   onOpen: () => void;
   onEdit: () => void;
+  onUpdate: () => void;
   onRemove: () => void;
   busy?: boolean;
 }) {
@@ -424,12 +459,7 @@ function ContainerCard({
               ? [{
                   label: "Update image & restart",
                   icon: <ArrowDownToLine className="size-3.5" />,
-                  onSelect: () =>
-                    action.mutate({
-                      kind: "container.update",
-                      target: container.name,
-                      success: `${container.name} updated`,
-                    }),
+                  onSelect: onUpdate,
                 }]
               : []),
             {
@@ -513,17 +543,13 @@ function ContainerCard({
               label="Update image and restart"
               size="sm"
               disabled={busy}
-              onClick={() =>
-                action.mutate({
-                  kind: "container.update",
-                  target: container.name,
-                  success: `${container.name} updated`,
-                })
-              }
+              onClick={onUpdate}
             >
               <ArrowDownToLine className="size-3.5 text-[var(--warning)]" />
             </IconButton>
-          ) : null}
+          ) : (
+            <span className="size-8" aria-hidden="true" />
+          )}
           <IconButton
             label={running ? "Restart container" : "Start container"}
             size="sm"
@@ -564,12 +590,14 @@ function ContainerRow({
   container,
   onOpen,
   onEdit,
+  onUpdate,
   onRemove,
   busy,
 }: {
   container: Container;
   onOpen: () => void;
   onEdit: () => void;
+  onUpdate: () => void;
   onRemove: () => void;
   busy?: boolean;
 }) {
@@ -610,17 +638,13 @@ function ContainerRow({
             label="Update image and restart"
             size="sm"
             disabled={busy}
-            onClick={() =>
-              action.mutate({
-                kind: "container.update",
-                target: container.name,
-                success: `${container.name} updated`,
-              })
-            }
+            onClick={onUpdate}
           >
             <ArrowDownToLine className="size-3.5 text-[var(--warning)]" />
           </IconButton>
-        ) : null}
+        ) : (
+          <span className="size-8" aria-hidden="true" />
+        )}
         <IconButton
           label={running ? "Restart" : "Start"}
           size="sm"
@@ -653,11 +677,13 @@ function ContainerDrawer({
   container,
   onClose,
   onEdit,
+  onUpdate,
   busy,
 }: {
   container: Container | null;
   onClose: () => void;
   onEdit: (container: Container) => void;
+  onUpdate: (container: Container) => void;
   busy?: boolean;
 }) {
   const action = useAction();
@@ -764,13 +790,7 @@ function ContainerDrawer({
             <p className="flex items-center gap-2 text-[11px] text-[var(--warning)]">
               <TriangleAlert className="size-3.5" /> A newer image is available
             </p>
-            <Button
-              size="sm"
-              variant="soft"
-              onClick={() =>
-                action.mutate({ kind: "container.update", target: container.name, success: `${container.name} updated` })
-              }
-            >
+            <Button size="sm" variant="soft" onClick={() => onUpdate(container)}>
               Update now
             </Button>
           </div>
