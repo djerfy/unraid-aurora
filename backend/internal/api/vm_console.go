@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -39,7 +38,7 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.log.Info("vm console opened", "vm", r.PathValue("id"), "tcpPort", console.Port, "wsPort", console.WebSocket, "address", console.Address, "keyboardDevice", console.Keyboard)
+	s.log.Info("vm console opened", "vm", r.PathValue("id"))
 
 	client, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true, // Origin checked above.
@@ -63,22 +62,7 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		upstream, err := net.DialTimeout("tcp", address, 5*time.Second)
 		if err == nil {
 			defer upstream.Close()
-			frames := 0
-			keys := 0
-			relayTCPConsole(ctx, client, upstream, func(data []byte) {
-				frames++
-				if frames <= 12 && len(data) > 0 {
-					s.log.Info("vm console client frame", "vm", r.PathValue("id"), "size", len(data), "messageType", data[0])
-				}
-				// RFB KeyEvent: type 4, 8 bytes, keysym in the last four.
-				if len(data) == 8 && data[0] == 4 {
-					keys++
-					if keys == 1 {
-						s.log.Info("vm console key event received", "vm", r.PathValue("id"),
-							"keysym", fmt.Sprintf("0x%x", binary.BigEndian.Uint32(data[4:8])), "down", data[1] != 0)
-					}
-				}
-			})
+			relayTCPConsole(ctx, client, upstream)
 			return
 		}
 		if console.WebSocket < 1 {
@@ -109,7 +93,7 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 }
 
 // relayTCPConsole bridges binary WebSocket frames to the raw RFB stream.
-func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.Conn, onMessage func(data []byte)) {
+func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.Conn) {
 	errCh := make(chan error, 2)
 
 	go func() {
@@ -118,9 +102,6 @@ func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.C
 			if err != nil {
 				errCh <- err
 				return
-			}
-			if onMessage != nil {
-				onMessage(data)
 			}
 			if _, err := upstream.Write(data); err != nil {
 				errCh <- err

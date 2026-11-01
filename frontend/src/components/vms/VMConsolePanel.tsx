@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { VM } from "../../lib/types";
 
 export type ConsoleStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -52,9 +52,6 @@ function keysymFor(event: KeyboardEvent): number | null {
 
 type RfbInternals = {
   _sock?: { readyState?: string; flush?: () => void };
-  _rfbConnectionState?: string;
-  _viewOnly?: boolean;
-  _qemuExtKeyEventSupported?: boolean;
   constructor?: { messages?: { keyEvent?: (sock: unknown, keysym: number, down: number) => void } };
 };
 
@@ -93,8 +90,6 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
   } | null>(null);
   const statusRef = useRef(onStatus);
   statusRef.current = onStatus;
-  const [keyboardActive, setKeyboardActive] = useState(false);
-  const keyboardActiveRef = useRef(false);
   const vmId = vm?.id ?? "";
 
   useEffect(() => {
@@ -124,31 +119,15 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
       if (typingInsideConsole) {
         return;
       }
-      if (!keyboardActiveRef.current) {
-        keyboardActiveRef.current = true;
-        setKeyboardActive(true);
-      }
       event.preventDefault();
       // Capture phase: stop the event before any other page handler sees it.
       event.stopPropagation();
       const keysym = keysymFor(event);
       if (keysym !== null) {
         const down = event.type === "keydown";
-        const raw = clientRef.current ? sendRawKey(clientRef.current, keysym, down) : false;
-        if (localStorage.getItem("aurora.debug") === "1") {
-          const rfb = clientRef.current as unknown as RfbInternals | null;
-          console.debug(
-            "[vnc] key",
-            event.type,
-            event.key,
-            event.code ?? "",
-            `0x${keysym.toString(16)}`,
-            "raw=" + raw,
-            "state=" + (rfb?._rfbConnectionState ?? "?"),
-            "viewOnly=" + (rfb?._viewOnly ?? "?"),
-          );
+        if (!sendRawKey(clientRef.current, keysym, down)) {
+          clientRef.current?.sendKey?.(keysym, event.code ?? "", down);
         }
-        if (!raw) clientRef.current?.sendKey?.(keysym, event.code ?? "", down);
         return;
       }
       const handler = event.type === "keydown" ? keyboard?._handleKeyDown : keyboard?._handleKeyUp;
@@ -246,17 +225,7 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
 
   return (
     <div className={className}>
-      <div className="relative size-full min-h-[320px] overflow-hidden rounded-xl border border-[#1f2230] bg-[#08090d]">
-        <div
-          ref={hostRef}
-          className="grid size-full place-items-center"
-        />
-        {keyboardActive ? (
-          <span className="pointer-events-none absolute left-2 top-2 rounded-md border border-[#28c840]/40 bg-[#28c840]/10 px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.08em] text-[#3ddc97]">
-            keyboard
-          </span>
-        ) : null}
-      </div>
+      <div ref={hostRef} className="grid size-full min-h-[320px] place-items-center overflow-hidden rounded-xl border border-[#1f2230] bg-[#08090d]" />
     </div>
   );
 });
