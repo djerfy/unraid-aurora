@@ -978,6 +978,21 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
           <span className="font-mono text-[10px]"> mover.ini</span> and survives a page refresh.
         </p>
       )}
+
+      {status?.history?.length ? (
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Recent runs</p>
+          <div className="space-y-1.5">
+            {status.history.slice(0, 4).map((run, index) => (
+              <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                <span className="text-muted">{formatDateTime(run.finished)}</span>
+                <span className="num text-subtle">{formatDuration(run.duration)} · {formatBytes(run.moved)}</span>
+                <Badge tone={run.status === "completed" ? "success" : "warning"}>{run.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }

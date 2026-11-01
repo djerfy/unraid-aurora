@@ -227,7 +227,7 @@ export function LoginPage() {
           </a>
           <span className="hidden size-1 rounded-full bg-[var(--subtle)]/40 sm:block" />
           <span className="font-mono">Go · React</span>
-          <span className="font-mono">v0.1.0</span>
+          <span className="font-mono">v{__APP_VERSION__}</span>
         </span>
       </footer>
     </div>

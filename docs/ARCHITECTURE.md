@@ -95,8 +95,8 @@ Reads the same sources as the original webGUI:
 | Logs | tail of `/var/log/syslog` (`docker.log` for Docker) |
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
 | User icons | `/boot/config/plugins/dynamix/users/<name>.png` |
-| GPUs | `nvidia-smi` (utilisation, VRAM, temperature, power, processes) |
-| Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini` |
+| GPUs | `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD): utilisation, VRAM, temperature, power, processes |
+| Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_DATA_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 

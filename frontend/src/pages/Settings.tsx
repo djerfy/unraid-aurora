@@ -390,7 +390,7 @@ export function SettingsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-[16px] font-semibold text-ink">Aurora</h2>
-                      <Badge tone="accent">v0.1.0</Badge>
+                      <Badge tone="accent">v{__APP_VERSION__}</Badge>
                       <Badge tone="success" dot>live host</Badge>
                     </div>
                     <p className="mt-1 max-w-xl text-[11.5px] leading-relaxed text-muted">

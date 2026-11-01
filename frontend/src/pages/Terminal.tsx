@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { RefreshCw, ShieldCheck, SquareTerminal } from "lucide-react";
-import { PageHeader } from "../components/layout/PageHeader";
-import { Badge, Button, Card, cn } from "../components/ui/primitives";
+import { ExternalLink, RefreshCw, ShieldCheck, SquareTerminal } from "lucide-react";
+import { Badge, Button, cn } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
 
@@ -13,6 +13,8 @@ type Connection = "connecting" | "connected" | "closed" | "error";
 export function TerminalPage() {
   const { snapshot, session } = useApp();
   const { toast } = useToast();
+  const [params] = useSearchParams();
+  const popout = params.get("popout") === "1";
   const hostRef = useRef<HTMLDivElement>(null);
   const [connection, setConnection] = useState<Connection>("connecting");
   const [generation, setGeneration] = useState(0);
@@ -60,7 +62,7 @@ export function TerminalPage() {
       try {
         fit.fit();
       } catch {
-        // The terminal may be measured while the page transition is running.
+        // The terminal may be measured during the page transition.
       }
     };
     resize();
@@ -76,6 +78,7 @@ export function TerminalPage() {
       term.writeln("\x1b[38;5;209mAurora terminal\x1b[0m  \x1b[90mroot shell · encrypted transport\x1b[0m");
       term.writeln("");
       resize();
+      term.focus();
     };
     socket.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
@@ -119,55 +122,60 @@ export function TerminalPage() {
     };
   }, [generation]);
 
+  const openWindow = () => {
+    const popup = window.open(
+      `${window.location.origin}/terminal?popout=1`,
+      "aurora-terminal",
+      "popup=yes,width=1200,height=800",
+    );
+    popup?.focus();
+  };
+
   return (
-    <>
-      <PageHeader
-        eyebrow="System"
-        title="Terminal"
-        description="An interactive root shell, streamed over the same authenticated HTTPS session as the rest of Aurora."
-        meta={
-          <>
-            <Badge tone={connection === "connected" ? "success" : connection === "connecting" ? "warning" : "danger"} dot pulse={connection === "connecting"}>
-              {connection}
-            </Badge>
-            <span className="chip">{session?.user ?? "root"}@{snapshot?.system.hostname ?? "server"}</span>
-          </>
-        }
-        actions={
+    <div className={cn("flex min-h-0 w-full flex-col bg-[#08090d]", popout ? "h-dvh" : "flex-1")}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#1f2230] bg-[#08090d] px-4 py-2.5">
+        <SquareTerminal className="size-4 text-[#ff8a6b]" />
+        <span className="font-mono text-[11px] text-[#c7cbd6]">
+          {session?.user ?? "root"}@{snapshot?.system.hostname ?? "server"}:~
+        </span>
+        <Badge
+          tone={connection === "connected" ? "success" : connection === "connecting" ? "warning" : "danger"}
+          dot
+          pulse={connection === "connecting"}
+        >
+          {connection}
+        </Badge>
+        <div className="ml-auto flex items-center gap-2">
+          {!popout ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<ExternalLink className="size-3" />}
+              onClick={openWindow}
+              className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
+            >
+              New window
+            </Button>
+          ) : null}
           <Button
+            size="sm"
             variant="secondary"
-            icon={<RefreshCw className="size-3.5" />}
+            icon={<RefreshCw className="size-3" />}
             onClick={() => {
               setGeneration((value) => value + 1);
               toast({ kind: "info", title: "Reconnecting terminal" });
             }}
+            className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
           >
             Reconnect
           </Button>
-        }
-      />
-
-      <Card className="overflow-hidden border-[#1f2230] bg-[#08090d]">
-        <div className="flex items-center gap-2 border-b border-[#1f2230] px-4 py-2.5">
-          <span className="flex gap-1.5">
-            <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-            <span className="size-2.5 rounded-full bg-[#febc2e]" />
-            <span className="size-2.5 rounded-full bg-[#28c840]" />
-          </span>
-          <span className="ml-2 flex items-center gap-2 font-mono text-[10px] text-[#8b93a7]">
-            <SquareTerminal className="size-3" /> root@{snapshot?.system.hostname ?? "server"}:~
-          </span>
-          <span className="ml-auto flex items-center gap-1.5 font-mono text-[9px] text-[#5f6678]">
-            <span className={cn("size-1.5 rounded-full", connection === "connected" ? "bg-[#3ddc97]" : "bg-[#f5b44a]")} />
-            {connection === "connected" ? "live" : connection}
-          </span>
         </div>
-        <div ref={hostRef} className="h-[62vh] min-h-[420px] w-full px-2 py-2" />
-        <div className="flex items-center gap-2 border-t border-[#1f2230] px-4 py-2 font-mono text-[9px] text-[#5f6678]">
-          <ShieldCheck className="size-3 text-[#3ddc97]" />
-          Commands execute as root on the Unraid host. Keep this session private.
-        </div>
-      </Card>
-    </>
+      </div>
+      <div ref={hostRef} className="min-h-0 w-full flex-1 px-2 py-2" />
+      <div className="flex items-center gap-2 border-t border-[#1f2230] bg-[#08090d] px-4 py-2 font-mono text-[9px] text-[#5f6678]">
+        <ShieldCheck className="size-3 text-[#3ddc97]" />
+        Commands execute as root on the Unraid host. Keep this session private.
+      </div>
+    </div>
   );
 }

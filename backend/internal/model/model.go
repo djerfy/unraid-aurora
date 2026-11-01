@@ -344,22 +344,32 @@ type Plugin struct {
 	Color           string `json:"color"`
 }
 
+type MoverRun struct {
+	Started  time.Time `json:"started"`
+	Finished time.Time `json:"finished"`
+	Duration int64     `json:"duration"`
+	Total    uint64    `json:"total"`
+	Moved    uint64    `json:"moved"`
+	Status   string    `json:"status"`
+}
+
 type MoverStatus struct {
-	Running         bool      `json:"running"`
-	Total           uint64    `json:"total"`
-	Remain          uint64    `json:"remain"`
-	Progress        float64   `json:"progress"`
-	Throughput      float64   `json:"throughput"`
-	ETA             int64     `json:"eta"`
-	ShareTotal      uint64    `json:"shareTotal"`
-	ShareRemain     uint64    `json:"shareRemain"`
-	ShareThroughput float64   `json:"shareThroughput"`
-	ShareETA        int64     `json:"shareEta"`
-	File            string    `json:"file"`
-	Action          string    `json:"action"`
-	FilePercent     float64   `json:"filePercent"`
-	PID             int       `json:"pid"`
-	Updated         time.Time `json:"updated"`
+	Running         bool       `json:"running"`
+	Total           uint64     `json:"total"`
+	Remain          uint64     `json:"remain"`
+	Progress        float64    `json:"progress"`
+	Throughput      float64    `json:"throughput"`
+	ETA             int64      `json:"eta"`
+	ShareTotal      uint64     `json:"shareTotal"`
+	ShareRemain     uint64     `json:"shareRemain"`
+	ShareThroughput float64    `json:"shareThroughput"`
+	ShareETA        int64      `json:"shareEta"`
+	File            string     `json:"file"`
+	Action          string     `json:"action"`
+	FilePercent     float64    `json:"filePercent"`
+	PID             int        `json:"pid"`
+	Updated         time.Time  `json:"updated"`
+	History         []MoverRun `json:"history"`
 }
 
 type GPUProcess struct {

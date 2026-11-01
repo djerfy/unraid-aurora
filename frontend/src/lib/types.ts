@@ -79,6 +79,15 @@ export type ArrayStartOptions = {
   mode: "normal" | "maintenance";
 };
 
+export type MoverRun = {
+  started: string;
+  finished: string;
+  duration: number;
+  total: number;
+  moved: number;
+  status: string;
+};
+
 export type MoverStatus = {
   running: boolean;
   total: number;
@@ -95,6 +104,7 @@ export type MoverStatus = {
   filePercent: number;
   pid: number;
   updated: string;
+  history: MoverRun[];
 };
 
 export type ArrayInfo = {

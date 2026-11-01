@@ -96,8 +96,8 @@ A push to a `v*` tag builds the embedded UI and publishes a single **linux/amd64
 GoReleaser:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.4
+git push origin v0.0.4
 ```
 
 The workflow can also be started manually (`workflow_dispatch`); it then produces a snapshot build and
@@ -195,13 +195,13 @@ Deep dives:
 | Containers | Docker workloads with real icons, CPU/memory, ports, updates, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, lifecycle actions |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
-| GPUs | NVIDIA utilisation, VRAM, temperature, power, clocks and compute processes |
+| GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
 | Users | Accounts, roles, share access matrix, account drawer |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
 | Plugins | Installed extensions, versions, categories, update visibility |
 | Logs | Syslog/Docker/parity tail, level + text filters, follow mode, export |
-| Terminal | Interactive root shell over an authenticated WebSocket |
-| Storage operations | Start/stop array with passphrase or keyfile, background mover with progress and ETA |
+| Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
+| Storage operations | Start/stop array with passphrase or keyfile, background mover with progress, ETA and run history |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
 | Global | ⌘K command palette, keyboard navigation, toasts, responsive layout, light theme |
 

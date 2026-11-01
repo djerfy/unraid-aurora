@@ -50,6 +50,15 @@ type Live struct {
 	vmCPU          map[string]vmCPUSample
 	vmCache        []model.VM
 	vmCacheAt      time.Time
+
+	moverMu        sync.Mutex
+	moverActive    bool
+	moverStarted   time.Time
+	moverStopped   bool
+	moverLast      model.MoverStatus
+	moverHistory   []model.MoverRun
+	moverStop      chan struct{}
+	moverCloseOnce sync.Once
 }
 
 type cpuSample struct {
@@ -83,8 +92,11 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 		},
 		containerStats: map[string]cachedContainerStats{},
 		vmCPU:          map[string]vmCPUSample{},
+		moverStop:      make(chan struct{}),
 	}
 	l.loadSettings()
+	l.loadMoverHistory()
+	go l.watchMover()
 	l.client = &http.Client{
 		Timeout: 4 * time.Second,
 		Transport: &http.Transport{
@@ -919,7 +931,17 @@ func (l *Live) Perform(ctx context.Context, action model.Action) error {
 	}
 }
 
-func (l *Live) Close() error { return nil }
+func (l *Live) Close() error {
+	l.moverCloseOnce.Do(func() {
+		if l.moverStop != nil {
+			close(l.moverStop)
+		}
+	})
+	l.moverMu.Lock()
+	_ = l.saveMoverHistory()
+	l.moverMu.Unlock()
+	return nil
+}
 
 // --- procfs helpers -------------------------------------------------------
 

@@ -63,3 +63,18 @@ Filepercent=42.5
 		t.Fatalf("unexpected mover details: %+v", status)
 	}
 }
+
+func TestMoverHistoryPersistence(t *testing.T) {
+	dir := t.TempDir()
+	live := &Live{dataDir: dir, moverHistory: []model.MoverRun{
+		{Total: 100, Moved: 80, Duration: 42, Status: "completed"},
+	}}
+	if err := live.saveMoverHistory(); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	loaded := &Live{dataDir: dir}
+	loaded.loadMoverHistory()
+	if len(loaded.moverHistory) != 1 || loaded.moverHistory[0].Moved != 80 || loaded.moverHistory[0].Status != "completed" {
+		t.Fatalf("history = %+v", loaded.moverHistory)
+	}
+}

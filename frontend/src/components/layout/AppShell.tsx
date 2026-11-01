@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Boxes,
   MonitorPlay,
@@ -63,6 +63,9 @@ export function AppShell() {
   const action = useAction();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isTerminal = location.pathname === "/terminal";
+  const terminalPopout = isTerminal && searchParams.get("popout") === "1";
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("aurora.sidebar") === "collapsed";
@@ -205,6 +208,13 @@ export function AppShell() {
 
   if (error) return <ErrorScreen error={error} onRetry={() => refresh()} />;
   if (!snapshot) return <BootScreen />;
+  if (terminalPopout) {
+    return (
+      <div className="h-dvh w-screen overflow-hidden bg-[#08090d]">
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-dvh">
@@ -232,13 +242,13 @@ export function AppShell() {
       >
         <Topbar onOpenCommand={() => setCommandOpen(true)} onOpenMobile={() => setMobileOpen(true)} />
 
-        <main className="w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8">
-          <div key={location.pathname} className="animate-fade-up">
+        <main className={isTerminal ? "flex min-h-0 w-full flex-1 flex-col" : "w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8"}>
+          <div key={location.pathname} className={isTerminal ? "flex min-h-0 flex-1 flex-col" : "animate-fade-up"}>
             <Outlet />
           </div>
         </main>
 
-        <footer className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-[10.5px] text-subtle sm:px-6 lg:px-8">
+        {!isTerminal ? <footer className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-[10.5px] text-subtle sm:px-6 lg:px-8">
           <span>
             Aurora · an independent, modern control plane for Unraid. Session {session?.user ?? "root"}.
           </span>
@@ -248,7 +258,7 @@ export function AppShell() {
             </span>
             <span className="font-mono">🌱 DJΞRFY 🚀</span>
           </span>
-        </footer>
+        </footer> : null}
       </div>
 
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} commands={commands} />

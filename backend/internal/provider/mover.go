@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,23 @@ import (
 )
 
 func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
+	status, err := l.readMoverStatus(ctx)
+	if err != nil {
+		return status, err
+	}
+	l.moverMu.Lock()
+	if status.Running {
+		l.moverLast = status
+	}
+	status.History = append([]model.MoverRun(nil), l.moverHistory...)
+	if status.History == nil {
+		status.History = []model.MoverRun{}
+	}
+	l.moverMu.Unlock()
+	return status, nil
+}
+
+func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	status := model.MoverStatus{}
 	status.Running = moverRunning(ctx)
 	path := filepath.Join(l.stateDir, "mover.ini")
@@ -46,6 +64,83 @@ func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	return status, nil
 }
 
+func (l *Live) watchMover() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-l.moverStop:
+			return
+		case <-ticker.C:
+			status, _ := l.readMoverStatus(context.Background())
+			l.moverMu.Lock()
+			if status.Running {
+				if !l.moverActive {
+					l.moverActive = true
+					l.moverStarted = time.Now()
+					l.moverStopped = false
+				}
+				l.moverLast = status
+			} else if l.moverActive {
+				last := l.moverLast
+				moved := uint64(0)
+				if last.Total > last.Remain {
+					moved = last.Total - last.Remain
+				}
+				finished := time.Now()
+				run := model.MoverRun{
+					Started: l.moverStarted, Finished: finished,
+					Duration: int64(finished.Sub(l.moverStarted).Seconds()),
+					Total:    last.Total, Moved: moved,
+				}
+				if l.moverStopped {
+					run.Status = "stopped"
+				} else {
+					run.Status = "completed"
+				}
+				l.moverHistory = append([]model.MoverRun{run}, l.moverHistory...)
+				if len(l.moverHistory) > 20 {
+					l.moverHistory = l.moverHistory[:20]
+				}
+				l.moverActive = false
+				l.moverStopped = false
+				l.moverLast = model.MoverStatus{}
+				_ = l.saveMoverHistory()
+			}
+			l.moverMu.Unlock()
+		}
+	}
+}
+
+func (l *Live) loadMoverHistory() {
+	if l.dataDir == "" {
+		return
+	}
+	raw, err := os.ReadFile(filepath.Join(l.dataDir, "mover-history.json"))
+	if err != nil {
+		return
+	}
+	var history []model.MoverRun
+	if json.Unmarshal(raw, &history) == nil && len(history) > 20 {
+		history = history[:20]
+	}
+	l.moverHistory = history
+}
+
+func (l *Live) saveMoverHistory() error {
+	if l.dataDir == "" {
+		return nil
+	}
+	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
+		return err
+	}
+	raw, err := json.MarshalIndent(l.moverHistory, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(l.dataDir, "mover-history.json"), raw, 0o600)
+}
+
 func (l *Live) StartMover(ctx context.Context) error {
 	if moverRunning(ctx) {
 		return fmt.Errorf("mover is already running")
@@ -62,6 +157,12 @@ func (l *Live) StartMover(ctx context.Context) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start mover: %w", err)
 	}
+	l.moverMu.Lock()
+	l.moverActive = true
+	l.moverStarted = time.Now()
+	l.moverStopped = false
+	l.moverLast = model.MoverStatus{}
+	l.moverMu.Unlock()
 	// Do not Wait: the mover runs for minutes or hours and must survive the
 	// HTTP request. The status endpoint follows it through mover.ini.
 	go func() { _ = cmd.Wait() }()
@@ -74,6 +175,9 @@ func parseFloat(value string) float64 {
 }
 
 func (l *Live) StopMover(ctx context.Context) error {
+	l.moverMu.Lock()
+	l.moverStopped = true
+	l.moverMu.Unlock()
 	script := moverScript()
 	if script == "" {
 		return fmt.Errorf("mover script not found")

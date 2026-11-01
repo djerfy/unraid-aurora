@@ -3,7 +3,11 @@ package provider
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
+	"fmt"
 	"os/exec"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -17,7 +21,7 @@ func (l *Live) GPUs(ctx context.Context) ([]model.GPU, error) {
 		"--query-gpu=index,uuid,name,driver_version,memory.total,memory.used,utilization.gpu,temperature.gpu,power.draw,power.limit,fan.speed,clocks.gr,clocks.mem",
 		"--format=csv,noheader,nounits").Output()
 	if err != nil {
-		return []model.GPU{}, nil
+		return l.amdGPUs(ctx)
 	}
 	gpus, byUUID := parseNvidiaSMI(string(out))
 	appsOut, err := exec.CommandContext(ctx, "nvidia-smi",
@@ -78,6 +82,91 @@ func parseNvidiaSMI(text string) ([]model.GPU, map[string]int) {
 type nvidiaProcess struct {
 	UUID    string
 	Process model.GPUProcess
+}
+
+func (l *Live) amdGPUs(ctx context.Context) ([]model.GPU, error) {
+	out, err := exec.CommandContext(ctx, "rocm-smi",
+		"--showproductname", "--showtemp", "--showuse", "--showmemuse", "--showpower", "--json").Output()
+	if err != nil {
+		return []model.GPU{}, nil
+	}
+	return parseRocmSMI(string(out)), nil
+}
+
+func parseRocmSMI(text string) []model.GPU {
+	var raw map[string]map[string]any
+	if json.Unmarshal([]byte(text), &raw) != nil {
+		return []model.GPU{}
+	}
+	keys := make([]string, 0, len(raw))
+	for key := range raw {
+		if strings.HasPrefix(key, "card") {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	gpus := make([]model.GPU, 0, len(keys))
+	for _, key := range keys {
+		card := raw[key]
+		gpu := model.GPU{
+			Index:       rocmIndex(key),
+			UUID:        key,
+			Name:        rocmString(card, "Card series", "Card SKU", "Card model"),
+			Vendor:      "Radeon",
+			MemoryTotal: uint64(rocmNumber(card, "VRAM Total Memory (B)")),
+			MemoryUsed:  uint64(rocmNumber(card, "VRAM Total Used Memory (B)")),
+			Utilization: rocmNumber(card, "GPU use (%)"),
+			Temperature: rocmNumber(card, "Temperature (Sensor edge) (C)", "Temperature (Sensor junction) (C)", "Temperature (Sensor mem) (C)"),
+			Power:       rocmNumber(card, "Average Graphics Package Power (W)", "Average Graphics Package Power (W)"),
+			Fan:         rocmNumber(card, "Fan speed (%)", "Current Fan Speed (PWM)"),
+			Processes:   []model.GPUProcess{},
+		}
+		if gpu.Name == "" {
+			gpu.Name = "AMD Radeon"
+		}
+		gpus = append(gpus, gpu)
+	}
+	return gpus
+}
+
+func rocmString(card map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := card[key]; ok {
+			return strings.TrimSpace(fmt.Sprint(value))
+		}
+	}
+	for key, value := range card {
+		for _, wanted := range keys {
+			if strings.Contains(strings.ToLower(key), strings.ToLower(wanted)) {
+				return strings.TrimSpace(fmt.Sprint(value))
+			}
+		}
+	}
+	return ""
+}
+
+var rocmNumberPattern = regexp.MustCompile(`-?[0-9]+(?:\.[0-9]+)?`)
+
+func rocmNumber(card map[string]any, keys ...string) float64 {
+	for _, key := range keys {
+		if value, ok := card[key]; ok {
+			return number(rocmNumberPattern.FindString(fmt.Sprint(value)))
+		}
+	}
+	for key, value := range card {
+		for _, wanted := range keys {
+			if strings.Contains(strings.ToLower(key), strings.ToLower(wanted)) {
+				return number(rocmNumberPattern.FindString(fmt.Sprint(value)))
+			}
+		}
+	}
+	return 0
+}
+
+func rocmIndex(key string) int {
+	digits := strings.TrimPrefix(key, "card")
+	index, _ := strconv.Atoi(digits)
+	return index
 }
 
 func parseNvidiaProcesses(text string) []nvidiaProcess {

@@ -65,8 +65,8 @@ export function GPUsPage() {
                 <Card key={gpu.uuid || gpu.index} className="card-pad">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-[var(--surface-2)] text-[var(--violet)]">
-                        <Microchip className="size-5" />
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-[var(--surface-2)]">
+                        <VendorLogo vendor={gpu.vendor} />
                       </span>
                       <div className="min-w-0">
                         <h2 className="truncate text-[14px] font-semibold text-ink">{gpu.name}</h2>
@@ -126,6 +126,12 @@ export function GPUsPage() {
       )}
     </>
   );
+}
+
+function VendorLogo({ vendor }: { vendor: string }) {
+  const src = vendor === "NVIDIA" ? "/brands/nvidia.svg" : vendor === "Radeon" || vendor === "AMD" ? "/brands/amd.svg" : "";
+  if (!src) return <Microchip className="size-5 text-[var(--violet)]" />;
+  return <img src={src} alt={vendor} className="h-5 w-auto max-w-7 object-contain" />;
 }
 
 function Stat({ icon, label, value, hint }: { icon: ReactNode; label: string; value: string; hint: string }) {

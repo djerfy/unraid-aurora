@@ -25,3 +25,27 @@ func TestParseNvidiaProcesses(t *testing.T) {
 		t.Fatalf("processes = %+v", processes)
 	}
 }
+
+func TestParseRocmSMI(t *testing.T) {
+	raw := `{
+  "card0": {
+    "Card series": "Radeon RX 7900 XTX",
+    "Temperature (Sensor edge) (C)": "52.0",
+    "GPU use (%)": "44",
+    "VRAM Total Memory (B)": "25753026560",
+    "VRAM Total Used Memory (B)": "4294967296",
+    "Average Graphics Package Power (W)": "188.0"
+  }
+}`
+	gpus := parseRocmSMI(raw)
+	if len(gpus) != 1 {
+		t.Fatalf("gpus = %+v", gpus)
+	}
+	gpu := gpus[0]
+	if gpu.Vendor != "Radeon" || gpu.Name != "Radeon RX 7900 XTX" || gpu.Utilization != 44 {
+		t.Fatalf("gpu = %+v", gpu)
+	}
+	if gpu.MemoryTotal != 25753026560 || gpu.MemoryUsed != 4294967296 || gpu.Temperature != 52 || gpu.Power != 188 {
+		t.Fatalf("metrics = %+v", gpu)
+	}
+}
