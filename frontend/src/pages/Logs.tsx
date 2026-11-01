@@ -164,12 +164,7 @@ export function LogsPage() {
 
       <Card className="overflow-hidden border-[#1f2230] bg-[#08090d]">
         <div className="flex items-center gap-2 border-b border-[#1f2230] px-4 py-2.5">
-          <span className="flex gap-1.5">
-            <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-            <span className="size-2.5 rounded-full bg-[#febc2e]" />
-            <span className="size-2.5 rounded-full bg-[#28c840]" />
-          </span>
-          <span className="ml-2 flex items-center gap-2 font-mono text-[10px] text-[#8b93a7]">
+          <span className="flex items-center gap-2 font-mono text-[10px] text-[#8b93a7]">
             <Terminal className="size-3" /> {SOURCE_PATHS[source] ?? source}
           </span>
           <span className="ml-auto flex items-center gap-1.5 font-mono text-[9px] text-[#5f6678]">
