@@ -427,7 +427,7 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
   const running = container.state === "running";
   return (
     <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left lg:w-56 lg:flex-none">
         <EntityIcon
           src={containerIconURL(container.id)}
           name={container.name}
@@ -449,6 +449,7 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
       <span className="hidden w-28 shrink-0 truncate font-mono text-[9.5px] text-subtle lg:block" title={container.ip || "—"}>
         {container.ip || "—"}
       </span>
+      <span className="hidden flex-1 lg:block" aria-hidden="true" />
       <Badge tone={running ? "success" : "neutral"} dot className="shrink-0">{running ? "Running" : container.state}</Badge>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
