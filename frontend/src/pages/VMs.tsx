@@ -167,6 +167,15 @@ export function VMsPage() {
             </div>
           ) : (
             <Card>
+              <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
+                <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Machine</span>
+                <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">State</span>
+                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">vCPUs</span>
+                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">Memory</span>
+                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">CPU</span>
+                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">RAM</span>
+                <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Actions</span>
+              </div>
               <div className="divide-y divide-line/60">
                 {vms.map((vm) => (
                   <VMRow
@@ -552,12 +561,14 @@ function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; on
           <span className="block truncate text-[9.5px] text-subtle">{vm.os}</span>
         </span>
       </button>
-      <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot>{running ? "running" : vm.state}</Badge>
+      <span className="w-20 shrink-0">
+        <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot>{running ? "running" : vm.state}</Badge>
+      </span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{vm.vcpus} vCPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(vm.memory)}</span>
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.cpuUsage.toFixed(0)}%` : "—"}</span>
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.memoryUsage.toFixed(0)}%` : "—"}</span>
-      <div className="flex items-center gap-1">
+      <div className="flex w-[140px] shrink-0 items-center justify-end gap-1">
         <IconButton
           label={running ? "Open console" : "Start the VM to open its console"}
           size="sm"

@@ -329,6 +329,20 @@ export function DockerPage() {
         </div>
       ) : (
         <Card>
+          <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
+            <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-56 lg:flex-none">
+              Container
+            </span>
+            <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">Image</span>
+            <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">Network</span>
+            <span className="hidden w-28 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">IP</span>
+            <span className="hidden flex-1 lg:block" aria-hidden="true" />
+            <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">State</span>
+            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
+            <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">Memory</span>
+            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">Uptime</span>
+            <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Actions</span>
+          </div>
           <div className="divide-y divide-line/60">
             {filtered.map((container) => (
               <ContainerRow
@@ -634,11 +648,13 @@ function ContainerRow({
         {container.ip || "—"}
       </span>
       <span className="hidden flex-1 lg:block" aria-hidden="true" />
-      <Badge tone={running ? "success" : "neutral"} dot className="shrink-0">{running ? "Running" : container.state}</Badge>
+      <span className="w-20 shrink-0">
+        <Badge tone={running ? "success" : "neutral"} dot>{running ? "Running" : container.state}</Badge>
+      </span>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
       <span className="hidden w-16 text-right font-mono text-[9px] text-subtle md:block">{running ? formatUptime(container.uptime) : "—"}</span>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex w-[176px] shrink-0 items-center justify-end gap-1">
         {container.updateAvailable ? (
           <IconButton
             label="Update image and restart"

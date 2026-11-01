@@ -228,6 +228,8 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
 - Search covers name, image, network, IP and category.
 - Cards show a coloured halo, live CPU/RAM, ports, network/IP and uptime.
 
+![Container list](screenshots/docker-list.png)
+
 ### Details
 
 ![Container details](screenshots/docker-drawer.png)
@@ -277,6 +279,8 @@ synchronised and the previous template is stored in **Historique**.
 
 - Grid or list view, persisted across refreshes.
 - Cards and rows show state, OS, vCPU, memory, CPU/RAM usage, IP, primary GPU and uptime.
+
+![VM list](screenshots/vms-list.png)
 - Lifecycle: start, suspend/resume, shut down.
 - **Autostart** toggle uses libvirt `virsh autostart`.
 - **XML** opens the libvirt domain definition read-only, with copy-to-clipboard.
