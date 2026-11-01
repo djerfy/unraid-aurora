@@ -217,6 +217,7 @@ export function VMsPage() {
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
         title={selected?.name ?? ""}
+        width="max-w-[1040px]"
         subtitle={
           selected ? (
             <span className="flex items-center gap-2">
