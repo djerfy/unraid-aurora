@@ -94,7 +94,7 @@ export function Drawer({
   icon,
   children,
   footer,
-  width = "max-w-[520px]",
+  width = "max-w-[1040px]",
 }: {
   open: boolean;
   onClose: () => void;
