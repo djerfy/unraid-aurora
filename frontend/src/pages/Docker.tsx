@@ -15,11 +15,14 @@ import {
   RefreshCw,
   RotateCw,
   Search,
+  Settings2,
   Square,
   Terminal,
   TriangleAlert,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
+import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu } from "../components/ui/overlays";
 import {
   Badge,
@@ -40,7 +43,6 @@ import {
   formatMemory,
   formatPercent,
   formatUptime,
-  hexToRgba,
   relativeTime,
 } from "../lib/format";
 import type { Container } from "../lib/types";
@@ -57,6 +59,7 @@ export function DockerPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [query, setQuery] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [editing, setEditing] = useState<Container | null>(null);
 
   const selectedName = params.get("container");
   const selected = snapshot?.containers.find((container) => container.name === selectedName) ?? null;
@@ -221,6 +224,7 @@ export function DockerPage() {
               key={container.id}
               container={container}
               onOpen={() => openContainer(container)}
+              onEdit={() => setEditing(container)}
               busy={action.isPending && action.variables?.target === container.name}
             />
           ))}
@@ -233,6 +237,7 @@ export function DockerPage() {
                 key={container.id}
                 container={container}
                 onOpen={() => openContainer(container)}
+                onEdit={() => setEditing(container)}
                 busy={action.isPending && action.variables?.target === container.name}
               />
             ))}
@@ -243,13 +248,19 @@ export function DockerPage() {
       <ContainerDrawer
         container={selected}
         onClose={closeContainer}
+        onEdit={(container) => {
+          setEditing(container);
+          closeContainer();
+        }}
         busy={action.isPending && action.variables?.target === selected?.name}
       />
+
+      <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
     </>
   );
 }
 
-function ContainerCard({ container, onOpen, busy }: { container: Container; onOpen: () => void; busy?: boolean }) {
+function ContainerCard({ container, onOpen, onEdit, busy }: { container: Container; onOpen: () => void; onEdit: () => void; busy?: boolean }) {
   const action = useAction();
   const running = container.state === "running";
   const ports = container.ports ?? [];
@@ -259,16 +270,12 @@ function ContainerCard({ container, onOpen, busy }: { container: Container; onOp
     <Card hover className="card-pad group">
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
-          <span
-            className="grid size-10 shrink-0 place-items-center rounded-xl border text-[12px] font-bold uppercase"
-            style={{
-              color: container.color,
-              backgroundColor: hexToRgba(container.color, 0.12),
-              borderColor: hexToRgba(container.color, 0.24),
-            }}
-          >
-            {container.name.slice(0, 2)}
-          </span>
+          <EntityIcon
+            src={containerIconURL(container.id)}
+            name={container.name}
+            color={container.color}
+            size={40}
+          />
           <span className="min-w-0">
             <span className="flex items-center gap-2">
               <span className="truncate text-[13px] font-semibold text-ink transition group-hover:text-[var(--accent)]">
@@ -287,6 +294,7 @@ function ContainerCard({ container, onOpen, busy }: { container: Container; onOp
           }
           items={[
             { label: "Details & logs", onSelect: onOpen },
+            { label: "Edit settings", icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
             {
               label: running ? "Restart" : "Start",
               onSelect: () =>
@@ -391,18 +399,19 @@ function ContainerCard({ container, onOpen, busy }: { container: Container; onOp
   );
 }
 
-function ContainerRow({ container, onOpen, busy }: { container: Container; onOpen: () => void; busy?: boolean }) {
+function ContainerRow({ container, onOpen, onEdit, busy }: { container: Container; onOpen: () => void; onEdit: () => void; busy?: boolean }) {
   const action = useAction();
   const running = container.state === "running";
   return (
     <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-        <span
-          className="grid size-8 shrink-0 place-items-center rounded-lg border text-[10px] font-bold uppercase"
-          style={{ color: container.color, backgroundColor: hexToRgba(container.color, 0.12), borderColor: hexToRgba(container.color, 0.22) }}
-        >
-          {container.name.slice(0, 2)}
-        </span>
+        <EntityIcon
+          src={containerIconURL(container.id)}
+          name={container.name}
+          color={container.color}
+          size={32}
+          className="rounded-lg"
+        />
         <span className="min-w-0">
           <span className="flex items-center gap-2 text-[12px] font-medium text-ink">
             {container.name}
@@ -430,6 +439,9 @@ function ContainerRow({ container, onOpen, busy }: { container: Container; onOpe
         >
           {running ? <RotateCw className={cn("size-3.5", busy && "animate-spin")} /> : <Play className="size-3.5" />}
         </IconButton>
+        <IconButton label="Edit settings" size="sm" onClick={onEdit}>
+          <Settings2 className="size-3.5" />
+        </IconButton>
         <IconButton label="Details" size="sm" onClick={onOpen}>
           <Terminal className="size-3.5" />
         </IconButton>
@@ -441,10 +453,12 @@ function ContainerRow({ container, onOpen, busy }: { container: Container; onOpe
 function ContainerDrawer({
   container,
   onClose,
+  onEdit,
   busy,
 }: {
   container: Container | null;
   onClose: () => void;
+  onEdit: (container: Container) => void;
   busy?: boolean;
 }) {
   const action = useAction();
@@ -524,6 +538,14 @@ function ContainerDrawer({
       }
     >
       <div className="space-y-5">
+        <Button
+          variant="secondary"
+          icon={<Settings2 className="size-3.5" />}
+          className="w-full"
+          onClick={() => onEdit(container)}
+        >
+          Edit configuration
+        </Button>
         <div className="grid grid-cols-2 gap-3">
           <Info label="Repository" value={container.repository} className="col-span-2" />
           <Info label="Tag" value={container.tag} />

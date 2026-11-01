@@ -93,6 +93,8 @@ Reads the same sources as the original webGUI:
 | Parity history | `/boot/config/parity-checks.log` |
 | UPS | `apcaccess status` |
 | Logs | tail of `/var/log/syslog` (`docker.log` for Docker) |
+| Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
+| VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 
 Every read is best-effort. A missing file or binary yields zero values, never a failed snapshot. The only
@@ -115,7 +117,11 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/pools` | Cache/boot pools |
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |
+| `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
+| `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
+| `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |
 | `GET` | `/api/v1/vms` | Virtual machines |
+| `GET` | `/api/v1/vms/{id}/icon` | Unraid OS icon for the VM |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
 | `GET` | `/api/v1/users` | Accounts and access |
 | `GET` | `/api/v1/plugins` | Installed plugins |
@@ -181,6 +187,7 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 | `disk.spinup` / `disk.spindown` | `mdcmd spinup\|spindown <device>` |
 | `container.start/stop/restart` | `docker start\|stop\|restart <name>` |
 | `container.update` | unraid `update_container` script |
+| container config `PUT` | Docker inspect → stop → rename → create → start, with rollback |
 | `vm.start/stop/pause/resume` | `virsh start\|shutdown\|suspend\|resume` |
 | `parity.start/stop/pause/resume` | `emcmd cmdCheck=...` |
 | `notification.ack/archive/ackall` | move `.notify` files from unread to archive |

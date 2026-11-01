@@ -470,8 +470,8 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
 			State: c.State, Status: c.Status, Autostart: c.Labels["com.centurylinklabs.watchtower.enable"] != "false",
 			Ports: ports, Color: color, Created: time.Unix(c.Created, 0),
-			Icon: name, WebUI: c.Labels["net.unraid.docker.webui"],
-			RestartPolicy: c.Labels["net.unraid.docker.icon"],
+			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
+			RestartPolicy: "",
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

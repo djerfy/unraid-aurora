@@ -149,6 +149,25 @@ export type Pool = {
 
 export type Port = { host: number; container: number; protocol: string; label?: string };
 
+export type ContainerEnv = { key: string; value: string };
+
+export type ContainerVolume = {
+  source: string;
+  destination: string;
+  readOnly: boolean;
+};
+
+export type ContainerConfig = {
+  id: string;
+  name: string;
+  image: string;
+  restartPolicy: string;
+  networkMode: string;
+  ports: Port[];
+  volumes: ContainerVolume[];
+  env: ContainerEnv[];
+};
+
 export type Container = {
   id: string;
   name: string;

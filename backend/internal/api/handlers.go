@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -186,6 +187,74 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) containerIcon(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	data, contentType, err := s.provider.ContainerIcon(ctx, r.PathValue("id"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	serveIcon(w, data, contentType)
+}
+
+func (s *Server) vmIcon(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	data, contentType, err := s.provider.VMIcon(ctx, r.PathValue("id"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	serveIcon(w, data, contentType)
+}
+
+func serveIcon(w http.ResponseWriter, data []byte, contentType string) {
+	if contentType == "" {
+		contentType = "image/png"
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+func (s *Server) containerConfig(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	cfg, err := s.provider.ContainerConfig(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, cfg)
+}
+
+func (s *Server) updateContainerConfig(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var cfg model.ContainerConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	if err := provider.ValidateContainerConfig(cfg); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_config", err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if err := s.provider.UpdateContainerConfig(ctx, r.PathValue("id"), cfg); err != nil {
+		s.log.Error("container update failed", "id", r.PathValue("id"), "error", err)
+		writeError(w, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+	s.log.Info("container configuration updated", "id", r.PathValue("id"), "name", cfg.Name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) vms(w http.ResponseWriter, r *http.Request) {

@@ -206,6 +206,28 @@ type Container struct {
 	RestartPolicy   string    `json:"restartPolicy"`
 }
 
+type ContainerEnv struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type ContainerVolume struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+	ReadOnly    bool   `json:"readOnly"`
+}
+
+type ContainerConfig struct {
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Image         string            `json:"image"`
+	RestartPolicy string            `json:"restartPolicy"`
+	NetworkMode   string            `json:"networkMode"`
+	Ports         []Port            `json:"ports"`
+	Volumes       []ContainerVolume `json:"volumes"`
+	Env           []ContainerEnv    `json:"env"`
+}
+
 type VM struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`

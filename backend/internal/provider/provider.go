@@ -20,7 +20,11 @@ type Provider interface {
 	Pools(ctx context.Context) ([]model.Pool, error)
 	Containers(ctx context.Context) ([]model.Container, error)
 	ContainerLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)
+	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
+	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
+	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error
 	VMs(ctx context.Context) ([]model.VM, error)
+	VMIcon(ctx context.Context, id string) ([]byte, string, error)
 	Network(ctx context.Context) (model.Network, error)
 	Users(ctx context.Context) ([]model.User, error)
 	Plugins(ctx context.Context) ([]model.Plugin, error)

@@ -57,6 +57,13 @@ export const api = {
     }),
   containerLogs: (id: string, lines = 160) =>
     request<LogLine[]>(`/api/v1/docker/containers/${encodeURIComponent(id)}/logs?lines=${lines}`),
+  containerConfig: (id: string) =>
+    request<import("./types").ContainerConfig>(`/api/v1/docker/containers/${encodeURIComponent(id)}/config`),
+  updateContainerConfig: (id: string, config: import("./types").ContainerConfig) =>
+    request<{ ok: boolean }>(`/api/v1/docker/containers/${encodeURIComponent(id)}/config`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
   logs: (source: string, lines = 240) =>
     request<LogLineType[]>(`/api/v1/logs?source=${encodeURIComponent(source)}&lines=${lines}`),
   saveSettings: (settings: Snapshot["settings"]) =>

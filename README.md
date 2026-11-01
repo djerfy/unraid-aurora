@@ -152,6 +152,7 @@ Flags `-addr` and `-version` are also available.
 | UPS | `apcaccess status` |
 | Logs | `/var/log/syslog`, `/var/log/docker.log` |
 | TLS | `/boot/config/ssl/certs/<server>_unraid_bundle.pem` |
+| Icons | Docker icon cache, `templates-user` XML, `dynamix.vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 | Credentials | `getent shadow root`, `/etc/shadow` |
 
@@ -191,7 +192,7 @@ Deep dives:
 |---|---|
 | Dashboard | Health score, CPU per-core matrix, memory, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
-| Containers | Docker workloads, CPU/memory, ports, updates, start/stop/restart, logs drawer |
+| Containers | Docker workloads with real icons, CPU/memory, ports, updates, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, lifecycle actions |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
 | Users | Accounts, roles, share access matrix, account drawer |

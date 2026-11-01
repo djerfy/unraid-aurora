@@ -15,6 +15,7 @@ import {
   SquareTerminal,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { Drawer } from "../components/ui/overlays";
 import {
   Badge,
@@ -255,12 +256,13 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
       />
       <div className="relative flex items-start justify-between gap-3">
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
-          <span
-            className="grid size-11 shrink-0 place-items-center rounded-xl border"
-            style={{ color: vm.color, backgroundColor: hexToRgba(vm.color, 0.12), borderColor: hexToRgba(vm.color, 0.24) }}
-          >
-            <Icon className="size-5" />
-          </span>
+          <EntityIcon
+            src={vmIconURL(vm.id)}
+            name={vm.name}
+            color={vm.color}
+            size={44}
+            fallback={<Icon className="size-5" />}
+          />
           <span className="min-w-0">
             <span className="block truncate text-[13px] font-semibold text-ink transition group-hover:text-[var(--accent)]">
               {vm.name}

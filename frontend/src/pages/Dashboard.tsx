@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { AreaChart, CoreMatrix, Ring, SegmentBar } from "../components/ui/charts";
 import {
   Badge,
@@ -37,7 +38,6 @@ import {
   formatSpeed,
   formatUptime,
   greeting,
-  hexToRgba,
   relativeTime,
 } from "../lib/format";
 import type { Disk } from "../lib/types";
@@ -427,16 +427,13 @@ export function DashboardPage() {
                 onClick={() => navigate(`/docker?container=${encodeURIComponent(container.name)}`)}
                 className="group flex w-full items-center gap-3 py-2 text-left first:pt-0 last:pb-0"
               >
-                <span
-                  className="grid size-7 shrink-0 place-items-center rounded-lg border text-[10px] font-bold uppercase"
-                  style={{
-                    color: container.color,
-                    backgroundColor: hexToRgba(container.color, 0.12),
-                    borderColor: hexToRgba(container.color, 0.22),
-                  }}
-                >
-                  {container.name.slice(0, 2)}
-                </span>
+                <EntityIcon
+                  src={containerIconURL(container.id)}
+                  name={container.name}
+                  color={container.color}
+                  size={28}
+                  className="rounded-lg"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12px] font-medium text-ink transition group-hover:text-accent">{container.name}</p>
                   <p className="truncate text-[9.5px] text-subtle">{container.image}</p>
