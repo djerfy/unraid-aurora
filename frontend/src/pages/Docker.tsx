@@ -50,6 +50,7 @@ import {
   formatMemory,
   formatPercent,
   formatUptime,
+  hexToRgba,
   relativeTime,
 } from "../lib/format";
 import type { Container } from "../lib/types";
@@ -427,8 +428,12 @@ function ContainerCard({
   const memoryUsage = container.memoryLimit ? (container.memory / container.memoryLimit) * 100 : 0;
 
   return (
-    <Card hover className="card-pad group">
-      <div className="flex items-start justify-between gap-3">
+    <Card hover className="card-pad group relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full blur-3xl"
+        style={{ background: hexToRgba(container.color, 0.14) }}
+      />
+      <div className="relative flex items-start justify-between gap-3">
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
           <EntityIcon
             src={containerIconURL(container.id)}
@@ -491,7 +496,7 @@ function ContainerCard({
         />
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="relative mt-4 flex items-center gap-2">
         <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot pulse={running}>
           {running ? "Running" : container.state}
         </Badge>
@@ -499,7 +504,7 @@ function ContainerCard({
         {container.updateAvailable ? <Badge tone="warning" className="ml-auto">Update</Badge> : null}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="relative mt-4 grid grid-cols-2 gap-3">
         <div>
           <div className="flex items-center justify-between text-[9.5px]">
             <span className="text-subtle">CPU</span>
@@ -516,7 +521,7 @@ function ContainerCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
         {ports.slice(0, 3).map((port) => (
           <span key={`${port.host}-${port.protocol}`} className="chip font-mono text-[9.5px]">
             {port.host}:{port.container}/{port.protocol}
@@ -526,14 +531,14 @@ function ContainerCard({
         {ports.length === 0 ? <span className="text-[9.5px] text-subtle">No published ports</span> : null}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
+      <div className="relative mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
         <span className="flex items-center gap-1">
           <Network className="size-3" /> {container.network || "—"}
         </span>
         <span className="font-mono">{container.ip || "no address"}</span>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
+      <div className="relative mt-4 flex items-center gap-2 border-t border-line pt-3">
         <span className="flex items-center gap-1 text-[9.5px] text-subtle">
           <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : "stopped"}
         </span>

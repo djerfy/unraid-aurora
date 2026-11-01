@@ -36,8 +36,8 @@ export function EntityIcon({
         width: size,
         height: size,
         color,
-        backgroundColor: `color-mix(in srgb, ${color} 11%, var(--surface-2))`,
-        borderColor: `color-mix(in srgb, ${color} 22%, transparent)`,
+        backgroundColor: "var(--surface-2)",
+        borderColor: "var(--line)",
       }}
     >
       {!loaded || failed || !src ? (
