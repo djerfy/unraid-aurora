@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownToLine,
   Boxes,
   Check,
   Clock3,
+  CloudDownload,
   Copy,
   Cpu,
   ExternalLink,
@@ -14,18 +15,21 @@ import {
   MemoryStick,
   Network,
   Play,
+  Plus,
   RefreshCw,
   RotateCw,
   Search,
   Settings2,
   Square,
   Terminal,
+  Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { ContainerCreateModal } from "../components/containers/ContainerCreate";
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
-import { Drawer, Menu } from "../components/ui/overlays";
+import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
   Badge,
   Button,
@@ -68,6 +72,9 @@ export function DockerPage() {
   const [query, setQuery] = useState("");
   const [updating, setUpdating] = useState(false);
   const [editing, setEditing] = useState<Container | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [removing, setRemoving] = useState<Container | null>(null);
+  const [removeError, setRemoveError] = useState("");
 
   useEffect(() => {
     try {
@@ -132,6 +139,40 @@ export function DockerPage() {
     }
   };
 
+  const checkUpdates = useMutation({
+    mutationFn: api.checkContainerUpdates,
+    onSuccess: (checks) => {
+      const available = checks.filter((check) => check.update).length;
+      const failed = checks.filter((check) => check.error).length;
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({
+        kind: available ? "warning" : "success",
+        title: available ? `${available} update${available > 1 ? "s" : ""} available` : "All images are up to date",
+        description:
+          `${checks.length} image${checks.length > 1 ? "s" : ""} checked` +
+          (failed ? ` · ${failed} could not be checked` : ""),
+      });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: "Update check failed", description: error.message });
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (container: Container) => api.removeContainer(container.id),
+    onSuccess: (_result, container) => {
+      toast({ kind: "info", title: `${container.name} removed` });
+      if (selectedName === container.name) closeContainer();
+      setRemoving(null);
+      setRemoveError("");
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    },
+    onError: (error: Error) => {
+      setRemoveError(error.message);
+      toast({ kind: "error", title: "Removal failed", description: error.message });
+    },
+  });
+
   const totalCpu = running.reduce((sum, container) => sum + container.cpu, 0);
   const totalMemory = running.reduce((sum, container) => sum + container.memory, 0);
 
@@ -154,13 +195,24 @@ export function DockerPage() {
               Refresh
             </Button>
             <Button
-              variant="primary"
+              variant="secondary"
+              icon={<CloudDownload className="size-3.5" />}
+              loading={checkUpdates.isPending}
+              onClick={() => checkUpdates.mutate()}
+            >
+              Check updates
+            </Button>
+            <Button
+              variant="secondary"
               icon={<ArrowDownToLine className="size-3.5" />}
               loading={updating}
               disabled={updates.length === 0}
               onClick={() => void updateAll()}
             >
-              Update {updates.length > 0 ? `(${updates.length})` : "images"}
+              Update all {updates.length > 0 ? `(${updates.length})` : ""}
+            </Button>
+            <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setCreating(true)}>
+              New container
             </Button>
           </>
         }
@@ -241,6 +293,10 @@ export function DockerPage() {
               container={container}
               onOpen={() => openContainer(container)}
               onEdit={() => setEditing(container)}
+              onRemove={() => {
+                setRemoveError("");
+                setRemoving(container);
+              }}
               busy={action.isPending && action.variables?.target === container.name}
             />
           ))}
@@ -254,6 +310,10 @@ export function DockerPage() {
                 container={container}
                 onOpen={() => openContainer(container)}
                 onEdit={() => setEditing(container)}
+                onRemove={() => {
+                  setRemoveError("");
+                  setRemoving(container);
+                }}
                 busy={action.isPending && action.variables?.target === container.name}
               />
             ))}
@@ -272,11 +332,60 @@ export function DockerPage() {
       />
 
       <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
+
+      <ContainerCreateModal open={creating} onClose={() => setCreating(false)} />
+
+      <Modal
+        open={Boolean(removing)}
+        onClose={() => setRemoving(null)}
+        title={`Remove ${removing?.name ?? "container"}?`}
+        description="The container is stopped and deleted. Bind mounts and appdata stay on disk."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRemoving(null)} disabled={remove.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              icon={<Trash2 className="size-3.5" />}
+              loading={remove.isPending}
+              onClick={() => {
+                if (removing) remove.mutate(removing);
+              }}
+            >
+              Remove container
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-[11px] leading-relaxed text-muted">
+            This action cannot be undone from Aurora. Recreate the container from its image if needed.
+          </p>
+          {removeError ? (
+            <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">
+              {removeError}
+            </div>
+          ) : null}
+        </div>
+      </Modal>
     </>
   );
 }
 
-function ContainerCard({ container, onOpen, onEdit, busy }: { container: Container; onOpen: () => void; onEdit: () => void; busy?: boolean }) {
+function ContainerCard({
+  container,
+  onOpen,
+  onEdit,
+  onRemove,
+  busy,
+}: {
+  container: Container;
+  onOpen: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
+  busy?: boolean;
+}) {
   const action = useAction();
   const running = container.state === "running";
   const ports = container.ports ?? [];
@@ -311,6 +420,18 @@ function ContainerCard({ container, onOpen, onEdit, busy }: { container: Contain
           items={[
             { label: "Details & logs", onSelect: onOpen },
             { label: "Edit settings", icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
+            ...(container.updateAvailable
+              ? [{
+                  label: "Update image & restart",
+                  icon: <ArrowDownToLine className="size-3.5" />,
+                  onSelect: () =>
+                    action.mutate({
+                      kind: "container.update",
+                      target: container.name,
+                      success: `${container.name} updated`,
+                    }),
+                }]
+              : []),
             {
               label: running ? "Restart" : "Start",
               onSelect: () =>
@@ -335,6 +456,7 @@ function ContainerCard({ container, onOpen, onEdit, busy }: { container: Contain
                   success: `${container.name} stopped`,
                 }),
             },
+            { label: "Remove container", icon: <Trash2 className="size-3.5" />, danger: true, onSelect: onRemove },
           ]}
         />
       </div>
@@ -386,6 +508,22 @@ function ContainerCard({ container, onOpen, onEdit, busy }: { container: Contain
           <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : "stopped"}
         </span>
         <div className="ml-auto flex items-center gap-1">
+          {container.updateAvailable ? (
+            <IconButton
+              label="Update image and restart"
+              size="sm"
+              disabled={busy}
+              onClick={() =>
+                action.mutate({
+                  kind: "container.update",
+                  target: container.name,
+                  success: `${container.name} updated`,
+                })
+              }
+            >
+              <ArrowDownToLine className="size-3.5 text-[var(--warning)]" />
+            </IconButton>
+          ) : null}
           <IconButton
             label={running ? "Restart container" : "Start container"}
             size="sm"
@@ -422,7 +560,19 @@ function ContainerCard({ container, onOpen, onEdit, busy }: { container: Contain
   );
 }
 
-function ContainerRow({ container, onOpen, onEdit, busy }: { container: Container; onOpen: () => void; onEdit: () => void; busy?: boolean }) {
+function ContainerRow({
+  container,
+  onOpen,
+  onEdit,
+  onRemove,
+  busy,
+}: {
+  container: Container;
+  onOpen: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
+  busy?: boolean;
+}) {
   const action = useAction();
   const running = container.state === "running";
   return (
@@ -455,6 +605,22 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
       <span className="hidden w-16 text-right font-mono text-[9px] text-subtle md:block">{running ? formatUptime(container.uptime) : "—"}</span>
       <div className="flex shrink-0 items-center gap-1">
+        {container.updateAvailable ? (
+          <IconButton
+            label="Update image and restart"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              action.mutate({
+                kind: "container.update",
+                target: container.name,
+                success: `${container.name} updated`,
+              })
+            }
+          >
+            <ArrowDownToLine className="size-3.5 text-[var(--warning)]" />
+          </IconButton>
+        ) : null}
         <IconButton
           label={running ? "Restart" : "Start"}
           size="sm"
@@ -474,6 +640,9 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
         </IconButton>
         <IconButton label="Details and logs" size="sm" onClick={onOpen}>
           <InfoIcon className="size-3.5" />
+        </IconButton>
+        <IconButton label="Remove container" size="sm" onClick={onRemove}>
+          <Trash2 className="size-3.5" />
         </IconButton>
       </div>
     </div>

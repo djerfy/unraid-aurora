@@ -57,6 +57,18 @@ export const api = {
     }),
   containerLogs: (id: string, lines = 160) =>
     request<LogLine[]>(`/api/v1/docker/containers/${encodeURIComponent(id)}/logs?lines=${lines}`),
+  createContainer: (options: import("./types").ContainerCreateOptions) =>
+    request<{ id: string }>("/api/v1/docker/containers", {
+      method: "POST",
+      body: JSON.stringify(options),
+    }),
+  removeContainer: (id: string) =>
+    request<{ ok: boolean }>(`/api/v1/docker/containers/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  containerNetworks: () => request<string[]>("/api/v1/docker/networks"),
+  checkContainerUpdates: () => request<import("./types").ImageCheck[]>("/api/v1/docker/check-updates", {
+    method: "POST",
+    body: "{}",
+  }),
   containerConfig: (id: string) =>
     request<import("./types").ContainerConfig>(`/api/v1/docker/containers/${encodeURIComponent(id)}/config`),
   updateContainerConfig: (id: string, config: import("./types").ContainerConfig) =>

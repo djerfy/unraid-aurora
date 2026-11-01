@@ -23,6 +23,10 @@ type Provider interface {
 	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error
+	CreateContainer(ctx context.Context, opts model.ContainerCreateOptions) (string, error)
+	RemoveContainer(ctx context.Context, id string) error
+	CheckContainerUpdates(ctx context.Context) ([]model.ImageCheck, error)
+	DockerNetworks(ctx context.Context) ([]string, error)
 	VMs(ctx context.Context) ([]model.VM, error)
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error

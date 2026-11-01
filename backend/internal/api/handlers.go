@@ -295,6 +295,80 @@ func (s *Server) updateContainerConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+func (s *Server) createContainer(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var opts model.ContainerCreateOptions
+	if !s.decode(w, r, &opts) {
+		return
+	}
+	if err := provider.ValidateContainerCreateOptions(opts); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_container", err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	id, err := s.provider.CreateContainer(ctx, opts)
+	if err != nil {
+		s.log.Error("container creation failed", "name", opts.Name, "error", err)
+		writeError(w, http.StatusInternalServerError, "create_failed", err.Error())
+		return
+	}
+	s.log.Info("container created", "name", opts.Name, "image", opts.Image, "id", id)
+	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
+func (s *Server) removeContainer(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if err := s.provider.RemoveContainer(ctx, r.PathValue("id")); err != nil {
+		s.log.Error("container removal failed", "id", r.PathValue("id"), "error", err)
+		writeError(w, http.StatusInternalServerError, "remove_failed", err.Error())
+		return
+	}
+	s.log.Info("container removed", "id", r.PathValue("id"))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) dockerNetworks(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	networks, err := s.provider.DockerNetworks(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, networks)
+}
+
+func (s *Server) checkContainerUpdates(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	checks, err := s.provider.CheckContainerUpdates(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	updates := 0
+	for _, check := range checks {
+		if check.Update {
+			updates++
+		}
+	}
+	s.log.Info("container image check completed", "images", len(checks), "updates", updates)
+	writeJSON(w, http.StatusOK, checks)
+}
+
 func (s *Server) vms(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

@@ -22,6 +22,10 @@ var envKeyPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var volumeNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 func (l *Live) dockerDo(ctx context.Context, method, path string, body any) ([]byte, error) {
+	return l.dockerDoHeaders(ctx, method, path, body, nil)
+}
+
+func (l *Live) dockerDoHeaders(ctx context.Context, method, path string, body any, headers map[string]string) ([]byte, error) {
 	var reader io.Reader
 	if body != nil {
 		raw, err := json.Marshal(body)
@@ -36,6 +40,9 @@ func (l *Live) dockerDo(ctx context.Context, method, path string, body any) ([]b
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 	client := l.client
 	if client.Timeout > 0 {

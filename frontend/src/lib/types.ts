@@ -191,6 +191,27 @@ export type ContainerVolume = {
   readOnly: boolean;
 };
 
+export type ContainerCreateOptions = {
+  name: string;
+  image: string;
+  networkMode: string;
+  restartPolicy: string;
+  ports: Port[];
+  volumes: ContainerVolume[];
+  env: ContainerEnv[];
+  icon: string;
+  webUi: string;
+  privileged: boolean;
+};
+
+export type ImageCheck = {
+  image: string;
+  local: string;
+  remote: string;
+  update: boolean;
+  error?: string;
+};
+
 export type ContainerConfig = {
   id: string;
   name: string;

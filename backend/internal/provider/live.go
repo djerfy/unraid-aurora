@@ -44,6 +44,10 @@ type Live struct {
 	settings  model.Settings
 	collected model.Metrics
 	client    *http.Client
+	webClient *http.Client
+
+	imageMu      sync.Mutex
+	imageUpdates map[string]bool
 
 	statsMu        sync.Mutex
 	containerStats map[string]cachedContainerStats
@@ -91,6 +95,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 			RefreshInterval: 5, Language: "en", TemperatureUnit: "celsius",
 		},
 		containerStats: map[string]cachedContainerStats{},
+		imageUpdates:   map[string]bool{},
 		vmCPU:          map[string]vmCPUSample{},
 		moverStop:      make(chan struct{}),
 	}
@@ -106,6 +111,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 			},
 		},
 	}
+	l.webClient = &http.Client{Timeout: 20 * time.Second}
 	l.lastCPU = readCPU()
 	l.lastNet = readNet()
 	l.lastDisk = readDiskStats()
@@ -442,6 +448,15 @@ func (l *Live) Pools(ctx context.Context) ([]model.Pool, error) {
 }
 
 func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
+	containers, err := l.listContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	l.enrichContainerStats(ctx, containers)
+	return containers, nil
+}
+
+func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/containers/json?all=1", nil)
 	if err != nil {
 		return nil, err
@@ -498,11 +513,10 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 			State: c.State, Status: c.Status, Autostart: c.Labels["com.centurylinklabs.watchtower.enable"] != "false",
 			Ports: ports, Color: color, Created: time.Unix(c.Created, 0),
 			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
-			RestartPolicy: "",
+			RestartPolicy: "", UpdateAvailable: l.imageUpdate(c.Image),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	l.enrichContainerStats(ctx, out)
 	return out, nil
 }
 
@@ -899,7 +913,7 @@ func (l *Live) Perform(ctx context.Context, action model.Action) error {
 	case ActionContainerRestart:
 		return run("/usr/bin/docker", "restart", action.Target)
 	case ActionContainerUpdate:
-		return run("/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container", action.Target)
+		return l.UpdateContainerImage(ctx, action.Target)
 	case ActionVMStart:
 		return run("/usr/bin/virsh", "start", action.Target)
 	case ActionVMStop:

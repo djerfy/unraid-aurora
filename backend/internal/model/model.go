@@ -219,6 +219,27 @@ type ContainerEnv struct {
 	Value string `json:"value"`
 }
 
+type ContainerCreateOptions struct {
+	Name          string            `json:"name"`
+	Image         string            `json:"image"`
+	NetworkMode   string            `json:"networkMode"`
+	RestartPolicy string            `json:"restartPolicy"`
+	Ports         []Port            `json:"ports"`
+	Volumes       []ContainerVolume `json:"volumes"`
+	Env           []ContainerEnv    `json:"env"`
+	Icon          string            `json:"icon"`
+	WebUI         string            `json:"webUi"`
+	Privileged    bool              `json:"privileged"`
+}
+
+type ImageCheck struct {
+	Image  string `json:"image"`
+	Local  string `json:"local"`
+	Remote string `json:"remote"`
+	Update bool   `json:"update"`
+	Error  string `json:"error,omitempty"`
+}
+
 type ContainerVolume struct {
 	Source      string `json:"source"`
 	Destination string `json:"destination"`

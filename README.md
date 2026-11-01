@@ -192,7 +192,7 @@ Deep dives:
 |---|---|
 | Dashboard | Health score, CPU per-core matrix, memory, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
-| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, updates, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
+| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, image update checks, create/remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, lifecycle actions |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |

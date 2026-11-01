@@ -1,11 +1,17 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, FolderPlus, Plus, Save, Settings2, Trash2 } from "lucide-react";
+import { AlertTriangle, FolderPlus, Plus, Save, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { Container, ContainerConfig, ContainerEnv, ContainerVolume } from "../../lib/types";
 import { EntityIcon, containerIconURL } from "../ui/entity-icon";
 import { Modal } from "../ui/overlays";
 import { Badge, Button, IconButton, Switch } from "../ui/primitives";
+import {
+  EmptyLine,
+  NumberField,
+  SectionHeader,
+  validateContainerFields,
+} from "./container-form";
 import { useToast } from "../../app/ToastProvider";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
@@ -86,7 +92,7 @@ export function ContainerSettingsModal({
 
   const submit = () => {
     if (!draft) return;
-    const validation = validate(draft);
+    const validation = validateContainerFields(draft);
     if (validation) {
       setError(validation);
       return;
@@ -336,90 +342,3 @@ export function ContainerSettingsModal({
   );
 }
 
-function SectionHeader({
-  title,
-  hint,
-  onAdd,
-  addLabel,
-}: {
-  title: string;
-  hint: string;
-  onAdd?: () => void;
-  addLabel?: string;
-}) {
-  return (
-    <div className="mb-2.5 flex items-end justify-between gap-3">
-      <div>
-        <h3 className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-[0.1em] text-soft">
-          <Settings2 className="size-3 text-subtle" /> {title}
-        </h3>
-        <p className="mt-0.5 text-[9.5px] text-subtle">{hint}</p>
-      </div>
-      {onAdd && addLabel ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<Plus className="size-3" />}
-          onClick={onAdd}
-          className="text-[10.5px]"
-        >
-          {addLabel}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <input
-      type="number"
-      min={1}
-      max={65535}
-      value={value || ""}
-      aria-label={label}
-      placeholder={label}
-      onChange={(event) => onChange(Number(event.target.value))}
-      className="h-9 min-w-0 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none transition focus:border-[var(--accent-line)]"
-    />
-  );
-}
-
-function EmptyLine({ icon, text }: { icon: ReactNode; text: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-dashed border-line px-3 py-2 text-[10px] text-subtle">
-      {icon}
-      {text}
-    </div>
-  );
-}
-
-function validate(cfg: ContainerConfig): string {
-  for (const volume of cfg.volumes) {
-    if (!volume.source.trim() || !volume.destination.trim()) {
-      return "Every path needs both a host source and a container destination.";
-    }
-    if (!volume.destination.startsWith("/")) {
-      return `Container path “${volume.destination}” must be absolute.`;
-    }
-  }
-  for (const port of cfg.ports) {
-    if (!Number.isInteger(port.host) || !Number.isInteger(port.container) || port.host < 1 || port.host > 65535 || port.container < 1 || port.container > 65535) {
-      return "Ports must be integers between 1 and 65535.";
-    }
-  }
-  for (const entry of cfg.env) {
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(entry.key)) {
-      return `Environment variable “${entry.key}” has an invalid name.`;
-    }
-  }
-  return "";
-}
