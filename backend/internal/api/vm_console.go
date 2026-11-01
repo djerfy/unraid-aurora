@@ -39,7 +39,7 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.log.Info("vm console opened", "vm", r.PathValue("id"), "tcpPort", console.Port, "wsPort", console.WebSocket, "address", console.Address)
+	s.log.Info("vm console opened", "vm", r.PathValue("id"), "tcpPort", console.Port, "wsPort", console.WebSocket, "address", console.Address, "keyboardDevice", console.Keyboard)
 
 	client, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true, // Origin checked above.

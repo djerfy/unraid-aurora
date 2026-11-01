@@ -58,6 +58,11 @@ export function VMConsolePage() {
           </Button>
         </div>
       </header>
+      {vm && vm.consoleProtocol && !vm.consoleKeyboard ? (
+        <div className="border-b border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] px-4 py-2 text-[10.5px] text-[var(--warning)]">
+          This virtual machine has no keyboard device defined. Add one in the VM settings.
+        </div>
+      ) : null}
       {vm ? (
         <VMConsolePanel
           ref={panelRef}

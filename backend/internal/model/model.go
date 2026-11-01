@@ -303,6 +303,7 @@ type VM struct {
 	ConsoleProtocol  string `json:"consoleProtocol"`
 	ConsolePort      int    `json:"consolePort"`
 	ConsoleWebSocket int    `json:"consoleWebSocket"`
+	ConsoleKeyboard  bool   `json:"consoleKeyboard"`
 }
 
 type Notification struct {
@@ -434,6 +435,7 @@ type VMConsole struct {
 	Port      int    `json:"port"`
 	WebSocket int    `json:"webSocket"`
 	Address   string `json:"address"`
+	Keyboard  bool   `json:"keyboard"`
 }
 
 type GPU struct {

@@ -55,6 +55,7 @@ func (l *Live) vmDetails(ctx context.Context, name string) model.VM {
 			vm.ConsoleProtocol = console.Protocol
 			vm.ConsolePort = console.Port
 			vm.ConsoleWebSocket = console.WebSocket
+			vm.ConsoleKeyboard = console.Keyboard
 		}
 		l.applyVMRuntime(ctx, &vm)
 	}
@@ -142,10 +143,20 @@ func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
 					Address string `xml:"address,attr"`
 				} `xml:"listen"`
 			} `xml:"graphics"`
+			Inputs []struct {
+				Type string `xml:"type,attr"`
+			} `xml:"input"`
 		} `xml:"devices"`
 	}
 	if err := xml.Unmarshal(raw, &domain); err != nil {
 		return model.VMConsole{}, fmt.Errorf("parse domain xml: %w", err)
+	}
+	hasKeyboard := false
+	for _, input := range domain.Devices.Inputs {
+		if strings.EqualFold(input.Type, "keyboard") {
+			hasKeyboard = true
+			break
+		}
 	}
 	var fallback model.VMConsole
 	for _, graphics := range domain.Devices.Graphics {
@@ -153,7 +164,7 @@ func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
 		if protocol != "vnc" && protocol != "spice" {
 			continue
 		}
-		console := model.VMConsole{Name: name, Protocol: protocol, Port: graphics.Port, WebSocket: graphics.WebSocket}
+		console := model.VMConsole{Name: name, Protocol: protocol, Port: graphics.Port, WebSocket: graphics.WebSocket, Keyboard: hasKeyboard}
 		console.Address = graphics.Listen
 		if console.Address == "" && len(graphics.Addresses) > 0 {
 			console.Address = graphics.Addresses[0].Address

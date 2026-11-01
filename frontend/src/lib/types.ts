@@ -296,6 +296,7 @@ export type VM = {
   consoleProtocol: string;
   consolePort: number;
   consoleWebSocket: number;
+  consoleKeyboard: boolean;
 };
 
 export type Notification = {

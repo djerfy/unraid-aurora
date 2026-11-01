@@ -64,6 +64,12 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
         </>
       }
     >
+      {vm.consoleProtocol && !vm.consoleKeyboard ? (
+        <div className="mb-3 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] px-3 py-2.5 text-[10.5px] leading-relaxed text-[var(--warning)]">
+          This virtual machine has no keyboard device defined. Add one (PS/2 or USB) in the VM settings,
+          otherwise the guest will ignore every keystroke.
+        </div>
+      ) : null}
       <VMConsolePanel
         ref={panelRef}
         vm={vm}
