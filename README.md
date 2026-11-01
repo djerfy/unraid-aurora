@@ -167,7 +167,7 @@ and prints the child PID before exiting.
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |
 | UPS | `apcaccess status` |
-| Logs | `/var/log/syslog`, `/var/log/docker.log` |
+| Logs | `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` |
 | TLS | `/boot/config/ssl/certs/<server>_unraid_bundle.pem` |
 | Icons | Docker icon cache, `templates-user` XML, `dynamix.vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
@@ -216,7 +216,7 @@ Deep dives:
 | Users | Accounts, roles, share access matrix, account drawer |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
 | Plugins | Real .plg metadata, version comparison against plugin repositories, streamed updates through the official plugin manager |
-| Logs | Syslog/Docker/parity tail, level + text filters, follow mode, export |
+| Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
 | Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with progress, ETA and run history |

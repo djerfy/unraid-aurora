@@ -29,8 +29,20 @@ import type { LogLine } from "../lib/types";
 const SOURCES = [
   { value: "syslog", label: "Syslog" },
   { value: "docker", label: "Docker" },
+  { value: "nginx", label: "Nginx" },
+  { value: "libvirt", label: "Libvirt" },
+  { value: "maillog", label: "Maillog" },
   { value: "parity", label: "Parity" },
 ];
+
+const SOURCE_PATHS: Record<string, string> = {
+  syslog: "/var/log/syslog",
+  docker: "/var/log/docker.log",
+  nginx: "/var/log/nginx/*.log",
+  libvirt: "/var/log/libvirt/libvirtd.log",
+  maillog: "/var/log/maillog",
+  parity: "/var/log/parity.log",
+};
 
 export function LogsPage() {
   const { toast } = useToast();
@@ -158,7 +170,7 @@ export function LogsPage() {
             <span className="size-2.5 rounded-full bg-[#28c840]" />
           </span>
           <span className="ml-2 flex items-center gap-2 font-mono text-[10px] text-[#8b93a7]">
-            <Terminal className="size-3" /> /var/log/{source === "docker" ? "docker.log" : source === "parity" ? "parity.log" : "syslog"}
+            <Terminal className="size-3" /> {SOURCE_PATHS[source] ?? source}
           </span>
           <span className="ml-auto flex items-center gap-1.5 font-mono text-[9px] text-[#5f6678]">
             <span className={cn("size-1.5 rounded-full", logs.isFetching ? "bg-[#f5b44a]" : "bg-[#3ddc97]")} />

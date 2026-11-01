@@ -92,7 +92,7 @@ Reads the same sources as the original webGUI:
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |
 | UPS | `apcaccess status` |
-| Logs | tail of `/var/log/syslog` (`docker.log` for Docker) |
+| Logs | tails of `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` and `/var/log/parity.log` |
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
 | User icons | `/boot/config/plugins/dynamix/users/<name>.png` |
 | GPUs | `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD): utilisation, VRAM, temperature, power, processes |

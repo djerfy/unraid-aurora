@@ -855,16 +855,48 @@ func (l *Live) Logs(ctx context.Context, source string, lines int) ([]model.LogL
 	if lines <= 0 || lines > 1000 {
 		lines = 200
 	}
-	path := "/var/log/syslog"
-	if source == "docker" {
-		path = "/var/log/docker.log"
+	switch source {
+	case "nginx":
+		return nginxLogLines(lines)
+	case "libvirt":
+		return readLogSource("libvirt", lines, "/var/log/libvirt/libvirtd.log", "/var/log/libvirt/libvirt.log")
+	case "maillog":
+		return readLogSource("maillog", lines, "/var/log/maillog", "/var/log/mail.log", "/var/log/mail/maillog")
+	case "docker":
+		return readLogSource("docker", lines, "/var/log/docker.log")
+	case "parity":
+		return readLogSource("parity", lines, "/var/log/parity.log")
+	default:
+		return readLogSource("syslog", lines, "/var/log/syslog")
 	}
+}
+
+func readLogSource(source string, lines int, candidates ...string) ([]model.LogLine, error) {
+	var lastErr error
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err != nil {
+			lastErr = err
+			continue
+		}
+		return logLinesFromFile(source, path, lines)
+	}
+	if lastErr == nil {
+		lastErr = errors.New("log file is unavailable")
+	}
+	return nil, lastErr
+}
+
+func logLinesFromFile(source, path string, lines int) ([]model.LogLine, error) {
 	out, err := tailLines(path, lines)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]model.LogLine, 0, len(out))
-	for _, line := range out {
+	return buildLogLines(source, out), nil
+}
+
+func buildLogLines(source string, lines []string) []model.LogLine {
+	result := make([]model.LogLine, 0, len(lines))
+	for _, line := range lines {
 		level := "info"
 		lower := strings.ToLower(line)
 		switch {
@@ -876,6 +908,41 @@ func (l *Live) Logs(ctx context.Context, source string, lines int) ([]model.LogL
 			level = "debug"
 		}
 		result = append(result, model.LogLine{Time: time.Now(), Level: level, Source: source, Message: line})
+	}
+	return result
+}
+
+// nginxLogLines merges the access and error logs kept in /var/log/nginx,
+// prefixing each line with its file name so the source stays obvious.
+func nginxLogLines(lines int) ([]model.LogLine, error) {
+	matches, err := filepath.Glob("/var/log/nginx/*.log")
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		return nil, errors.New("no nginx logs found in /var/log/nginx")
+	}
+	sort.Strings(matches)
+	perFile := lines / len(matches)
+	if perFile < 20 {
+		perFile = 20
+	}
+	result := make([]model.LogLine, 0, lines)
+	for _, path := range matches {
+		tail, err := tailLines(path, perFile)
+		if err != nil {
+			continue
+		}
+		name := filepath.Base(path)
+		for _, line := range tail {
+			result = append(result, buildLogLines("nginx", []string{name + ": " + line})...)
+		}
+	}
+	if len(result) == 0 {
+		return nil, errors.New("nginx logs are empty")
+	}
+	if len(result) > lines {
+		result = result[len(result)-lines:]
 	}
 	return result, nil
 }
