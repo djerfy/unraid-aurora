@@ -140,7 +140,6 @@ export function ContainerSettingsModal({
             <EntityIcon
               src={containerIconURL(container.id)}
               name={container.name}
-              color={container.color}
               size={38}
             />
             <div className="min-w-0 flex-1">

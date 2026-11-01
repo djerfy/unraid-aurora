@@ -326,7 +326,6 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
           <EntityIcon
             src={vmIconURL(vm.id)}
             name={vm.name}
-            color={vm.color}
             size={44}
             fallback={<Icon className="size-5" />}
           />
@@ -422,7 +421,7 @@ function VMRow({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolea
   return (
     <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-        <EntityIcon src={vmIconURL(vm.id)} name={vm.name} color={vm.color} size={32} fallback={<Icon className="size-4" />} />
+        <EntityIcon src={vmIconURL(vm.id)} name={vm.name} size={32} fallback={<Icon className="size-4" />} />
         <span className="min-w-0">
           <span className="block truncate text-[12px] font-medium text-ink">{vm.name}</span>
           <span className="block truncate text-[9.5px] text-subtle">{vm.os}</span>

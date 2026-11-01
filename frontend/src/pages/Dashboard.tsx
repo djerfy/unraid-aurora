@@ -430,7 +430,6 @@ export function DashboardPage() {
                 <EntityIcon
                   src={containerIconURL(container.id)}
                   name={container.name}
-                  color={container.color}
                   size={28}
                   className="rounded-lg"
                 />

@@ -2,18 +2,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import { initials } from "../../lib/format";
 import { cn } from "./primitives";
 
-/** Image with a coloured monogram/icon fallback, used for containers and VMs. */
+/** Image with a neutral monogram/icon fallback, used for containers and VMs. */
 export function EntityIcon({
   src,
   name,
-  color,
   size = 40,
   className,
   fallback,
 }: {
   src?: string;
   name: string;
-  color: string;
   size?: number;
   className?: string;
   fallback?: ReactNode;
@@ -35,7 +33,7 @@ export function EntityIcon({
       style={{
         width: size,
         height: size,
-        color,
+        color: "var(--muted)",
         backgroundColor: "var(--surface-2)",
         borderColor: "var(--line)",
       }}

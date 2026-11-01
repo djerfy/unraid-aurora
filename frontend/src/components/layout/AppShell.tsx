@@ -178,7 +178,6 @@ export function AppShell() {
         <EntityIcon
           src={containerIconURL(container.id)}
           name={container.name}
-          color={container.color}
           size={20}
           className="rounded-md"
         />
@@ -214,7 +213,6 @@ export function AppShell() {
         <EntityIcon
           src={vmIconURL(vm.id)}
           name={vm.name}
-          color={vm.color}
           size={20}
           className="rounded-md"
         />

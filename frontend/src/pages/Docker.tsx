@@ -438,7 +438,6 @@ function ContainerCard({
           <EntityIcon
             src={containerIconURL(container.id)}
             name={container.name}
-            color={container.color}
             size={40}
           />
           <span className="min-w-0">
@@ -614,7 +613,6 @@ function ContainerRow({
         <EntityIcon
           src={containerIconURL(container.id)}
           name={container.name}
-          color={container.color}
           size={32}
           className="rounded-lg"
         />
@@ -728,7 +726,6 @@ function ContainerDrawer({
         <EntityIcon
           src={containerIconURL(container.id)}
           name={container.name}
-          color={container.color}
           size={56}
         />
       }

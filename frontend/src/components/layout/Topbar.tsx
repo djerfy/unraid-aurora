@@ -202,7 +202,7 @@ export function Topbar({
         width="w-56"
         trigger={
           <button type="button" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition hover:bg-[var(--surface-2)] sm:pr-2">
-            <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} color="var(--accent)" size={28} />
+            <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} size={28} />
             <span className="hidden max-w-[100px] truncate text-[12px] font-medium text-soft md:block">
               {session?.user ?? "admin"}
             </span>
