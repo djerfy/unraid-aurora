@@ -48,6 +48,7 @@ func (l *Live) CreateContainer(ctx context.Context, opts model.ContainerCreateOp
 		return "", fmt.Errorf("start container: %w", err)
 	}
 	l.setImageUpdate(opts.Image, false)
+	l.saveImageUpdates()
 	return created.ID, nil
 }
 
@@ -190,6 +191,7 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 		return err
 	}
 	l.setImageUpdate(cfg.Image, false)
+	l.saveImageUpdates()
 	emit(model.ContainerUpdateEvent{Step: "done", Message: "Container updated", Progress: 100, Done: true})
 	return nil
 }
@@ -332,6 +334,52 @@ func (l *Live) setImageUpdate(image string, update bool) {
 	l.imageUpdates[image] = update
 }
 
+type imageUpdateState struct {
+	CheckedAt time.Time       `json:"checkedAt"`
+	Images    map[string]bool `json:"images"`
+}
+
+// loadImageUpdates restores the last check so update badges survive a browser
+// refresh and an Aurora restart.
+func (l *Live) loadImageUpdates() {
+	if l.dataDir == "" {
+		return
+	}
+	raw, err := os.ReadFile(filepath.Join(l.dataDir, "image-updates.json"))
+	if err != nil {
+		return
+	}
+	var state imageUpdateState
+	if json.Unmarshal(raw, &state) != nil || state.Images == nil {
+		return
+	}
+	l.imageMu.Lock()
+	l.imageUpdates = state.Images
+	l.imageCheckedAt = state.CheckedAt
+	l.imageMu.Unlock()
+}
+
+func (l *Live) saveImageUpdates() {
+	if l.dataDir == "" {
+		return
+	}
+	l.imageMu.Lock()
+	state := imageUpdateState{CheckedAt: l.imageCheckedAt, Images: make(map[string]bool, len(l.imageUpdates))}
+	for image, update := range l.imageUpdates {
+		state.Images[image] = update
+	}
+	l.imageMu.Unlock()
+
+	raw, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return
+	}
+	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(l.dataDir, "image-updates.json"), raw, 0o600)
+}
+
 // CheckContainerUpdates compares the local repository digest of every image
 // used by a container with the digest published by its registry, like the
 // official webGUI "Check for Updates" button.
@@ -365,6 +413,10 @@ func (l *Live) CheckContainerUpdates(ctx context.Context) ([]model.ImageCheck, e
 	wg.Wait()
 
 	sort.Slice(results, func(i, j int) bool { return results[i].Image < results[j].Image })
+	l.imageMu.Lock()
+	l.imageCheckedAt = time.Now()
+	l.imageMu.Unlock()
+	l.saveImageUpdates()
 	return results, nil
 }
 

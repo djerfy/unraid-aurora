@@ -99,6 +99,7 @@ Reads the same sources as the original webGUI:
 | Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_DATA_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
+| Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
 
 Every read is best-effort. A missing file or binary yields zero values, never a failed snapshot. The only
 hard failure is a host without `/var/local/emhttp/var.ini`: Aurora refuses to start rather than serve empty

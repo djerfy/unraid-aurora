@@ -46,8 +46,9 @@ type Live struct {
 	client    *http.Client
 	webClient *http.Client
 
-	imageMu      sync.Mutex
-	imageUpdates map[string]bool
+	imageMu        sync.Mutex
+	imageUpdates   map[string]bool
+	imageCheckedAt time.Time
 
 	statsMu        sync.Mutex
 	containerStats map[string]cachedContainerStats
@@ -101,6 +102,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 	}
 	l.loadSettings()
 	l.loadMoverHistory()
+	l.loadImageUpdates()
 	go l.watchMover()
 	l.client = &http.Client{
 		Timeout: 4 * time.Second,

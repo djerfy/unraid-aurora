@@ -86,6 +86,7 @@ export function Drawer({
   onClose,
   title,
   subtitle,
+  icon,
   children,
   footer,
   width = "max-w-[520px]",
@@ -94,6 +95,7 @@ export function Drawer({
   onClose: () => void;
   title: string;
   subtitle?: ReactNode;
+  icon?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   width?: string;
@@ -127,9 +129,12 @@ export function Drawer({
         )}
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
-          <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-ink">{title}</h2>
-            {subtitle ? <div className="mt-1 text-xs text-muted">{subtitle}</div> : null}
+          <div className="flex min-w-0 items-start gap-3">
+            {icon ? <div className="shrink-0">{icon}</div> : null}
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-ink">{title}</h2>
+              {subtitle ? <div className="mt-1 text-xs text-muted">{subtitle}</div> : null}
+            </div>
           </div>
           <IconButton label="Close panel" onClick={onClose}>
             <X className="size-4" />

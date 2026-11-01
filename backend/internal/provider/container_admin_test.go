@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"aurora/internal/model"
 )
@@ -138,5 +139,21 @@ func TestValidateContainerCreateOptions(t *testing.T) {
 		if err := ValidateContainerCreateOptions(options); err == nil {
 			t.Fatalf("%s should be rejected", name)
 		}
+	}
+}
+
+func TestImageUpdatePersistence(t *testing.T) {
+	dir := t.TempDir()
+	live := &Live{dataDir: dir, imageUpdates: map[string]bool{"nginx:latest": true}}
+	live.imageCheckedAt = time.Now().Truncate(time.Second)
+	live.saveImageUpdates()
+
+	reloaded := &Live{dataDir: dir}
+	reloaded.loadImageUpdates()
+	if !reloaded.imageUpdate("nginx:latest") {
+		t.Fatal("update status should survive a restart")
+	}
+	if reloaded.imageCheckedAt.IsZero() {
+		t.Fatal("check timestamp should be restored")
 	}
 }

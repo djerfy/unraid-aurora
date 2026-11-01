@@ -718,6 +718,15 @@ function ContainerDrawer({
       open={Boolean(container)}
       onClose={onClose}
       title={container.name}
+      width="max-w-[1040px]"
+      icon={
+        <EntityIcon
+          src={containerIconURL(container.id)}
+          name={container.name}
+          color={container.color}
+          size={40}
+        />
+      }
       subtitle={
         <span className="flex flex-wrap items-center gap-2">
           <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot>
