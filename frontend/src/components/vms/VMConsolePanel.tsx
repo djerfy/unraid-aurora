@@ -31,6 +31,12 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
     let cancelled = false;
     let client: { disconnect: () => void; focus: (options?: FocusOptions) => void } | null = null;
     let detach: (() => void) | null = null;
+    // noVNC keeps its layout-aware keyboard mapper on the RFB instance. Calling
+    // it directly bypasses canvas focus and DOM event plumbing entirely.
+    let keyboard: {
+      _handleKeyDown?: (event: KeyboardEvent) => void;
+      _handleKeyUp?: (event: KeyboardEvent) => void;
+    } | null = null;
 
     const report = (status: ConsoleStatus, message = "") => {
       if (!cancelled) statusRef.current?.(status, message);
@@ -38,13 +44,22 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
     const canvas = () => host.querySelector("canvas");
     const focusCanvas = () => canvas()?.focus({ preventScroll: true });
     const forwardKey = (event: KeyboardEvent) => {
-      const target = canvas();
-      if (!target) return;
-      if (event.target === target) return;
       const element = event.target as HTMLElement | null;
       if (element && (["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName) || element.isContentEditable)) {
         return;
       }
+      event.preventDefault();
+      // Capture phase: stop the event before any other page handler sees it.
+      event.stopPropagation();
+      const handler = event.type === "keydown" ? keyboard?._handleKeyDown : keyboard?._handleKeyUp;
+      if (handler) {
+        handler.call(keyboard, event);
+        return;
+      }
+      // Fallback for noVNC versions that do not expose the mapper: re-dispatch
+      // the event straight onto the canvas.
+      const target = canvas();
+      if (!target) return;
       target.focus({ preventScroll: true });
       target.dispatchEvent(
         new KeyboardEvent(event.type, {
@@ -61,8 +76,6 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
           cancelable: true,
         }),
       );
-      event.preventDefault();
-      event.stopPropagation();
     };
 
     report("connecting");
@@ -96,6 +109,9 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
         });
         client = connection;
         clientRef.current = connection;
+        keyboard = (connection as unknown as {
+          _keyboard?: { _handleKeyDown?: (event: KeyboardEvent) => void; _handleKeyUp?: (event: KeyboardEvent) => void };
+        })._keyboard ?? null;
 
         document.addEventListener("keydown", forwardKey, true);
         document.addEventListener("keyup", forwardKey, true);
