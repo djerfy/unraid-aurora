@@ -50,6 +50,29 @@ function keysymFor(event: KeyboardEvent): number | null {
   return null;
 }
 
+type RfbInternals = {
+  _sock?: { readyState?: string; flush?: () => void };
+  _rfbConnectionState?: string;
+  _viewOnly?: boolean;
+  _qemuExtKeyEventSupported?: boolean;
+  constructor?: { messages?: { keyEvent?: (sock: unknown, keysym: number, down: number) => void } };
+};
+
+/**
+ * Send a raw RFB KeyEvent, bypassing noVNC's state checks and QEMU extended
+ * key events. Some QEMU builds accept the connection but silently ignore the
+ * extended scancode form used by noVNC.
+ */
+function sendRawKey(connection: unknown, keysym: number, down: boolean): boolean {
+  const rfb = connection as RfbInternals;
+  const messages = rfb.constructor?.messages;
+  const sock = rfb._sock;
+  if (!messages?.keyEvent || !sock) return false;
+  if (sock.readyState !== "open") return false;
+  messages.keyEvent(sock, keysym, down ? 1 : 0);
+  return true;
+}
+
 export type VMConsoleHandle = {
   sendCtrlAltDel: () => void;
   focus: () => void;
@@ -109,11 +132,23 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
       // Capture phase: stop the event before any other page handler sees it.
       event.stopPropagation();
       const keysym = keysymFor(event);
-      if (keysym !== null && clientRef.current?.sendKey) {
+      if (keysym !== null) {
+        const down = event.type === "keydown";
+        const raw = clientRef.current ? sendRawKey(clientRef.current, keysym, down) : false;
         if (localStorage.getItem("aurora.debug") === "1") {
-          console.debug("[vnc] key", event.type, event.key, event.code ?? "", `0x${keysym.toString(16)}`);
+          const rfb = clientRef.current as unknown as RfbInternals | null;
+          console.debug(
+            "[vnc] key",
+            event.type,
+            event.key,
+            event.code ?? "",
+            `0x${keysym.toString(16)}`,
+            "raw=" + raw,
+            "state=" + (rfb?._rfbConnectionState ?? "?"),
+            "viewOnly=" + (rfb?._viewOnly ?? "?"),
+          );
         }
-        clientRef.current.sendKey(keysym, event.code ?? "", event.type === "keydown");
+        if (!raw) clientRef.current?.sendKey?.(keysym, event.code ?? "", down);
         return;
       }
       const handler = event.type === "keydown" ? keyboard?._handleKeyDown : keyboard?._handleKeyUp;
