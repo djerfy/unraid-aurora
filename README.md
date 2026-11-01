@@ -261,6 +261,7 @@ Deep dives:
 | Balance | Mounts under `/mnt`, `statfs`, `du`; copy → verify → delete pipeline |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
 | Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with live phases and per-file history |
+| Shares | Edit comment, free-space floor, cache mode, primary/secondary storage, allocator, split level, include/exclude disks, SMB and NFS export/security |
 | Équilibrage | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
 | Historique | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |

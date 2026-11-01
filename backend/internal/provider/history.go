@@ -201,6 +201,37 @@ func isTextContent(data []byte) bool {
 	return true
 }
 
+// recordExternalConfigChange records a change applied by an external process
+// (emhttpd). before/after are the file contents around the command.
+func (l *Live) recordExternalConfigChange(action, description, path string, before, after []byte) {
+	if l.dataDir == "" {
+		return
+	}
+	entryID := newHistoryID()
+	entryDir := filepath.Join(l.dataDir, configHistoryDir, entryID)
+	filesDir := filepath.Join(entryDir, "files")
+	if err := os.MkdirAll(filesDir, 0o750); err != nil {
+		return
+	}
+	meta := historyMeta{ID: entryID, Created: time.Now().UTC(), Action: action, Description: description}
+	file := historyFile{
+		Path: path, Existed: before != nil,
+		Diff: renderConfigDiff(path, before, after, false),
+		Size: int64(len(before)), Mode: 0o644,
+	}
+	if before != nil {
+		file.Backup = "000.bak"
+		if err := os.WriteFile(filepath.Join(filesDir, file.Backup), before, 0o600); err != nil {
+			return
+		}
+	}
+	meta.Files = append(meta.Files, file)
+	if raw, err := json.MarshalIndent(meta, "", "  "); err == nil {
+		_ = os.WriteFile(filepath.Join(entryDir, "meta.json"), raw, 0o600)
+	}
+	l.pruneConfigHistory()
+}
+
 func (l *Live) ConfigHistory(_ context.Context) ([]model.ConfigHistory, error) {
 	directory := filepath.Join(l.dataDir, configHistoryDir)
 	entries, err := os.ReadDir(directory)

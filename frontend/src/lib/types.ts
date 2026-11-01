@@ -172,6 +172,28 @@ export type Share = {
   lastModified: string;
 };
 
+export type ShareConfig = {
+  name: string;
+  comment: string;
+  floor: string;
+  allocator: string;
+  splitLevel: string;
+  include: string[];
+  exclude: string[];
+  useCache: string;
+  cachePool: string;
+  cachePool2: string;
+  cow: string;
+  exclusive: boolean;
+  smbExport: string;
+  smbSecurity: string;
+  smbCaseSensitive: string;
+  smbVolumeSizeLimit: string;
+  nfsExport: string;
+  nfsSecurity: string;
+  nfsHostList: string;
+};
+
 export type Pool = {
   name: string;
   fsType: string;

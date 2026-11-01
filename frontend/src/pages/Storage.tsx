@@ -48,7 +48,7 @@ import {
   formatSpeed,
   relativeTime,
 } from "../lib/format";
-import type { Disk, MoverRun, Share } from "../lib/types";
+import type { Disk, MoverRun, Share, ShareConfig } from "../lib/types";
 
 const TABS = [
   { value: "array", label: "Array" },
@@ -75,6 +75,7 @@ export function StoragePage() {
   const [showIO, setShowIO] = useState(true);
   const [query, setQuery] = useState("");
   const [arrayModal, setArrayModal] = useState<"start" | "stop" | null>(null);
+  const [editingShare, setEditingShare] = useState<Share | null>(null);
 
   if (!snapshot) return null;
   const { array, disks, shares, pools } = snapshot;
@@ -626,6 +627,13 @@ export function StoragePage() {
         onClose={() => setSelectedShare(null)}
         title={selectedShare?.name ?? ""}
         subtitle={selectedShare?.comment}
+        footer={
+          selectedShare ? (
+            <Button variant="primary" className="w-full" onClick={() => setEditingShare(selectedShare)}>
+              Edit settings
+            </Button>
+          ) : null
+        }
       >
         {selectedShare ? (
           <div className="space-y-5">
@@ -658,6 +666,10 @@ export function StoragePage() {
           </div>
         ) : null}
       </Drawer>
+
+      {editingShare ? (
+        <ShareEditModal share={editingShare} onClose={() => setEditingShare(null)} />
+      ) : null}
     </>
   );
 }
@@ -807,6 +819,275 @@ function DiskGroup({
         })}
       </div>
     </div>
+  );
+}
+
+function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { snapshot } = useApp();
+  const { toast } = useToast();
+  const [draft, setDraft] = useState<ShareConfig | null>(null);
+  const [error, setError] = useState("");
+  const [includeText, setIncludeText] = useState("");
+  const [excludeText, setExcludeText] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const config = useQuery({
+    queryKey: ["share-config", share.name],
+    queryFn: () => api.shareConfig(share.name),
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!config.data) return;
+    setDraft({ ...config.data });
+    setIncludeText(config.data.include.join(", "));
+    setExcludeText(config.data.exclude.join(", "));
+    setError("");
+  }, [config.data]);
+
+  const update = (patch: Partial<ShareConfig>) => {
+    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setError("");
+  };
+
+  const save = async () => {
+    if (!draft) return;
+    const csrf = draft;
+    const next: ShareConfig = {
+      ...csrf,
+      include: includeText.split(",").map((item) => item.trim()).filter(Boolean),
+      exclude: excludeText.split(",").map((item) => item.trim()).filter(Boolean),
+    };
+    setSaving(true);
+    setError("");
+    try {
+      await api.updateShare(share.name, next);
+      await api.updateShareSMB(share.name, next);
+      await api.updateShareNFS(share.name, next);
+      toast({
+        kind: "success",
+        title: "Share updated",
+        description: "A snapshot is available in Historique for rollback.",
+      });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      void queryClient.invalidateQueries({ queryKey: ["config-history"] });
+      onClose();
+    } catch (saveError) {
+      setError((saveError as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pools = snapshot?.pools ?? [];
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Settings · ${share.name}`}
+      description="Share properties, SMB export and NFS export. The current configuration file is snapshotted before applying."
+      size="xl"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={saving} disabled={!draft} onClick={() => void save()}>
+            Apply changes
+          </Button>
+        </>
+      }
+    >
+      {config.isLoading ? (
+        <p className="text-[11px] text-muted">Loading share configuration…</p>
+      ) : config.isError ? (
+        <ErrorLine message={(config.error as Error).message} />
+      ) : draft ? (
+        <div className="space-y-5">
+          <section>
+            <SectionTitle title="Share" hint="Name, description and free-space floor" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <TextInput label="Comment" value={draft.comment} onChange={(value) => update({ comment: value })} />
+              <TextInput label="Minimum free space" value={draft.floor} onChange={(value) => update({ floor: value })} placeholder="0 or 10G" />
+            </div>
+          </section>
+
+          <section>
+            <SectionTitle title="Storage" hint="Primary/secondary storage, cache mode and allocation" />
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <SelectInput label="Primary storage" value={draft.cachePool} onChange={(value) => update({ cachePool: value })}>
+                <option value="">Array</option>
+                {pools.map((pool) => (
+                  <option key={pool.name} value={pool.name}>{pool.name}</option>
+                ))}
+              </SelectInput>
+              <SelectInput label="Secondary storage" value={draft.cachePool2} onChange={(value) => update({ cachePool2: value })}>
+                <option value="">None / Array</option>
+                {pools.map((pool) => (
+                  <option key={pool.name} value={pool.name}>{pool.name}</option>
+                ))}
+              </SelectInput>
+              <SelectInput label="Cache mode" value={draft.useCache} onChange={(value) => update({ useCache: value })}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="prefer">Prefer</option>
+                <option value="only">Only</option>
+              </SelectInput>
+              <SelectInput label="Allocation method" value={draft.allocator} onChange={(value) => update({ allocator: value })}>
+                <option value="highwater">High-water</option>
+                <option value="fillup">Fill-up</option>
+                <option value="mostfree">Most-free</option>
+              </SelectInput>
+              <SelectInput label="Split level" value={draft.splitLevel} onChange={(value) => update({ splitLevel: value })}>
+                <option value="">Automatic</option>
+                {["1", "2", "3", "4", "5", "0"].map((level) => (
+                  <option key={level} value={level}>{level === "0" ? "Manual" : `Split at level ${level}`}</option>
+                ))}
+              </SelectInput>
+              <SelectInput label="Copy-on-write" value={draft.cow} onChange={() => undefined} disabled>
+                <option value="auto">Auto</option>
+                <option value="no">No</option>
+              </SelectInput>
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <TextInput label="Included disks (comma separated)" value={includeText} onChange={setIncludeText} placeholder="disk1, disk2" />
+              <TextInput label="Excluded disks (comma separated)" value={excludeText} onChange={setExcludeText} placeholder="disk3" />
+            </div>
+            <p className="mt-2 text-[9.5px] text-subtle">Copy-on-write can only be chosen when creating a share.</p>
+          </section>
+
+          <section>
+            <SectionTitle title="SMB" hint="Windows/Samba export and security" />
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <SelectInput label="Export" value={draft.smbExport} onChange={(value) => update({ smbExport: value })}>
+                <option value="-">No</option>
+                <option value="e">Yes</option>
+                <option value="eh">Yes (hidden)</option>
+                <option value="et">Yes / Time Machine</option>
+                <option value="eth">Yes / Time Machine (hidden)</option>
+              </SelectInput>
+              <SelectInput label="Security" value={draft.smbSecurity} onChange={(value) => update({ smbSecurity: value })}>
+                <option value="public">Public</option>
+                <option value="secure">Secure</option>
+                <option value="private">Private</option>
+              </SelectInput>
+              <SelectInput label="Case-sensitive names" value={draft.smbCaseSensitive} onChange={(value) => update({ smbCaseSensitive: value })}>
+                <option value="auto">Auto</option>
+                <option value="yes">Yes</option>
+                <option value="forced">Force lower</option>
+              </SelectInput>
+              <TextInput label="Time Machine limit (MB)" value={draft.smbVolumeSizeLimit} onChange={(value) => update({ smbVolumeSizeLimit: value })} placeholder="0" />
+            </div>
+          </section>
+
+          <section>
+            <SectionTitle title="NFS" hint="Network file system export and rules" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <SelectInput label="Export" value={draft.nfsExport} onChange={(value) => update({ nfsExport: value })}>
+                <option value="-">No</option>
+                <option value="e">Yes</option>
+              </SelectInput>
+              <SelectInput label="Security" value={draft.nfsSecurity} onChange={(value) => update({ nfsSecurity: value })}>
+                <option value="public">Public</option>
+                <option value="secure">Secure</option>
+                <option value="private">Private</option>
+              </SelectInput>
+            </div>
+            {draft.nfsSecurity === "private" ? (
+              <label className="mt-2 block space-y-1">
+                <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">NFS rules</span>
+                <textarea
+                  value={draft.nfsHostList}
+                  onChange={(event) => update({ nfsHostList: event.target.value })}
+                  rows={4}
+                  placeholder="*(rw,sec=sys,insecure,anongid=100,anonuid=99,no_root_squash,lock)"
+                  className="w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-2 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                />
+              </label>
+            ) : null}
+          </section>
+
+          <div className="flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
+            <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
+            The share configuration is snapshotted before the change. Use <span className="text-soft">Historique</span> to
+            review the diff or roll back.
+          </div>
+
+          {error ? <ErrorLine message={error} /> : null}
+        </div>
+      ) : null}
+    </Modal>
+  );
+}
+
+function SectionTitle({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="mb-2.5">
+      <h3 className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-soft">{title}</h3>
+      <p className="mt-0.5 text-[9.5px] text-subtle">{hint}</p>
+    </div>
+  );
+}
+
+function TextInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block space-y-1">
+      <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{label}</span>
+      <input
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-ink outline-none focus:border-[var(--accent-line)]"
+      />
+    </label>
+  );
+}
+
+function SelectInput({
+  label,
+  value,
+  onChange,
+  children,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block space-y-1">
+      <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{label}</span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)] disabled:opacity-50"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function ErrorLine({ message }: { message: string }) {
+  return (
+    <p className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-[10.5px] text-[var(--danger)]">
+      {message}
+    </p>
   );
 }
 

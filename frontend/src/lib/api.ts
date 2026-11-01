@@ -159,6 +159,23 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  shareConfig: (name: string) =>
+    request<import("./types").ShareConfig>(`/api/v1/shares/${encodeURIComponent(name)}/config`),
+  updateShare: (name: string, config: import("./types").ShareConfig) =>
+    request<{ ok: boolean }>(`/api/v1/shares/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
+  updateShareSMB: (name: string, config: import("./types").ShareConfig) =>
+    request<{ ok: boolean }>(`/api/v1/shares/${encodeURIComponent(name)}/smb`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
+  updateShareNFS: (name: string, config: import("./types").ShareConfig) =>
+    request<{ ok: boolean }>(`/api/v1/shares/${encodeURIComponent(name)}/nfs`, {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
   balanceDisks: () => request<import("./types").BalanceDisk[]>("/api/v1/balance/disks"),
   balanceBrowse: (disk: string, path: string) =>
     request<import("./types").BalanceEntry[]>(

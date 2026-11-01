@@ -191,6 +191,28 @@ type Share struct {
 	LastModified time.Time `json:"lastModified"`
 }
 
+type ShareConfig struct {
+	Name               string   `json:"name"`
+	Comment            string   `json:"comment"`
+	Floor              string   `json:"floor"`
+	Allocator          string   `json:"allocator"`
+	SplitLevel         string   `json:"splitLevel"`
+	Include            []string `json:"include"`
+	Exclude            []string `json:"exclude"`
+	UseCache           string   `json:"useCache"`
+	CachePool          string   `json:"cachePool"`
+	CachePool2         string   `json:"cachePool2"`
+	COW                string   `json:"cow"`
+	Exclusive          bool     `json:"exclusive"`
+	SMBExport          string   `json:"smbExport"`
+	SMBSecurity        string   `json:"smbSecurity"`
+	SMBCaseSensitive   string   `json:"smbCaseSensitive"`
+	SMBVolumeSizeLimit string   `json:"smbVolumeSizeLimit"`
+	NFSExport          string   `json:"nfsExport"`
+	NFSSecurity        string   `json:"nfsSecurity"`
+	NFSHostList        string   `json:"nfsHostList"`
+}
+
 type Pool struct {
 	Name    string   `json:"name"`
 	FsType  string   `json:"fsType"`

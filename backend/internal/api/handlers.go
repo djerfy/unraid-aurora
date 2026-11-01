@@ -248,6 +248,77 @@ func (s *Server) pools(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) shareConfig(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	cfg, err := s.provider.ShareConfig(ctx, r.PathValue("name"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, cfg)
+}
+
+func (s *Server) updateShare(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var cfg model.ShareConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.UpdateShareProperties(ctx, name, cfg); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "update_share_failed", err.Error())
+		return
+	}
+	s.log.Info("share settings updated", "share", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) updateShareSMB(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var cfg model.ShareConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.UpdateShareSMB(ctx, name, cfg); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "update_share_smb_failed", err.Error())
+		return
+	}
+	s.log.Info("share SMB settings updated", "share", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) updateShareNFS(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var cfg model.ShareConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.UpdateShareNFS(ctx, name, cfg); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "update_share_nfs_failed", err.Error())
+		return
+	}
+	s.log.Info("share NFS settings updated", "share", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) containers(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

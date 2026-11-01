@@ -123,6 +123,10 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/disks/{device}/smart` | SMART health and attributes |
 | `POST` | `/api/v1/disks/{device}/smart-test` | Start a short self-test |
 | `GET` | `/api/v1/shares` | Shares and protocols |
+| `GET` | `/api/v1/shares/{name}/config` | Editable share configuration |
+| `PUT` | `/api/v1/shares/{name}` | Share properties (cache, allocator, disks…) |
+| `PUT` | `/api/v1/shares/{name}/smb` | SMB export, security, case sensitivity |
+| `PUT` | `/api/v1/shares/{name}/nfs` | NFS export, security and host rules |
 | `GET` | `/api/v1/pools` | Cache/boot pools |
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |

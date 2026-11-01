@@ -60,6 +60,10 @@ type Provider interface {
 	Network(ctx context.Context) (model.Network, error)
 	Users(ctx context.Context) ([]model.User, error)
 	UserIcon(ctx context.Context, name string) ([]byte, string, error)
+	ShareConfig(ctx context.Context, name string) (model.ShareConfig, error)
+	UpdateShareProperties(ctx context.Context, name string, cfg model.ShareConfig) error
+	UpdateShareSMB(ctx context.Context, name string, cfg model.ShareConfig) error
+	UpdateShareNFS(ctx context.Context, name string, cfg model.ShareConfig) error
 	CreateUser(ctx context.Context, opts model.UserCreateOptions) error
 	UpdateUser(ctx context.Context, name, description string) error
 	ChangeUserPassword(ctx context.Context, name, password string) error
