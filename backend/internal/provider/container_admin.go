@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -49,6 +50,20 @@ func (l *Live) CreateContainer(ctx context.Context, opts model.ContainerCreateOp
 	}
 	l.setImageUpdate(opts.Image, false)
 	l.saveImageUpdates()
+	if err := l.syncContainerTemplate(ctx, containerTemplateData{
+		Name:          opts.Name,
+		Image:         opts.Image,
+		Network:       opts.NetworkMode,
+		RestartPolicy: opts.RestartPolicy,
+		Ports:         opts.Ports,
+		Volumes:       opts.Volumes,
+		Env:           opts.Env,
+		Icon:          opts.Icon,
+		WebUI:         opts.WebUI,
+		Privileged:    opts.Privileged,
+	}); err != nil {
+		slog.Error("create container template", "container", opts.Name, "error", err)
+	}
 	return created.ID, nil
 }
 

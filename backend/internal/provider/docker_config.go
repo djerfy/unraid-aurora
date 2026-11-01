@@ -248,6 +248,9 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	// stopped backup but does not invalidate the successful update.
 	emit("cleanup", "Removing the previous container")
 	_, _ = l.dockerDo(ctx, http.MethodDelete, "/containers/"+url.PathEscape(oldID)+"?force=1", nil)
+	// Keep the Unraid template in sync so the official webGUI and its update
+	// scripts recreate the container with the same settings.
+	l.syncTemplateAfterUpdate(ctx, cfg)
 	return nil
 }
 

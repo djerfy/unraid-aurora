@@ -100,6 +100,7 @@ Reads the same sources as the original webGUI:
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
+| Container templates | `/boot/config/plugins/dockerMan/templates-user/my-<name>.xml`, read and written like the official webGUI |
 
 Every read is best-effort. A missing file or binary yields zero values, never a failed snapshot. The only
 hard failure is a host without `/var/local/emhttp/var.ini`: Aurora refuses to start rather than serve empty
@@ -202,7 +203,7 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 | `disk.spinup` / `disk.spindown` | `mdcmd spinup\|spindown <device>` |
 | `container.start/stop/restart` | `docker start\|stop\|restart <name>` |
 | `container.update` | pull the image, then stop → rename → create → start, with rollback; steps streamed to the UI |
-| container config `PUT` | Docker inspect → stop → rename → create → start, with rollback |
+| container config `PUT` | Docker inspect → stop → rename → create → start, with rollback; the Unraid XML template is synced afterwards |
 | `vm.start/stop/pause/resume` | `virsh start\|shutdown\|suspend\|resume` |
 | `parity.start/stop/pause/resume` | `emcmd cmdCheck=...` |
 | `notification.ack/archive/ackall` | move `.notify` files from unread to archive |
