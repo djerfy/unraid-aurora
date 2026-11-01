@@ -106,7 +106,7 @@ export function ContainerSettingsModal({
       onClose={onClose}
       title={`Settings · ${container.name}`}
       description="Recreate this container with new paths, ports, environment variables and restart policy."
-      size="lg"
+      size="xl"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={save.isPending}>

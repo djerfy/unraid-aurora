@@ -724,7 +724,7 @@ function ContainerDrawer({
           src={containerIconURL(container.id)}
           name={container.name}
           color={container.color}
-          size={40}
+          size={56}
         />
       }
       subtitle={
