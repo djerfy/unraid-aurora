@@ -38,6 +38,8 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.log.Info("vm console opened", "vm", r.PathValue("id"), "tcpPort", console.Port, "wsPort", console.WebSocket, "address", console.Address)
+
 	client, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true, // Origin checked above.
 		CompressionMode:    websocket.CompressionDisabled,
@@ -52,7 +54,11 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if console.Port > 0 && console.Port <= 65535 {
-		address := net.JoinHostPort("127.0.0.1", strconv.Itoa(console.Port))
+		host := console.Address
+		if host == "" || host == "0.0.0.0" || host == "::" {
+			host = "127.0.0.1"
+		}
+		address := net.JoinHostPort(host, strconv.Itoa(console.Port))
 		upstream, err := net.DialTimeout("tcp", address, 5*time.Second)
 		if err == nil {
 			defer upstream.Close()
@@ -69,6 +75,9 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		upstreamURL := fmt.Sprintf("ws://127.0.0.1:%d/", console.WebSocket)
 		upstream, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
 			CompressionMode: websocket.CompressionDisabled,
+			// QEMU's VNC websocket proxy only behaves correctly when the
+			// non-standard "binary" subprotocol is negotiated.
+			Subprotocols: []string{"binary"},
 		})
 		if err != nil {
 			_ = client.Write(ctx, websocket.MessageText, []byte("Unable to reach the virtual machine console: "+err.Error()))

@@ -81,12 +81,45 @@ func (l *Live) VMConsole(ctx context.Context, id string) (model.VMConsole, error
 		if err != nil {
 			return model.VMConsole{}, err
 		}
+		// Autoport domains can report port=-1 in the XML; virsh knows the
+		// display allocated at runtime.
+		if console.Port < 1 {
+			if address, port := virshVNCAddress(ctx, vm.Name); port > 0 {
+				console.Port = port
+				if console.Address == "" {
+					console.Address = address
+				}
+			}
+		}
 		if console.WebSocket < 1 && console.Port < 1 {
 			return model.VMConsole{}, errors.New("this virtual machine does not expose a console")
 		}
 		return console, nil
 	}
 	return model.VMConsole{}, errors.New("virtual machine not found")
+}
+
+// virshVNCAddress parses `virsh vncdisplay`, which reports the runtime display
+// as "host:display" even when the XML uses autoport.
+func virshVNCAddress(ctx context.Context, name string) (string, int) {
+	out, err := exec.CommandContext(ctx, "virsh", "vncdisplay", name).Output()
+	if err != nil {
+		return "", 0
+	}
+	value := strings.TrimSpace(string(out))
+	if value == "" {
+		return "", 0
+	}
+	host := ""
+	if index := strings.LastIndex(value, ":"); index >= 0 {
+		host = value[:index]
+		value = value[index+1:]
+	}
+	display, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || display < 0 {
+		return "", 0
+	}
+	return host, 5900 + display
 }
 
 func virshGraphics(ctx context.Context, name string) (model.VMConsole, error) {
@@ -104,6 +137,10 @@ func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
 				Type      string `xml:"type,attr"`
 				Port      int    `xml:"port,attr"`
 				WebSocket int    `xml:"websocket,attr"`
+				Listen    string `xml:"listen,attr"`
+				Addresses []struct {
+					Address string `xml:"address,attr"`
+				} `xml:"listen"`
 			} `xml:"graphics"`
 		} `xml:"devices"`
 	}
@@ -117,6 +154,10 @@ func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
 			continue
 		}
 		console := model.VMConsole{Name: name, Protocol: protocol, Port: graphics.Port, WebSocket: graphics.WebSocket}
+		console.Address = graphics.Listen
+		if console.Address == "" && len(graphics.Addresses) > 0 {
+			console.Address = graphics.Addresses[0].Address
+		}
 		if console.WebSocket > 0 {
 			return console, nil
 		}

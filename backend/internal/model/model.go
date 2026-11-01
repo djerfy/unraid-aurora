@@ -433,6 +433,7 @@ type VMConsole struct {
 	Protocol  string `json:"protocol"`
 	Port      int    `json:"port"`
 	WebSocket int    `json:"webSocket"`
+	Address   string `json:"address"`
 }
 
 type GPU struct {
