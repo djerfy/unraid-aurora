@@ -291,7 +291,8 @@ export function AppShell() {
             <span className="flex items-center gap-1">
               <span className="status-dot live" /> Unraid {snapshot.system.version}
             </span>
-            <span className="font-mono">🌱 DJΞRFY 🚀</span>
+            <span className="h-3 w-px bg-[var(--line)]" aria-hidden="true" />
+            <span className="font-mono">Powered by 🌱 DJΞRFY 🚀</span>
           </span>
         </footer> : null}
       </div>
