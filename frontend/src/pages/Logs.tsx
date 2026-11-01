@@ -94,7 +94,7 @@ export function LogsPage() {
       <PageHeader
         eyebrow="System"
         title="Logs"
-        description="Tail system, Docker and parity logs with instant filtering — no SSH required."
+        description="Tail system, Docker, Nginx, libvirt, mail and parity logs with instant filtering — no SSH required."
         meta={
           <>
             <Badge tone={errors > 0 ? "danger" : "success"} dot>{errors} errors</Badge>
@@ -182,6 +182,19 @@ export function LogsPage() {
               {Array.from({ length: 14 }).map((_, index) => (
                 <div key={index} className="h-3 animate-pulse rounded bg-[#1a1d28]" style={{ width: `${45 + ((index * 17) % 45)}%` }} />
               ))}
+            </div>
+          ) : logs.isError ? (
+            <div className="rounded-xl border border-[#3a1f26] bg-[#1a0f13] p-4">
+              <p className="text-[11px] leading-relaxed text-[#ff8a9b]">{(logs.error as Error).message}</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-3"
+                icon={<RefreshCw className="size-3" />}
+                onClick={() => void logs.refetch()}
+              >
+                Try again
+              </Button>
             </div>
           ) : filtered.length === 0 ? (
             <EmptyState

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"strings"
@@ -704,9 +705,9 @@ func (s *Server) stopMover(w http.ResponseWriter, r *http.Request) {
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	source := r.URL.Query().Get("source")
 	switch source {
-	case "", "syslog", "docker", "parity":
+	case "", "syslog", "docker", "parity", "nginx", "libvirt", "maillog":
 	default:
-		writeError(w, http.StatusBadRequest, "invalid_source", "source must be syslog, docker or parity")
+		writeError(w, http.StatusBadRequest, "invalid_source", "source must be syslog, docker, parity, nginx, libvirt or maillog")
 		return
 	}
 	if source == "" {
@@ -716,6 +717,10 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	v, err := s.provider.Logs(ctx, source, queryInt(r, "lines", 200, 10, 1000))
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "log_unavailable", err.Error())
+			return
+		}
 		s.fail(w, err)
 		return
 	}

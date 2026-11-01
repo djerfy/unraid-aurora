@@ -881,9 +881,9 @@ func readLogSource(source string, lines int, candidates ...string) ([]model.LogL
 		return logLinesFromFile(source, path, lines)
 	}
 	if lastErr == nil {
-		lastErr = errors.New("log file is unavailable")
+		lastErr = os.ErrNotExist
 	}
-	return nil, lastErr
+	return nil, fmt.Errorf("%s log is unavailable: %w", source, lastErr)
 }
 
 func logLinesFromFile(source, path string, lines int) ([]model.LogLine, error) {
@@ -920,7 +920,7 @@ func nginxLogLines(lines int) ([]model.LogLine, error) {
 		return nil, err
 	}
 	if len(matches) == 0 {
-		return nil, errors.New("no nginx logs found in /var/log/nginx")
+		return nil, fmt.Errorf("no nginx logs found in /var/log/nginx: %w", os.ErrNotExist)
 	}
 	sort.Strings(matches)
 	perFile := lines / len(matches)
@@ -939,7 +939,7 @@ func nginxLogLines(lines int) ([]model.LogLine, error) {
 		}
 	}
 	if len(result) == 0 {
-		return nil, errors.New("nginx logs are empty")
+		return []model.LogLine{}, nil
 	}
 	if len(result) > lines {
 		result = result[len(result)-lines:]
