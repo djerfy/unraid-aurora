@@ -1,18 +1,22 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Activity,
   ArrowDownToLine,
   ArrowUpFromLine,
   CircleAlert,
+  ArrowRightLeft,
   Database,
   FolderTree,
   Gauge,
   HardDrive,
   Info,
+  LockKeyhole,
   Pause,
   Play,
   RefreshCw,
+  Square,
   Search,
   ShieldCheck,
   Thermometer,
@@ -31,10 +35,11 @@ import {
   Tabs,
   cn,
 } from "../components/ui/primitives";
-import { Drawer, Menu } from "../components/ui/overlays";
+import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import { useApp } from "../app/AppDataProvider";
 import { useAction } from "../lib/useAction";
 import { useToast } from "../app/ToastProvider";
+import { api } from "../lib/api";
 import {
   formatBytes,
   formatDateTime,
@@ -63,6 +68,7 @@ export function StoragePage() {
   const [selectedShare, setSelectedShare] = useState<Share | null>(null);
   const [showIO, setShowIO] = useState(true);
   const [query, setQuery] = useState("");
+  const [arrayModal, setArrayModal] = useState<"start" | "stop" | null>(null);
 
   if (!snapshot) return null;
   const { array, disks, shares, pools } = snapshot;
@@ -115,7 +121,24 @@ export function StoragePage() {
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
               Refresh
             </Button>
-            {parity.running ? (
+            {array.state === "STARTED" ? (
+              <Button
+                variant="secondary"
+                icon={<Square className="size-3.5" />}
+                onClick={() => setArrayModal("stop")}
+              >
+                Stop array
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                icon={<Play className="size-3.5" />}
+                onClick={() => setArrayModal("start")}
+              >
+                Start array
+              </Button>
+            )}
+            {array.state === "STARTED" && parity.running ? (
               <Button
                 variant="primary"
                 icon={<Pause className="size-3.5" />}
@@ -129,7 +152,7 @@ export function StoragePage() {
               >
                 {parity.paused ? "Resume check" : "Pause check"}
               </Button>
-            ) : (
+            ) : array.state === "STARTED" ? (
               <Button
                 variant="primary"
                 icon={<Play className="size-3.5" />}
@@ -140,7 +163,7 @@ export function StoragePage() {
               >
                 Start parity check
               </Button>
-            )}
+            ) : null}
           </>
         }
       />
@@ -250,6 +273,7 @@ export function StoragePage() {
 
       {tab === "array" ? (
         <div className="space-y-4">
+          <MoverCard arrayRunning={array.state === "STARTED"} />
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[10.5px] text-subtle">
             <Info className="size-3.5" />
             <span>Spin disks down to save energy. A spun-down disk wakes automatically on first access.</span>
@@ -517,6 +541,9 @@ export function StoragePage() {
           </Card>
         </div>
       ) : null}
+
+      <ArrayStartModal open={arrayModal === "start"} onClose={() => setArrayModal(null)} />
+      <ArrayStopModal open={arrayModal === "stop"} onClose={() => setArrayModal(null)} />
 
       <Drawer
         open={Boolean(selectedDisk)}
@@ -838,5 +865,329 @@ function Detail({ label, value, icon }: { label: string; value: string; icon?: R
       </p>
       <p className="num mt-1 truncate text-[11px] text-soft">{value}</p>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mover                                                                       */
+/* -------------------------------------------------------------------------- */
+
+function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const statusQuery = useQuery({
+    queryKey: ["mover"],
+    queryFn: api.mover,
+    refetchInterval: 3000,
+  });
+  const status = statusQuery.data;
+  const running = Boolean(status?.running);
+  const shareProgress = status && status.shareTotal > 0
+    ? ((status.shareTotal - status.shareRemain) / status.shareTotal) * 100
+    : 0;
+
+  const run = async (action: "start" | "stop") => {
+    setBusy(true);
+    try {
+      if (action === "start") {
+        await api.startMover();
+        toast({ kind: "success", title: "Mover started", description: "It runs in the background; you can leave this page." });
+      } else {
+        await api.stopMover();
+        toast({ kind: "info", title: "Mover stopped" });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["mover"] });
+    } catch (error) {
+      toast({ kind: "error", title: `Unable to ${action} mover`, description: (error as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="card-pad">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-[var(--violet)]">
+            <ArrowRightLeft className="size-4" />
+          </span>
+          <div>
+            <h2 className="text-[13px] font-semibold text-ink">Mover</h2>
+            <p className="mt-0.5 text-[10.5px] text-subtle">Move cache data to the array and back, in the background</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone={running ? "accent" : "neutral"} dot pulse={running}>
+            {running ? "Running" : "Ready"}
+          </Badge>
+          {running ? (
+            <Button size="sm" variant="danger" icon={<Square className="size-3" />} loading={busy} onClick={() => void run("stop")}>
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Play className="size-3" />}
+              disabled={!arrayRunning || busy}
+              loading={busy}
+              onClick={() => void run("start")}
+            >
+              Start mover
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {running ? (
+        <div className="mt-4 space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="min-w-0 truncate text-[11.5px] text-soft">
+              {status?.action || "Calculating totals…"}
+              {status?.file ? <span className="ml-2 font-mono text-[10px] text-subtle">{status.file}</span> : null}
+            </p>
+            <span className="num shrink-0 text-[12px] text-ink">{status?.progress.toFixed(1)}%</span>
+          </div>
+          <Progress value={status?.progress ?? 0} height={7} />
+          <div className="grid grid-cols-2 gap-3 text-[10px] sm:grid-cols-4">
+            <MoverStat label="Moved" value={formatBytes(Math.max(0, (status?.total ?? 0) - (status?.remain ?? 0)))} />
+            <MoverStat label="Remaining" value={formatBytes(status?.remain ?? 0)} />
+            <MoverStat label="Throughput" value={formatSpeed(status?.throughput ?? 0)} />
+            <MoverStat label="ETA" value={status && status.eta > 0 ? formatDuration(status.eta) : "—"} />
+          </div>
+          {status && status.shareTotal > 0 ? (
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 p-3">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-muted">Current item</span>
+                <span className="num text-subtle">{shareProgress.toFixed(1)}% · {formatSpeed(status.shareThroughput)}</span>
+              </div>
+              <Progress value={shareProgress} height={4} className="mt-2" tone="var(--violet)" />
+            </div>
+          ) : null}
+          {!status?.total ? (
+            <p className="text-[10px] text-subtle">
+              Progress reporting is disabled in Unraid (Settings → Scheduler → Mover). The job still runs.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-4 text-[11px] leading-relaxed text-muted">
+          The mover honours each share's cache mode: <span className="text-soft">Yes</span> moves to the array,
+          <span className="text-soft"> Prefer</span> brings data back to the pool. Progress is read from Unraid's
+          <span className="font-mono text-[10px]"> mover.ini</span> and survives a page refresh.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function MoverStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-[var(--surface-2)]/45 px-2.5 py-2">
+      <p className="text-[8.5px] uppercase tracking-[0.1em] text-subtle">{label}</p>
+      <p className="num mt-0.5 truncate text-[10.5px] text-soft">{value}</p>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Array start / stop                                                          */
+/* -------------------------------------------------------------------------- */
+
+function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [keyType, setKeyType] = useState<"none" | "passphrase" | "keyfile">("none");
+  const [passphrase, setPassphrase] = useState("");
+  const [keyfile, setKeyfile] = useState("");
+  const [maintenance, setMaintenance] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setKeyType("none");
+    setPassphrase("");
+    setKeyfile("");
+    setMaintenance(false);
+    setError("");
+  }, [open]);
+
+  const readKeyfile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      setError("The keyfile must be smaller than 1 MiB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      setKeyfile(result.includes(",") ? result.split(",")[1] : result);
+      setError("");
+    };
+    reader.onerror = () => setError("Unable to read the keyfile.");
+    reader.readAsDataURL(file);
+  };
+
+  const start = async () => {
+    if (keyType === "passphrase" && !passphrase) {
+      setError("Enter the array passphrase.");
+      return;
+    }
+    if (keyType === "keyfile" && !keyfile) {
+      setError("Select the encryption keyfile.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await api.startArray({
+        keyType,
+        key: keyType === "passphrase" ? passphrase : keyType === "keyfile" ? keyfile : "",
+        mode: maintenance ? "maintenance" : "normal",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      await queryClient.invalidateQueries({ queryKey: ["mover"] });
+      toast({ kind: "success", title: "Array start requested", description: "The array is starting." });
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Start the array"
+      description="Provide the encryption key when the array uses LUKS."
+      size="md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="primary" icon={<Play className="size-3.5" />} loading={saving} onClick={() => void start()}>
+            Start array
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="array-key-type" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
+            Encryption key
+          </label>
+          <select
+            id="array-key-type"
+            value={keyType}
+            onChange={(event) => { setKeyType(event.target.value as typeof keyType); setError(""); }}
+            className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+          >
+            <option value="none">No key (unencrypted array)</option>
+            <option value="passphrase">Passphrase</option>
+            <option value="keyfile">Keyfile</option>
+          </select>
+        </div>
+        {keyType === "passphrase" ? (
+          <div>
+            <label htmlFor="array-passphrase" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
+              Passphrase
+            </label>
+            <div className="flex h-9 items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-2.5">
+              <LockKeyhole className="size-3.5 text-subtle" />
+              <input
+                id="array-passphrase"
+                type="password"
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
+                placeholder="Printable ASCII characters"
+                className="h-full w-full bg-transparent text-[12px] text-ink outline-none placeholder:text-subtle"
+              />
+            </div>
+            <p className="mt-1 text-[9.5px] text-subtle">Unraid accepts printable ASCII characters from space to tilde.</p>
+          </div>
+        ) : null}
+        {keyType === "keyfile" ? (
+          <div>
+            <label htmlFor="array-keyfile" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
+              Keyfile
+            </label>
+            <input
+              id="array-keyfile"
+              type="file"
+              onChange={readKeyfile}
+              className="block w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-2 text-[10.5px] text-muted file:mr-3 file:rounded-md file:border-0 file:bg-[var(--surface-3)] file:px-2 file:py-1 file:text-[10px] file:text-soft"
+            />
+            <p className="mt-1 text-[9.5px] text-subtle">The file is uploaded to the keyfile path configured by Unraid.</p>
+          </div>
+        ) : null}
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+          <span>
+            <span className="block text-[11px] font-medium text-soft">Maintenance mode</span>
+            <span className="block text-[9.5px] text-subtle">Start the array without mounting disks.</span>
+          </span>
+          <Switch checked={maintenance} onChange={setMaintenance} label="Maintenance mode" />
+        </label>
+        {error ? (
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">
+            {error}
+          </div>
+        ) : null}
+      </div>
+    </Modal>
+  );
+}
+
+function ArrayStopModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const stop = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api.stopArray();
+      await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      await queryClient.invalidateQueries({ queryKey: ["mover"] });
+      toast({ kind: "info", title: "Array stop requested", description: "The array is stopping." });
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Stop the array?"
+      description="Services and shares will become unavailable until the array is started again."
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="danger" icon={<Square className="size-3.5" />} loading={saving} onClick={() => void stop()}>
+            Stop array
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-[11px] leading-relaxed text-muted">
+          Unraid will flush pending writes and stop the array. Encryption keys are not stored by Aurora.
+        </p>
+        {error ? (
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">
+            {error}
+          </div>
+        ) : null}
+      </div>
+    </Modal>
   );
 }

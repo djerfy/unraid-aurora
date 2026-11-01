@@ -1,10 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Apple,
   Clock3,
   Cpu,
   Gauge,
   HardDrive,
+  LayoutGrid,
+  List,
   MemoryStick,
   Monitor,
   Network,
@@ -22,6 +24,7 @@ import {
   Button,
   Card,
   EmptyState,
+  IconButton,
   Progress,
   cn,
 } from "../components/ui/primitives";
@@ -34,10 +37,25 @@ export function VMsPage() {
   const { snapshot, refresh } = useApp();
   const action = useAction();
   const [selected, setSelected] = useState<VM | null>(null);
+  const [view, setView] = useState<"grid" | "list">(() => {
+    try {
+      return localStorage.getItem("aurora.vms.view") === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
+  });
 
   if (!snapshot) return null;
   const vms = snapshot.vms;
   const running = vms.filter((vm) => vm.state === "running");
+  useEffect(() => {
+    try {
+      localStorage.setItem("aurora.vms.view", view);
+    } catch {
+      // Storage can be unavailable; the view still works for this session.
+    }
+  }, [view]);
+
   const totalVcpu = vms.reduce((sum, vm) => sum + vm.vcpus, 0);
   const totalMemory = vms.reduce((sum, vm) => sum + vm.memory, 0);
 
@@ -77,16 +95,53 @@ export function VMsPage() {
           />
         </Card>
       ) : (
-        <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {vms.map((vm) => (
-            <VMCard
-              key={vm.id}
-              vm={vm}
-              onOpen={() => setSelected(vm)}
-              busy={action.isPending && action.variables?.target === vm.name}
-            />
-          ))}
-        </div>
+        <>
+          <div className="mb-4 flex justify-end">
+            <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+              <button
+                type="button"
+                onClick={() => setView("grid")}
+                aria-label="Grid view"
+                className={cn("grid size-7 place-items-center rounded-md transition", view === "grid" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
+              >
+                <LayoutGrid className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("list")}
+                aria-label="List view"
+                className={cn("grid size-7 place-items-center rounded-md transition", view === "list" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
+              >
+                <List className="size-3.5" />
+              </button>
+            </div>
+          </div>
+          {view === "grid" ? (
+            <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {vms.map((vm) => (
+                <VMCard
+                  key={vm.id}
+                  vm={vm}
+                  onOpen={() => setSelected(vm)}
+                  busy={action.isPending && action.variables?.target === vm.name}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-line/60">
+                {vms.map((vm) => (
+                  <VMRow
+                    key={vm.id}
+                    vm={vm}
+                    onOpen={() => setSelected(vm)}
+                    busy={action.isPending && action.variables?.target === vm.name}
+                  />
+                ))}
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
       <Card className="card-pad mt-4">
@@ -345,6 +400,56 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
         ) : null}
       </div>
     </Card>
+  );
+}
+
+function VMRow({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolean }) {
+  const action = useAction();
+  const running = vm.state === "running";
+  const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <EntityIcon src={vmIconURL(vm.id)} name={vm.name} color={vm.color} size={32} fallback={<Icon className="size-4" />} />
+        <span className="min-w-0">
+          <span className="block truncate text-[12px] font-medium text-ink">{vm.name}</span>
+          <span className="block truncate text-[9.5px] text-subtle">{vm.os}</span>
+        </span>
+      </button>
+      <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot>{running ? "running" : vm.state}</Badge>
+      <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{vm.vcpus} vCPU</span>
+      <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(vm.memory)}</span>
+      <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.cpuUsage.toFixed(0)}%` : "—"}</span>
+      <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.memoryUsage.toFixed(0)}%` : "—"}</span>
+      <div className="flex items-center gap-1">
+        <IconButton
+          label={running ? "Suspend" : vm.state === "paused" ? "Resume" : "Start"}
+          size="sm"
+          disabled={busy}
+          onClick={() =>
+            action.mutate({
+              kind: running ? "vm.pause" : vm.state === "paused" ? "vm.resume" : "vm.start",
+              target: vm.name,
+              success: running ? `${vm.name} suspended` : vm.state === "paused" ? `${vm.name} resumed` : `${vm.name} started`,
+            })
+          }
+        >
+          {running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+        </IconButton>
+        {vm.state !== "stopped" ? (
+          <IconButton
+            label="Shut down"
+            size="sm"
+            onClick={() => action.mutate({ kind: "vm.stop", target: vm.name, success: `${vm.name} is shutting down` })}
+          >
+            <Square className="size-3.5" />
+          </IconButton>
+        ) : null}
+        <IconButton label="Details" size="sm" onClick={onOpen}>
+          <Monitor className="size-3.5" />
+        </IconButton>
+      </div>
+    </div>
   );
 }
 

@@ -73,6 +73,30 @@ export type Parity = {
   history: ParityCheck[];
 };
 
+export type ArrayStartOptions = {
+  keyType: "none" | "passphrase" | "keyfile";
+  key: string;
+  mode: "normal" | "maintenance";
+};
+
+export type MoverStatus = {
+  running: boolean;
+  total: number;
+  remain: number;
+  progress: number;
+  throughput: number;
+  eta: number;
+  shareTotal: number;
+  shareRemain: number;
+  shareThroughput: number;
+  shareEta: number;
+  file: string;
+  action: string;
+  filePercent: number;
+  pid: number;
+  updated: string;
+};
+
 export type ArrayInfo = {
   state: string;
   protection: string;
@@ -290,6 +314,26 @@ export type Plugin = {
   color: string;
 };
 
+export type GPUProcess = { pid: number; name: string; memory: number };
+
+export type GPU = {
+  index: number;
+  uuid: string;
+  name: string;
+  vendor: string;
+  driver: string;
+  memoryTotal: number;
+  memoryUsed: number;
+  utilization: number;
+  temperature: number;
+  power: number;
+  powerLimit: number;
+  fan: number;
+  clockMhz: number;
+  memoryClockMhz: number;
+  processes: GPUProcess[];
+};
+
 export type UPS = {
   present: boolean;
   model: string;
@@ -356,6 +400,7 @@ export type Snapshot = {
   users: User[];
   plugins: Plugin[];
   notifications: Notification[];
+  gpus: GPU[];
   ups: UPS;
   settings: Settings;
   metrics: Metrics;

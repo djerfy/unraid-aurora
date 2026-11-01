@@ -94,6 +94,9 @@ Reads the same sources as the original webGUI:
 | UPS | `apcaccess status` |
 | Logs | tail of `/var/log/syslog` (`docker.log` for Docker) |
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
+| User icons | `/boot/config/plugins/dynamix/users/<name>.png` |
+| GPUs | `nvidia-smi` (utilisation, VRAM, temperature, power, processes) |
+| Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 
@@ -128,6 +131,12 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/notifications` | Inbox + archive |
 | `GET` | `/api/v1/parity/history` | Historical checks |
 | `GET` | `/api/v1/ups` | UPS state |
+| `GET` | `/api/v1/gpus` | NVIDIA telemetry |
+| `GET` | `/api/v1/mover` | Mover status and progress |
+| `POST` | `/api/v1/mover/start` / `stop` | Background mover control |
+| `POST` | `/api/v1/array/start` / `stop` | Array lifecycle with optional LUKS key |
+| `GET` | `/api/v1/users/{name}/icon` | Unraid user avatar |
+| `GET` | `/api/v1/terminal` | Authenticated WebSocket root shell |
 | `GET` | `/api/v1/logs?source=&lines=` | syslog, docker or parity |
 | `GET` | `/api/v1/settings` | UI settings |
 | `PUT` | `/api/v1/settings` | Persist validated settings |
@@ -191,6 +200,8 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 | `vm.start/stop/pause/resume` | `virsh start\|shutdown\|suspend\|resume` |
 | `parity.start/stop/pause/resume` | `emcmd cmdCheck=...` |
 | `notification.ack/archive/ackall` | move `.notify` files from unread to archive |
+| mover start/stop | detached `/usr/local/sbin/mover start` and `mover stop` |
+| array start/stop | `emcmd`, with base64 `luksKey` or a host keyfile |
 
 ## 7. Realtime
 
@@ -248,6 +259,8 @@ main.tsx
 | `/docker` | Container grid/list + logs drawer |
 | `/vms` | VM cards + hypervisor summary |
 | `/network` | Traffic, interfaces, peers, services |
+| `/gpus` | GPU telemetry |
+| `/terminal` | Live root shell |
 | `/users` | Accounts + access matrix |
 | `/notifications` | Inbox with filters and drawer |
 | `/plugins` | Installed extensions |

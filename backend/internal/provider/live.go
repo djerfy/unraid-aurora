@@ -117,6 +117,7 @@ func (l *Live) Snapshot(ctx context.Context) (model.Snapshot, error) {
 	users, _ := l.Users(ctx)
 	plugins, _ := l.Plugins(ctx)
 	notifications, _ := l.Notifications(ctx)
+	gpus, _ := l.GPUs(ctx)
 	metrics, _ := l.Metrics(ctx)
 	history, _ := l.History(ctx)
 	ups, _ := l.UPS(ctx)
@@ -124,7 +125,7 @@ func (l *Live) Snapshot(ctx context.Context) (model.Snapshot, error) {
 	snap := model.Snapshot{
 		System: sys, Array: arr, Disks: disks, Shares: shares, Pools: pools,
 		Containers: containers, VMs: vms, Network: network, Users: users,
-		Plugins: plugins, Notifications: notifications, UPS: ups,
+		Plugins: plugins, Notifications: notifications, GPUs: gpus, UPS: ups,
 		Settings: settings, Metrics: metrics, History: history,
 		ServerTime: time.Now(),
 	}
@@ -143,6 +144,7 @@ func normalizeSnapshot(s *model.Snapshot) {
 	s.Users = emptyIfNil(s.Users)
 	s.Plugins = emptyIfNil(s.Plugins)
 	s.Notifications = emptyIfNil(s.Notifications)
+	s.GPUs = emptyIfNil(s.GPUs)
 	s.History = emptyIfNil(s.History)
 	s.Metrics.Cores = emptyIfNil(s.Metrics.Cores)
 	s.System.CPU.PerCore = emptyIfNil(s.System.CPU.PerCore)

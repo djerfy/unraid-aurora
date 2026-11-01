@@ -7,6 +7,7 @@ import {
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn, IconButton, Kbd } from "./primitives";
+import { useBodyScrollLock } from "../../lib/useBodyScrollLock";
 
 /* -------------------------------------------------------------------------- */
 /* Modal                                                                       */
@@ -29,18 +30,14 @@ export function Modal({
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
 }) {
+  useBodyScrollLock(open);
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previous;
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
   if (!open) return null;
@@ -101,18 +98,14 @@ export function Drawer({
   footer?: ReactNode;
   width?: string;
 }) {
+  useBodyScrollLock(open);
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previous;
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
   if (!open) return null;
@@ -260,6 +253,7 @@ export function CommandPalette({
   onClose: () => void;
   commands: Command[];
 }) {
+  useBodyScrollLock(open);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

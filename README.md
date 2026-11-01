@@ -195,10 +195,13 @@ Deep dives:
 | Containers | Docker workloads with real icons, CPU/memory, ports, updates, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, lifecycle actions |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
+| GPUs | NVIDIA utilisation, VRAM, temperature, power, clocks and compute processes |
 | Users | Accounts, roles, share access matrix, account drawer |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
 | Plugins | Installed extensions, versions, categories, update visibility |
 | Logs | Syslog/Docker/parity tail, level + text filters, follow mode, export |
+| Terminal | Interactive root shell over an authenticated WebSocket |
+| Storage operations | Start/stop array with passphrase or keyfile, background mover with progress and ETA |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
 | Global | ⌘K command palette, keyboard navigation, toasts, responsive layout, light theme |
 

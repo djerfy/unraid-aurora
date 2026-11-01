@@ -13,9 +13,9 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { EntityIcon, userIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu } from "../components/ui/overlays";
 import {
-  Avatar,
   Badge,
   Button,
   Card,
@@ -107,7 +107,7 @@ export function UsersPage() {
                   className="grid grid-cols-1 gap-3 px-5 py-3.5 transition hover:bg-[var(--surface-2)]/40 lg:grid-cols-[minmax(0,2fr)_120px_minmax(0,2fr)_140px_40px] lg:items-center lg:gap-4"
                 >
                   <button type="button" onClick={() => setSelected(user)} className="flex min-w-0 items-center gap-3 text-left">
-                    <Avatar name={user.name} color={user.color} size={34} />
+                    <EntityIcon src={userIconURL(user.name)} name={user.name} color={user.color} size={34} />
                     <span className="min-w-0">
                       <span className="flex items-center gap-1.5">
                         <span className="truncate text-[12.5px] font-medium text-ink">{user.name}</span>
@@ -255,7 +255,7 @@ export function UsersPage() {
         {selected ? (
           <div className="space-y-5">
             <div className="flex items-center gap-4 rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
-              <Avatar name={selected.name} color={selected.color} size={52} />
+              <EntityIcon src={userIconURL(selected.name)} name={selected.name} color={selected.color} size={52} />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-semibold text-ink">{selected.name}</p>

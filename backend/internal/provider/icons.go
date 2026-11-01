@@ -48,6 +48,15 @@ func (l *Live) ContainerIcon(ctx context.Context, id string) ([]byte, string, er
 	return readFirstIcon(candidates...)
 }
 
+// UserIcon reads the optional avatar stored by the Unraid user editor.
+func (l *Live) UserIcon(_ context.Context, name string) ([]byte, string, error) {
+	name = filepath.Base(strings.TrimSpace(name))
+	if name == "" || name == "." || name == ".." {
+		return nil, "", errors.New("invalid user name")
+	}
+	return readFirstIcon(filepath.Join(l.bootDir, "config/plugins/dynamix/users", name+".png"))
+}
+
 // VMIcon resolves the icon declared in the domain metadata, then the stock
 // Unraid OS icons.
 func (l *Live) VMIcon(ctx context.Context, id string) ([]byte, string, error) {

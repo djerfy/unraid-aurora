@@ -24,9 +24,16 @@ type Provider interface {
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error
 	VMs(ctx context.Context) ([]model.VM, error)
+	GPUs(ctx context.Context) ([]model.GPU, error)
+	StartArray(ctx context.Context, opts model.ArrayStartOptions) error
+	StopArray(ctx context.Context) error
+	Mover(ctx context.Context) (model.MoverStatus, error)
+	StartMover(ctx context.Context) error
+	StopMover(ctx context.Context) error
 	VMIcon(ctx context.Context, id string) ([]byte, string, error)
 	Network(ctx context.Context) (model.Network, error)
 	Users(ctx context.Context) ([]model.User, error)
+	UserIcon(ctx context.Context, name string) ([]byte, string, error)
 	Plugins(ctx context.Context) ([]model.Plugin, error)
 	Notifications(ctx context.Context) ([]model.Notification, error)
 	ParityHistory(ctx context.Context) ([]model.ParityCheck, error)

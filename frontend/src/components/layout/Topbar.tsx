@@ -15,7 +15,8 @@ import {
   Settings2,
   Sun,
 } from "lucide-react";
-import { Avatar, IconButton, Kbd, cn } from "../ui/primitives";
+import { IconButton, Kbd, cn } from "../ui/primitives";
+import { EntityIcon, userIconURL } from "../ui/entity-icon";
 import { useApp } from "../../app/AppDataProvider";
 import { useTheme } from "../../app/ThemeProvider";
 import { useToast } from "../../app/ToastProvider";
@@ -201,7 +202,7 @@ export function Topbar({
         width="w-56"
         trigger={
           <button type="button" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition hover:bg-[var(--surface-2)] sm:pr-2">
-            <Avatar name={session?.user ?? "admin"} color="var(--accent)" size={28} />
+            <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} color="var(--accent)" size={28} className="rounded-full" />
             <span className="hidden max-w-[100px] truncate text-[12px] font-medium text-soft md:block">
               {session?.user ?? "admin"}
             </span>

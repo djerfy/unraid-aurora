@@ -56,10 +56,24 @@ export function DockerPage() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"grid" | "list">(() => {
+    try {
+      return localStorage.getItem("aurora.docker.view") === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
+  });
   const [query, setQuery] = useState("");
   const [updating, setUpdating] = useState(false);
   const [editing, setEditing] = useState<Container | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("aurora.docker.view", view);
+    } catch {
+      // Storage can be unavailable; the view still works for this session.
+    }
+  }, [view]);
 
   const selectedName = params.get("container");
   const selected = snapshot?.containers.find((container) => container.name === selectedName) ?? null;

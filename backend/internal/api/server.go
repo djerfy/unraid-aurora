@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,6 +45,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/bootstrap", s.bootstrap)
 	api.HandleFunc("GET /api/v1/system", s.system)
 	api.HandleFunc("GET /api/v1/array", s.array)
+	api.HandleFunc("POST /api/v1/array/start", s.startArray)
+	api.HandleFunc("POST /api/v1/array/stop", s.stopArray)
 	api.HandleFunc("GET /api/v1/disks", s.disks)
 	api.HandleFunc("GET /api/v1/shares", s.shares)
 	api.HandleFunc("GET /api/v1/pools", s.pools)
@@ -55,15 +59,21 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/vms/{id}/icon", s.vmIcon)
 	api.HandleFunc("GET /api/v1/network", s.network)
 	api.HandleFunc("GET /api/v1/users", s.users)
+	api.HandleFunc("GET /api/v1/users/{name}/icon", s.userIcon)
 	api.HandleFunc("GET /api/v1/plugins", s.plugins)
 	api.HandleFunc("GET /api/v1/notifications", s.notifications)
 	api.HandleFunc("GET /api/v1/parity/history", s.parityHistory)
 	api.HandleFunc("GET /api/v1/ups", s.ups)
+	api.HandleFunc("GET /api/v1/gpus", s.gpus)
+	api.HandleFunc("GET /api/v1/mover", s.mover)
+	api.HandleFunc("POST /api/v1/mover/start", s.startMover)
+	api.HandleFunc("POST /api/v1/mover/stop", s.stopMover)
 	api.HandleFunc("GET /api/v1/logs", s.logs)
 	api.HandleFunc("GET /api/v1/settings", s.getSettings)
 	api.HandleFunc("PUT /api/v1/settings", s.putSettings)
 	api.HandleFunc("GET /api/v1/metrics/history", s.metricsHistory)
 	api.HandleFunc("GET /api/v1/events", s.events)
+	api.HandleFunc("GET /api/v1/terminal", s.terminal)
 	api.HandleFunc("POST /api/v1/actions", s.action)
 
 	root := http.NewServeMux()
@@ -173,6 +183,18 @@ func (w *statusWriter) Flush() {
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+func (w *statusWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, http.ErrNotSupported
+	}
+	return hijacker.Hijack()
+}
+
+func (w *statusWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
 }
 
 func (s *Server) accessLog(next http.Handler) http.Handler {

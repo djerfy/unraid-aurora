@@ -133,6 +133,44 @@ func (s *Server) array(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) startArray(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body model.ArrayStartOptions
+	if !s.decode(w, r, &body) {
+		return
+	}
+	if err := provider.ValidateArrayStartOptions(body); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_array_options", err.Error())
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if err := s.provider.StartArray(ctx, body); err != nil {
+		writeError(w, http.StatusInternalServerError, "array_start_failed", err.Error())
+		return
+	}
+	s.log.Info("array start requested")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) stopArray(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if err := s.provider.StopArray(ctx); err != nil {
+		writeError(w, http.StatusInternalServerError, "array_stop_failed", err.Error())
+		return
+	}
+	s.log.Info("array stop requested")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) disks(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -290,6 +328,17 @@ func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) userIcon(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	data, contentType, err := s.provider.UserIcon(ctx, r.PathValue("name"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	serveIcon(w, data, contentType)
+}
+
 func (s *Server) plugins(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -332,6 +381,56 @@ func (s *Server) ups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) gpus(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	values, err := s.provider.GPUs(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, values)
+}
+
+func (s *Server) mover(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	status, err := s.provider.Mover(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, status)
+}
+
+func (s *Server) startMover(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := s.provider.StartMover(ctx); err != nil {
+		writeError(w, http.StatusConflict, "mover_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) stopMover(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
+	defer cancel()
+	if err := s.provider.StopMover(ctx); err != nil {
+		writeError(w, http.StatusInternalServerError, "mover_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {

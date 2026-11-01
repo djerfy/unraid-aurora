@@ -246,7 +246,7 @@ export function AppShell() {
             <span className="flex items-center gap-1">
               <span className="status-dot live" /> Unraid {snapshot.system.version}
             </span>
-            <span className="font-mono">native auth</span>
+            <span className="font-mono">🌱 DJΞRFY 🚀</span>
           </span>
         </footer>
       </div>

@@ -64,6 +64,16 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(config),
     }),
+  startArray: (options: import("./types").ArrayStartOptions) =>
+    request<{ ok: boolean }>("/api/v1/array/start", {
+      method: "POST",
+      body: JSON.stringify(options),
+    }),
+  stopArray: () =>
+    request<{ ok: boolean }>("/api/v1/array/stop", { method: "POST", body: "{}" }),
+  mover: () => request<import("./types").MoverStatus>("/api/v1/mover"),
+  startMover: () => request<{ ok: boolean }>("/api/v1/mover/start", { method: "POST", body: "{}" }),
+  stopMover: () => request<{ ok: boolean }>("/api/v1/mover/stop", { method: "POST", body: "{}" }),
   logs: (source: string, lines = 240) =>
     request<LogLineType[]>(`/api/v1/logs?source=${encodeURIComponent(source)}&lines=${lines}`),
   saveSettings: (settings: Snapshot["settings"]) =>

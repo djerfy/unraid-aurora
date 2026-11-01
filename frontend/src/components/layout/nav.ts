@@ -1,6 +1,7 @@
 import {
   Bell,
   Boxes,
+  Cpu,
   Gauge,
   HardDrive,
   MonitorPlay,
@@ -8,6 +9,7 @@ import {
   Puzzle,
   ScrollText,
   Settings2,
+  SquareTerminal,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -29,9 +31,11 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/docker", label: "Containers", icon: Boxes, group: "Infrastructure" },
   { to: "/vms", label: "Virtual machines", icon: MonitorPlay, group: "Infrastructure" },
   { to: "/network", label: "Network", icon: Network, group: "Infrastructure" },
+  { to: "/gpus", label: "GPUs", icon: Cpu, group: "Infrastructure" },
   { to: "/users", label: "Users", icon: Users, group: "System" },
   { to: "/plugins", label: "Plugins", icon: Puzzle, group: "System" },
   { to: "/logs", label: "Logs", icon: ScrollText, group: "System" },
+  { to: "/terminal", label: "Terminal", icon: SquareTerminal, group: "System" },
   { to: "/settings", label: "Settings", icon: Settings2, group: "System" },
 ];
 
@@ -42,8 +46,10 @@ export const PAGE_META: Record<string, { title: string; section: string }> = {
   "/docker": { title: "Containers", section: "Infrastructure" },
   "/vms": { title: "Virtual machines", section: "Infrastructure" },
   "/network": { title: "Network", section: "Infrastructure" },
+  "/gpus": { title: "GPUs", section: "Infrastructure" },
   "/users": { title: "Users", section: "System" },
   "/plugins": { title: "Plugins", section: "System" },
   "/logs": { title: "Logs", section: "System" },
+  "/terminal": { title: "Terminal", section: "System" },
   "/settings": { title: "Settings", section: "System" },
 };

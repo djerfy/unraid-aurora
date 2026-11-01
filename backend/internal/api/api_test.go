@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +20,8 @@ import (
 	"aurora/internal/metrics"
 	"aurora/internal/model"
 	"aurora/internal/provider"
+
+	"github.com/coder/websocket"
 )
 
 // fakeProvider exposes the handful of methods the HTTP tests exercise. The
@@ -306,5 +310,48 @@ func TestUnknownActionIsRejected(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusUnprocessableEntity {
 		t.Fatalf("expected 422, got %d", resp.StatusCode)
+	}
+}
+
+func TestTerminalWebSocket(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("login status = %d", resp.StatusCode)
+	}
+	serverURL, err := url.Parse(env.server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookies := env.client.Jar.Cookies(serverURL)
+	if len(cookies) == 0 {
+		t.Fatal("session cookie missing")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	wsURL := "ws" + strings.TrimPrefix(env.server.URL, "http") + "/api/v1/terminal"
+	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
+		HTTPHeader: http.Header{"Cookie": []string{cookies[0].String()}},
+	})
+	if err != nil {
+		t.Fatalf("dial terminal: %v", err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "test done")
+
+	if err := conn.Write(ctx, websocket.MessageBinary, []byte("echo TERMINAL_OK\n")); err != nil {
+		t.Fatalf("write terminal: %v", err)
+	}
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatalf("read terminal: %v", err)
+		}
+		if strings.Contains(string(data), "TERMINAL_OK") {
+			return
+		}
 	}
 }

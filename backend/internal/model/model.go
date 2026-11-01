@@ -99,6 +99,12 @@ type Parity struct {
 	History    []ParityCheck `json:"history"`
 }
 
+type ArrayStartOptions struct {
+	KeyType string `json:"keyType"` // none, passphrase or keyfile
+	Key     string `json:"key"`     // passphrase, or base64 keyfile content
+	Mode    string `json:"mode"`    // normal or maintenance
+}
+
 type Array struct {
 	State      string  `json:"state"`
 	Protection string  `json:"protection"`
@@ -338,6 +344,48 @@ type Plugin struct {
 	Color           string `json:"color"`
 }
 
+type MoverStatus struct {
+	Running         bool      `json:"running"`
+	Total           uint64    `json:"total"`
+	Remain          uint64    `json:"remain"`
+	Progress        float64   `json:"progress"`
+	Throughput      float64   `json:"throughput"`
+	ETA             int64     `json:"eta"`
+	ShareTotal      uint64    `json:"shareTotal"`
+	ShareRemain     uint64    `json:"shareRemain"`
+	ShareThroughput float64   `json:"shareThroughput"`
+	ShareETA        int64     `json:"shareEta"`
+	File            string    `json:"file"`
+	Action          string    `json:"action"`
+	FilePercent     float64   `json:"filePercent"`
+	PID             int       `json:"pid"`
+	Updated         time.Time `json:"updated"`
+}
+
+type GPUProcess struct {
+	PID    int    `json:"pid"`
+	Name   string `json:"name"`
+	Memory uint64 `json:"memory"`
+}
+
+type GPU struct {
+	Index          int          `json:"index"`
+	UUID           string       `json:"uuid"`
+	Name           string       `json:"name"`
+	Vendor         string       `json:"vendor"`
+	Driver         string       `json:"driver"`
+	MemoryTotal    uint64       `json:"memoryTotal"`
+	MemoryUsed     uint64       `json:"memoryUsed"`
+	Utilization    float64      `json:"utilization"`
+	Temperature    float64      `json:"temperature"`
+	Power          float64      `json:"power"`
+	PowerLimit     float64      `json:"powerLimit"`
+	Fan            float64      `json:"fan"`
+	ClockMHz       int          `json:"clockMhz"`
+	MemoryClockMHz int          `json:"memoryClockMhz"`
+	Processes      []GPUProcess `json:"processes"`
+}
+
 type UPS struct {
 	Present       bool    `json:"present"`
 	Model         string  `json:"model"`
@@ -409,6 +457,7 @@ type Snapshot struct {
 	Users         []User         `json:"users"`
 	Plugins       []Plugin       `json:"plugins"`
 	Notifications []Notification `json:"notifications"`
+	GPUs          []GPU          `json:"gpus"`
 	UPS           UPS            `json:"ups"`
 	Settings      Settings       `json:"settings"`
 	Metrics       Metrics        `json:"metrics"`

@@ -73,3 +73,7 @@ export function containerIconURL(id: string) {
 export function vmIconURL(id: string) {
   return `/api/v1/vms/${encodeURIComponent(id)}/icon`;
 }
+
+export function userIconURL(name: string) {
+  return `/api/v1/users/${encodeURIComponent(name)}/icon`;
+}

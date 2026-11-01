@@ -8,10 +8,12 @@ import { StoragePage } from "./pages/Storage";
 import { DockerPage } from "./pages/Docker";
 import { VMsPage } from "./pages/VMs";
 import { NetworkPage } from "./pages/Network";
+import { GPUsPage } from "./pages/GPUs";
 import { UsersPage } from "./pages/Users";
 import { NotificationsPage } from "./pages/Notifications";
 import { PluginsPage } from "./pages/Plugins";
 import { LogsPage } from "./pages/Logs";
+import { TerminalPage } from "./pages/Terminal";
 import { SettingsPage } from "./pages/Settings";
 import { LoginPage } from "./pages/Login";
 import { NotFoundPage } from "./pages/NotFound";
@@ -48,10 +50,12 @@ export default function App() {
           <Route path="/docker" element={<DockerPage />} />
           <Route path="/vms" element={<VMsPage />} />
           <Route path="/network" element={<NetworkPage />} />
+          <Route path="/gpus" element={<GPUsPage />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/plugins" element={<PluginsPage />} />
           <Route path="/logs" element={<LogsPage />} />
+          <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

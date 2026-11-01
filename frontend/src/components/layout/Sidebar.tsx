@@ -10,7 +10,8 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { cn, Avatar, Progress } from "../ui/primitives";
+import { cn, Progress } from "../ui/primitives";
+import { EntityIcon, userIconURL } from "../ui/entity-icon";
 import { AuroraWordmark } from "./Brand";
 import { NAV_GROUPS, NAV_ITEMS } from "./nav";
 import { useApp } from "../../app/AppDataProvider";
@@ -193,7 +194,7 @@ export function Sidebar({
               <kbd className="rounded border border-line bg-[var(--surface)] px-1 font-mono text-[9px]">⌘K</kbd>
             </button>
             <div className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-[var(--surface-2)]">
-              <Avatar name={session?.user ?? "root"} color="var(--accent)" size={30} />
+              <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} color="var(--accent)" size={30} className="rounded-full" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12px] font-medium text-ink">{session?.user ?? "root"}</p>
                 <p className="truncate text-[10px] text-subtle">Host administrator</p>
@@ -211,7 +212,7 @@ export function Sidebar({
           </>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Avatar name={session?.user ?? "root"} color="var(--accent)" size={30} />
+            <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} color="var(--accent)" size={30} className="rounded-full" />
             <div className="flex items-center gap-1">
               <button
                 type="button"
