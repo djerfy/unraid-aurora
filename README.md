@@ -203,7 +203,7 @@ Deep dives:
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
 | Storage operations | Start/stop array with passphrase or keyfile, background mover with progress, ETA and run history |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
-| Global | ⌘K command palette, keyboard navigation, toasts, responsive layout, light theme |
+| Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 
 ## Security notes
 

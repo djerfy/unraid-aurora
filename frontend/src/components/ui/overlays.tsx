@@ -244,6 +244,16 @@ export type Command = {
   run: () => void;
 };
 
+function limitPerGroup(commands: Command[], limit: number): Command[] {
+  const counts = new Map<string, number>();
+  return commands.filter((command) => {
+    const count = counts.get(command.group) ?? 0;
+    if (count >= limit) return false;
+    counts.set(command.group, count + 1);
+    return true;
+  });
+}
+
 export function CommandPalette({
   open,
   onClose,
@@ -268,12 +278,16 @@ export function CommandPalette({
 
   const filtered = commands.filter((command) => {
     if (!query.trim()) return true;
-    const haystack = `${command.label} ${command.group} ${command.keywords ?? ""}`.toLowerCase();
+    const haystack = `${command.label} ${command.hint ?? ""} ${command.group} ${command.keywords ?? ""}`.toLowerCase();
     return query
       .toLowerCase()
       .split(/\s+/)
       .every((word) => haystack.includes(word));
   });
+
+  // The unfiltered list would be dominated by every container and VM, so each
+  // group is trimmed until the user actually types something.
+  const visible = query.trim() ? filtered : limitPerGroup(filtered, 4);
 
   useEffect(() => {
     setCursor(0);
@@ -287,13 +301,13 @@ export function CommandPalette({
         onClose();
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
-        setCursor((c) => Math.min(filtered.length - 1, c + 1));
+        setCursor((c) => Math.min(visible.length - 1, c + 1));
       } else if (event.key === "ArrowUp") {
         event.preventDefault();
         setCursor((c) => Math.max(0, c - 1));
       } else if (event.key === "Enter") {
         event.preventDefault();
-        const command = filtered[cursor];
+        const command = visible[cursor];
         if (command) {
           onClose();
           command.run();
@@ -302,7 +316,7 @@ export function CommandPalette({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, filtered, cursor, onClose]);
+  }, [open, visible, cursor, onClose]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -331,17 +345,17 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search pages, containers, actions…"
+            placeholder="Search pages, containers, VMs, actions…"
             className="h-6 w-full border-0 bg-transparent text-sm text-ink outline-none placeholder:text-subtle"
           />
           <Kbd>esc</Kbd>
         </div>
 
         <div ref={listRef} className="max-h-[44vh] overflow-y-auto p-2">
-          {filtered.length === 0 ? (
+          {visible.length === 0 ? (
             <p className="px-3 py-10 text-center text-xs text-muted">No results for “{query}”.</p>
           ) : (
-            filtered.map((command) => {
+            visible.map((command) => {
               visibleIndex += 1;
               const index = visibleIndex;
               const showGroup = command.group !== lastGroup;
@@ -388,7 +402,7 @@ export function CommandPalette({
             <span className="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="status-dot live" /> {filtered.length} results
+            <span className="status-dot live" /> {visible.length} results
           </span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Apple,
   Clock3,
@@ -36,7 +37,7 @@ import type { VM } from "../lib/types";
 export function VMsPage() {
   const { snapshot, refresh } = useApp();
   const action = useAction();
-  const [selected, setSelected] = useState<VM | null>(null);
+  const [params, setParams] = useSearchParams();
   const [view, setView] = useState<"grid" | "list">(() => {
     try {
       return localStorage.getItem("aurora.vms.view") === "list" ? "list" : "grid";
@@ -45,9 +46,6 @@ export function VMsPage() {
     }
   });
 
-  if (!snapshot) return null;
-  const vms = snapshot.vms;
-  const running = vms.filter((vm) => vm.state === "running");
   useEffect(() => {
     try {
       localStorage.setItem("aurora.vms.view", view);
@@ -55,6 +53,20 @@ export function VMsPage() {
       // Storage can be unavailable; the view still works for this session.
     }
   }, [view]);
+
+  if (!snapshot) return null;
+  const vms = snapshot.vms;
+  const running = vms.filter((vm) => vm.state === "running");
+
+  // Keeping the selection in the URL lets the command palette (and a page
+  // refresh) open a specific VM directly.
+  const selected = vms.find((vm) => vm.name === params.get("vm")) ?? null;
+  const setSelected = (vm: VM | null) => {
+    const next = new URLSearchParams(params);
+    if (vm) next.set("vm", vm.name);
+    else next.delete("vm");
+    setParams(next, { replace: true });
+  };
 
   const totalVcpu = vms.reduce((sum, vm) => sum + vm.vcpus, 0);
   const totalMemory = vms.reduce((sum, vm) => sum + vm.memory, 0);

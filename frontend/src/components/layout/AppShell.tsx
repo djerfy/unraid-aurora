@@ -19,6 +19,7 @@ import { useTheme } from "../../app/ThemeProvider";
 import { useAction } from "../../lib/useAction";
 import { useHotkeys } from "../../lib/hooks";
 import { NAV_ITEMS } from "./nav";
+import { EntityIcon, containerIconURL, vmIconURL } from "../ui/entity-icon";
 import { AuroraWordmark } from "./Brand";
 
 function BootScreen({ message = "Connecting to your server" }: { message?: string }) {
@@ -167,14 +168,32 @@ export function AppShell() {
       },
     ];
 
-    const containers: Command[] = snapshot.containers.slice(0, 10).map((container) => {
+    const containers: Command[] = snapshot.containers.map((container) => ({
+      id: `ct-open-${container.id}`,
+      label: container.name,
+      hint: `Container · ${container.state} · ${container.image}`,
+      group: "Containers",
+      keywords: `container docker ${container.state} ${container.image} ${container.category}`,
+      icon: (
+        <EntityIcon
+          src={containerIconURL(container.id)}
+          name={container.name}
+          color={container.color}
+          size={20}
+          className="rounded-md"
+        />
+      ),
+      run: () => navigate(`/docker?container=${encodeURIComponent(container.name)}`),
+    }));
+
+    const containerActions: Command[] = snapshot.containers.map((container) => {
       const running = container.state === "running";
       return {
-        id: `ct-${container.id}`,
+        id: `ct-action-${container.id}`,
         label: running ? `Restart ${container.name}` : `Start ${container.name}`,
-        hint: container.image,
-        group: "Containers",
-        keywords: "docker container",
+        hint: `${container.state} · ${container.image}`,
+        group: "Container actions",
+        keywords: `docker container ${container.state} ${container.image}`,
         icon: running ? <RotateCw className="size-3.5" /> : <Play className="size-3.5" />,
         run: () =>
           action.mutate({
@@ -185,14 +204,32 @@ export function AppShell() {
       };
     });
 
-    const vms: Command[] = snapshot.vms.slice(0, 6).map((vm) => {
+    const vms: Command[] = snapshot.vms.map((vm) => ({
+      id: `vm-open-${vm.id}`,
+      label: vm.name,
+      hint: `Virtual machine · ${vm.state} · ${vm.os}`,
+      group: "Virtual machines",
+      keywords: `vm qemu kvm ${vm.state} ${vm.os}`,
+      icon: (
+        <EntityIcon
+          src={vmIconURL(vm.id)}
+          name={vm.name}
+          color={vm.color}
+          size={20}
+          className="rounded-md"
+        />
+      ),
+      run: () => navigate(`/vms?vm=${encodeURIComponent(vm.name)}`),
+    }));
+
+    const vmActions: Command[] = snapshot.vms.map((vm) => {
       const running = vm.state === "running";
       return {
-        id: `vm-${vm.id}`,
+        id: `vm-action-${vm.id}`,
         label: running ? `Stop ${vm.name}` : `Start ${vm.name}`,
-        hint: vm.os,
-        group: "Virtual machines",
-        keywords: "vm qemu",
+        hint: `${vm.state} · ${vm.os}`,
+        group: "VM actions",
+        keywords: `vm qemu kvm ${vm.state} ${vm.os}`,
         icon: running ? <Square className="size-3.5" /> : <Play className="size-3.5" />,
         run: () =>
           action.mutate({
@@ -203,7 +240,7 @@ export function AppShell() {
       };
     });
 
-    return [...navigation, ...globals, ...containers, ...vms];
+    return [...navigation, ...globals, ...containers, ...containerActions, ...vms, ...vmActions];
   }, [snapshot, navigate, resolvedTheme, setTheme, refresh, action]);
 
   if (error) return <ErrorScreen error={error} onRetry={() => refresh()} />;
