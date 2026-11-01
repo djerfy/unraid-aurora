@@ -727,6 +727,45 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) configHistory(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	history, err := s.provider.ConfigHistory(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, history)
+}
+
+func (s *Server) configHistoryDetail(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	entry, err := s.provider.ConfigHistoryDetail(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, entry)
+}
+
+func (s *Server) rollbackConfig(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	id := r.PathValue("id")
+	if err := s.provider.RollbackConfig(ctx, id); err != nil {
+		s.log.Error("config rollback failed", "id", id, "error", err)
+		writeError(w, http.StatusInternalServerError, "rollback_failed", err.Error())
+		return
+	}
+	s.log.Info("config rollback applied", "id", id)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) getSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

@@ -370,10 +370,10 @@ func readAutostartFile(path string) ([]string, error) {
 	return entries, nil
 }
 
-func writeAutostartFile(path, name string, enabled bool) error {
+func updatedAutostartEntries(path, name string, enabled bool) ([]string, error) {
 	entries, err := readAutostartFile(path)
 	if err != nil {
-		return fmt.Errorf("read autostart file: %w", err)
+		return nil, fmt.Errorf("read autostart file: %w", err)
 	}
 	kept := make([]string, 0, len(entries)+1)
 	for _, line := range entries {
@@ -384,6 +384,14 @@ func writeAutostartFile(path, name string, enabled bool) error {
 	}
 	if enabled {
 		kept = append(kept, name)
+	}
+	return kept, nil
+}
+
+func writeAutostartFile(path, name string, enabled bool) error {
+	kept, err := updatedAutostartEntries(path, name, enabled)
+	if err != nil {
+		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create autostart directory: %w", err)
@@ -400,6 +408,22 @@ func writeAutostartFile(path, name string, enabled bool) error {
 	return nil
 }
 
+func (l *Live) setContainerAutostart(name string, enabled bool) error {
+	kept, err := updatedAutostartEntries(dockerAutostartFile, name, enabled)
+	if err != nil {
+		return err
+	}
+	if len(kept) == 0 {
+		return l.deleteConfigFile("container.autostart", "Remove autostart entry · "+name, dockerAutostartFile)
+	}
+	return l.writeConfigFile(
+		"container.autostart",
+		fmt.Sprintf("Set autostart %s · %s", map[bool]string{true: "on", false: "off"}[enabled], name),
+		dockerAutostartFile,
+		[]byte(strings.Join(kept, "\n")+"\n"),
+	)
+}
+
 // SetContainerAutostart updates Unraid's own autostart list so the official
 // Docker page and the array startup script see the same setting.
 func (l *Live) SetContainerAutostart(ctx context.Context, id string, enabled bool) error {
@@ -412,10 +436,7 @@ func (l *Live) SetContainerAutostart(ctx context.Context, id string, enabled boo
 		return errors.New("container name is missing")
 	}
 
-	if err := writeAutostartFile(dockerAutostartFile, name, enabled); err != nil {
-		return err
-	}
-	return nil
+	return l.setContainerAutostart(name, enabled)
 }
 
 func (l *Live) imageUpdate(image string) bool {

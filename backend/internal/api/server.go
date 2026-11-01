@@ -88,6 +88,9 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/metrics/history", s.metricsHistory)
 	api.HandleFunc("GET /api/v1/events", s.events)
 	api.HandleFunc("GET /api/v1/tools/diagnostics", s.diagnostics)
+	api.HandleFunc("GET /api/v1/config-history", s.configHistory)
+	api.HandleFunc("GET /api/v1/config-history/{id}", s.configHistoryDetail)
+	api.HandleFunc("POST /api/v1/config-history/{id}/rollback", s.rollbackConfig)
 	api.HandleFunc("GET /api/v1/terminal", s.terminal)
 	api.HandleFunc("POST /api/v1/actions", s.action)
 

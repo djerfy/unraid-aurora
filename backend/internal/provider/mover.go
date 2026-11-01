@@ -19,9 +19,11 @@ func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	if err != nil {
 		return status, err
 	}
+	status.Phase = moverPhase(status.Running, status.Action, status.Total, status.Remain)
 	l.moverMu.Lock()
 	if status.Running {
 		l.moverLast = status
+		status.Files = append([]string(nil), l.moverFiles...)
 	}
 	status.History = append([]model.MoverRun(nil), l.moverHistory...)
 	if status.History == nil {
@@ -64,8 +66,29 @@ func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	return status, nil
 }
 
+func moverPhase(running bool, action string, total, remain uint64) string {
+	if !running {
+		return "idle"
+	}
+	lower := strings.ToLower(action)
+	switch {
+	case strings.Contains(lower, "stop"):
+		return "stopping"
+	case strings.Contains(lower, "calculating"):
+		return "calculating"
+	case strings.Contains(lower, "calculated"):
+		return "moving"
+	case total == 0:
+		return "scanning"
+	case remain == 0:
+		return "finishing"
+	default:
+		return "moving"
+	}
+}
+
 func (l *Live) watchMover() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
@@ -79,7 +102,10 @@ func (l *Live) watchMover() {
 					l.moverActive = true
 					l.moverStarted = time.Now()
 					l.moverStopped = false
+					l.moverFiles = nil
+					l.moverSeen = map[string]bool{}
 				}
+				l.trackMoverFile(status)
 				l.moverLast = status
 			} else if l.moverActive {
 				last := l.moverLast
@@ -105,10 +131,30 @@ func (l *Live) watchMover() {
 				l.moverActive = false
 				l.moverStopped = false
 				l.moverLast = model.MoverStatus{}
+				l.moverFiles = nil
+				l.moverSeen = map[string]bool{}
 				_ = l.saveMoverHistory()
 			}
 			l.moverMu.Unlock()
 		}
+	}
+}
+
+// trackMoverFile records each file announced by mover.ini while the mover is
+// relocating data. mover.ini changes faster than the poll interval for tiny
+// files, so the list is a best-effort record of the run.
+func (l *Live) trackMoverFile(status model.MoverStatus) {
+	file := strings.TrimSpace(status.File)
+	if file == "" || l.moverSeen[file] {
+		return
+	}
+	action := strings.ToLower(status.Action)
+	if !strings.Contains(action, "moving") && !strings.Contains(action, "copying") && !strings.Contains(action, "cleanup") {
+		return
+	}
+	l.moverSeen[file] = true
+	if len(l.moverFiles) < 1000 {
+		l.moverFiles = append(l.moverFiles, file)
 	}
 }
 
@@ -162,6 +208,8 @@ func (l *Live) StartMover(ctx context.Context) error {
 	l.moverStarted = time.Now()
 	l.moverStopped = false
 	l.moverLast = model.MoverStatus{}
+	l.moverFiles = nil
+	l.moverSeen = map[string]bool{}
 	l.moverMu.Unlock()
 	// Do not Wait: the mover runs for minutes or hours and must survive the
 	// HTTP request. The status endpoint follows it through mover.ini.

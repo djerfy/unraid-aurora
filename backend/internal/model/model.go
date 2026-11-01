@@ -427,6 +427,21 @@ type PluginEvent struct {
 	Error bool   `json:"error"`
 }
 
+type ConfigFileChange struct {
+	Path    string `json:"path"`
+	Existed bool   `json:"existed"`
+	Size    int64  `json:"size"`
+	Diff    string `json:"diff"`
+}
+
+type ConfigHistory struct {
+	ID          string             `json:"id"`
+	Created     time.Time          `json:"created"`
+	Action      string             `json:"action"`
+	Description string             `json:"description"`
+	Files       []ConfigFileChange `json:"files"`
+}
+
 type MoverRun struct {
 	Started  time.Time `json:"started"`
 	Finished time.Time `json:"finished"`
@@ -434,6 +449,7 @@ type MoverRun struct {
 	Total    uint64    `json:"total"`
 	Moved    uint64    `json:"moved"`
 	Status   string    `json:"status"`
+	Files    []string  `json:"files"`
 }
 
 type MoverStatus struct {
@@ -452,6 +468,8 @@ type MoverStatus struct {
 	FilePercent     float64    `json:"filePercent"`
 	PID             int        `json:"pid"`
 	Updated         time.Time  `json:"updated"`
+	Phase           string     `json:"phase"`
+	Files           []string   `json:"files"`
 	History         []MoverRun `json:"history"`
 }
 

@@ -337,9 +337,6 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 	bridgeLike := l.isBridgeNetwork(ctx, data.Network)
 	syncTemplateConfigs(root, data, bridgeLike)
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("create template directory: %w", err)
-	}
 	var buffer bytes.Buffer
 	buffer.WriteString(xml.Header)
 	encoder := xml.NewEncoder(&buffer)
@@ -351,7 +348,13 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 		return fmt.Errorf("encode template: %w", err)
 	}
 	buffer.WriteString("\n")
-	if err := os.WriteFile(path, buffer.Bytes(), 0o644); err != nil {
+	action := "container-template.create"
+	description := "Create container template · " + data.Name
+	if exists {
+		action = "container-template.update"
+		description = "Update container template · " + data.Name
+	}
+	if err := l.writeConfigFile(action, description, path, buffer.Bytes()); err != nil {
 		return fmt.Errorf("write template: %w", err)
 	}
 	return nil

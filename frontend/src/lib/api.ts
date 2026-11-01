@@ -85,6 +85,14 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  configHistory: () => request<import("./types").ConfigHistory[]>("/api/v1/config-history"),
+  configHistoryDetail: (id: string) =>
+    request<import("./types").ConfigHistory>(`/api/v1/config-history/${encodeURIComponent(id)}`),
+  rollbackConfig: (id: string) =>
+    request<{ ok: boolean }>(`/api/v1/config-history/${encodeURIComponent(id)}/rollback`, {
+      method: "POST",
+      body: "{}",
+    }),
   checkPluginUpdates: () =>
     request<import("./types").Plugin[]>("/api/v1/plugins/check-updates", { method: "POST", body: "{}" }),
   updatePlugin: async (

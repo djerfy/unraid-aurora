@@ -4,6 +4,7 @@ import {
   Cpu,
   Gauge,
   HardDrive,
+  History,
   MonitorPlay,
   Network,
   Puzzle,
@@ -38,6 +39,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/logs", label: "Logs", icon: ScrollText, group: "System" },
   { to: "/terminal", label: "Terminal", icon: SquareTerminal, group: "System" },
   { to: "/tools", label: "Tools", icon: Wrench, group: "System" },
+  { to: "/history", label: "Historique", icon: History, group: "System" },
   { to: "/settings", label: "Settings", icon: Settings2, group: "System" },
 ];
 
@@ -54,5 +56,6 @@ export const PAGE_META: Record<string, { title: string; section: string }> = {
   "/logs": { title: "Logs", section: "System" },
   "/terminal": { title: "Terminal", section: "System" },
   "/tools": { title: "Tools", section: "System" },
+  "/history": { title: "Historique", section: "System" },
   "/settings": { title: "Settings", section: "System" },
 };

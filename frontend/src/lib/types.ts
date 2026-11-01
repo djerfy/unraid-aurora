@@ -86,6 +86,7 @@ export type MoverRun = {
   total: number;
   moved: number;
   status: string;
+  files: string[];
 };
 
 export type MoverStatus = {
@@ -104,6 +105,8 @@ export type MoverStatus = {
   filePercent: number;
   pid: number;
   updated: string;
+  phase: string;
+  files: string[];
   history: MoverRun[];
 };
 
@@ -378,6 +381,21 @@ export type Plugin = {
   updateAvailable: boolean;
   enabled: boolean;
   color: string;
+};
+
+export type ConfigFileChange = {
+  path: string;
+  existed: boolean;
+  size: number;
+  diff: string;
+};
+
+export type ConfigHistory = {
+  id: string;
+  created: string;
+  action: string;
+  description: string;
+  files: ConfigFileChange[];
 };
 
 export type SmartAttribute = {

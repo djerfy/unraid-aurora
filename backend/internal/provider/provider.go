@@ -36,6 +36,9 @@ type Provider interface {
 	SmartReport(ctx context.Context, device string) (model.SmartReport, error)
 	RunSmartTest(ctx context.Context, device string) error
 	Diagnostics(ctx context.Context) ([]byte, error)
+	ConfigHistory(ctx context.Context) ([]model.ConfigHistory, error)
+	ConfigHistoryDetail(ctx context.Context, id string) (model.ConfigHistory, error)
+	RollbackConfig(ctx context.Context, id string) error
 	CheckPluginUpdates(ctx context.Context) ([]model.Plugin, error)
 	UpdatePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
 	VMs(ctx context.Context) ([]model.VM, error)

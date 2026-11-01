@@ -48,13 +48,20 @@ import {
   formatSpeed,
   relativeTime,
 } from "../lib/format";
-import type { Disk, Share } from "../lib/types";
+import type { Disk, MoverRun, Share } from "../lib/types";
 
 const TABS = [
   { value: "array", label: "Array" },
   { value: "shares", label: "Shares" },
   { value: "pools", label: "Pools" },
   { value: "parity", label: "Parity" },
+];
+
+const MOVER_PHASES = [
+  { key: "scanning", label: "Recherche" },
+  { key: "calculating", label: "Calculs" },
+  { key: "moving", label: "Déplacement" },
+  { key: "finishing", label: "Finalisation" },
 ];
 
 export function StoragePage() {
@@ -972,13 +979,15 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [filesRun, setFilesRun] = useState<MoverRun | null>(null);
   const statusQuery = useQuery({
     queryKey: ["mover"],
     queryFn: api.mover,
-    refetchInterval: 3000,
+    refetchInterval: 1500,
   });
   const status = statusQuery.data;
   const running = Boolean(status?.running);
+  const phaseIndex = MOVER_PHASES.findIndex((phase) => phase.key === status?.phase);
   const shareProgress = status && status.shareTotal > 0
     ? ((status.shareTotal - status.shareRemain) / status.shareTotal) * 100
     : 0;
@@ -1038,6 +1047,27 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
 
       {running ? (
         <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-4 gap-1.5">
+            {MOVER_PHASES.map((phase, index) => {
+              const active = index === phaseIndex || (phaseIndex < 0 && index === 0);
+              const done = phaseIndex > index;
+              return (
+                <div
+                  key={phase.key}
+                  className={cn(
+                    "rounded-lg border px-2 py-1.5 text-center text-[9px] font-medium uppercase tracking-[0.08em]",
+                    active
+                      ? "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent)]"
+                      : done
+                        ? "border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[var(--success-soft)] text-[var(--success)]"
+                        : "border-line bg-[var(--surface-2)]/40 text-subtle",
+                  )}
+                >
+                  {phase.label}
+                </div>
+              );
+            })}
+          </div>
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate text-[11.5px] text-soft">
               {status?.action || "Calculating totals…"}
@@ -1052,6 +1082,15 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
             <MoverStat label="Throughput" value={formatSpeed(status?.throughput ?? 0)} />
             <MoverStat label="ETA" value={status && status.eta > 0 ? formatDuration(status.eta) : "—"} />
           </div>
+          {status?.files?.length ? (
+            <button
+              type="button"
+              onClick={() => setFilesRun({ started: "", finished: "", duration: 0, total: 0, moved: 0, status: "running", files: status.files })}
+              className="text-left text-[10px] text-subtle underline decoration-dotted underline-offset-2 hover:text-soft"
+            >
+              {status.files.length} fichier{status.files.length > 1 ? "s" : ""} déplacé{status.files.length > 1 ? "s" : ""} observé{status.files.length > 1 ? "s" : ""}
+            </button>
+          ) : null}
           {status && status.shareTotal > 0 ? (
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 p-3">
               <div className="flex items-center justify-between text-[10px]">
@@ -1079,16 +1118,55 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
         <div className="mt-4 border-t border-line pt-3">
           <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Recent runs</p>
           <div className="space-y-1.5">
-            {status.history.slice(0, 4).map((run, index) => (
+            {status.history.slice(0, 6).map((run, index) => (
               <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
                 <span className="text-muted">{formatDateTime(run.finished)}</span>
                 <span className="num text-subtle">{formatDuration(run.duration)} · {formatBytes(run.moved)}</span>
+                {run.files?.length ? (
+                  <button
+                    type="button"
+                    onClick={() => setFilesRun(run)}
+                    className="text-[10px] text-[var(--accent)] underline decoration-dotted underline-offset-2"
+                  >
+                    {run.files.length} fichiers
+                  </button>
+                ) : (
+                  <span className="text-[9.5px] text-subtle">no file list</span>
+                )}
                 <Badge tone={run.status === "completed" ? "success" : "warning"}>{run.status}</Badge>
               </div>
             ))}
           </div>
         </div>
       ) : null}
+
+      <Modal
+        open={Boolean(filesRun)}
+        onClose={() => setFilesRun(null)}
+        title="Fichiers déplacés"
+        description={filesRun?.finished ? formatDateTime(filesRun.finished) : "Exécution en cours"}
+        size="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setFilesRun(null)}>
+            Close
+          </Button>
+        }
+      >
+        {filesRun?.files?.length ? (
+          <div className="max-h-[55vh] space-y-1 overflow-y-auto">
+            {filesRun.files.map((file, index) => (
+              <p
+                key={`${file}-${index}`}
+                className="truncate rounded-md border border-line bg-[var(--surface-2)]/50 px-2.5 py-1.5 font-mono text-[9.5px] text-soft"
+              >
+                {file}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted">No file was recorded for this run.</p>
+        )}
+      </Modal>
     </Card>
   );
 }

@@ -66,6 +66,8 @@ type Live struct {
 	moverStopped   bool
 	moverLast      model.MoverStatus
 	moverHistory   []model.MoverRun
+	moverFiles     []string
+	moverSeen      map[string]bool
 	moverStop      chan struct{}
 	moverCloseOnce sync.Once
 }
@@ -104,6 +106,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 		pluginUpdates:  map[string]pluginUpdate{},
 		vmCPU:          map[string]vmCPUSample{},
 		moverStop:      make(chan struct{}),
+		moverSeen:      map[string]bool{},
 	}
 	l.loadSettings()
 	l.loadMoverHistory()
