@@ -41,3 +41,28 @@ esac
 		t.Fatalf("disk = %d/%d", vm.DiskSize, vm.DiskUsed)
 	}
 }
+
+func TestParseDomainGraphics(t *testing.T) {
+	raw := []byte(`<domain type='kvm'>
+  <name>win11</name>
+  <devices>
+    <graphics type='vnc' port='5901' autoport='yes' websocket='5701' listen='0.0.0.0'/>
+  </devices>
+</domain>`)
+	console, err := parseDomainGraphics(raw, "win11")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if console.Name != "win11" || console.Protocol != "vnc" || console.Port != 5901 || console.WebSocket != 5701 {
+		t.Fatalf("console = %+v", console)
+	}
+
+	raw = []byte(`<domain><devices><graphics type='spice' port='5902'/></devices></domain>`)
+	console, err = parseDomainGraphics(raw, "linux")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if console.Protocol != "spice" || console.WebSocket != 0 {
+		t.Fatalf("spice fallback = %+v", console)
+	}
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, FolderPlus, Plus, Rocket, Trash2 } from "lucide-react";
+import { Boxes, FolderPlus, Plus, RefreshCw, Rocket, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { ContainerCreateOptions } from "../../lib/types";
 import { useToast } from "../../app/ToastProvider";
@@ -39,6 +39,14 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
   const { toast } = useToast();
   const [draft, setDraft] = useState<ContainerCreateOptions>(emptyOptions);
   const [error, setError] = useState("");
+  const [templateID, setTemplateID] = useState("");
+
+  const templates = useQuery({
+    queryKey: ["docker-templates"],
+    queryFn: api.containerTemplates,
+    enabled: open,
+    staleTime: 30_000,
+  });
 
   const networks = useQuery({
     queryKey: ["docker-networks"],
@@ -50,6 +58,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
   useEffect(() => {
     if (!open) return;
     setDraft({ ...emptyOptions, env: emptyOptions.env.map((entry) => ({ ...entry })) });
+    setTemplateID("");
     setError("");
   }, [open]);
 
@@ -72,6 +81,25 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
 
   const update = (patch: Partial<ContainerCreateOptions>) => {
     setDraft((current) => ({ ...current, ...patch }));
+    setError("");
+  };
+
+  const applyTemplate = (id: string) => {
+    setTemplateID(id);
+    const template = templates.data?.find((entry) => entry.id === id);
+    if (!template) return;
+    setDraft({
+      name: template.name,
+      image: template.image,
+      networkMode: template.network || "bridge",
+      restartPolicy: template.restartPolicy || "unless-stopped",
+      ports: template.ports ?? [],
+      volumes: template.volumes ?? [],
+      env: template.env?.length ? template.env : emptyOptions.env.map((entry) => ({ ...entry })),
+      icon: template.icon,
+      webUi: template.webUi,
+      privileged: template.privileged,
+    });
     setError("");
   };
 
@@ -129,6 +157,38 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
       }
     >
       <div className="space-y-5">
+        <section>
+          <SectionHeader title="Template" hint="Load an existing Unraid XML to recreate a container" />
+          <div className="flex items-center gap-2">
+            <select
+              value={templateID}
+              aria-label="Container template"
+              onChange={(event) => applyTemplate(event.target.value)}
+              className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
+            >
+              <option value="">Start from scratch</option>
+              {(templates.data ?? []).map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} · {template.image}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<RefreshCw className="size-3.5" />}
+              loading={templates.isFetching}
+              onClick={() => void templates.refetch()}
+            >
+              Reload
+            </Button>
+          </div>
+          <p className="mt-1.5 text-[9.5px] text-subtle">
+            Templates are read from the flash drive; loading one prefills every field and can be used to relaunch a
+            container after a failed creation.
+          </p>
+        </section>
+
         <section>
           <SectionHeader title="Container" hint="Identity, image and network" />
           <div className="grid gap-2 sm:grid-cols-2">

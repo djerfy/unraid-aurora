@@ -457,7 +457,7 @@ function ContainerCard({
             </IconButton>
           }
           items={[
-            { label: "Details & logs", onSelect: onOpen },
+            { label: "Details & logs", icon: <InfoIcon className="size-3.5" />, onSelect: onOpen },
             { label: "Edit settings", icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
             ...(container.updateAvailable
               ? [{
@@ -468,6 +468,7 @@ function ContainerCard({
               : []),
             {
               label: running ? "Restart" : "Start",
+              icon: running ? <RotateCw className="size-3.5" /> : <Play className="size-3.5" />,
               onSelect: () =>
                 action.mutate({
                   kind: running ? "container.restart" : "container.start",
@@ -481,6 +482,7 @@ function ContainerCard({
             { label: "", separator: true },
             {
               label: running ? "Stop" : "Already stopped",
+              icon: <Square className="size-3.5" />,
               danger: running,
               disabled: !running,
               onSelect: () =>

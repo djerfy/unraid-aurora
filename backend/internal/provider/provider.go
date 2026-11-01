@@ -28,6 +28,8 @@ type Provider interface {
 	CheckContainerUpdates(ctx context.Context) ([]model.ImageCheck, error)
 	UpdateContainerImage(ctx context.Context, id string, report func(model.ContainerUpdateEvent)) error
 	DockerNetworks(ctx context.Context) ([]string, error)
+	ContainerTemplates(ctx context.Context) ([]model.ContainerTemplate, error)
+	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
 	VMs(ctx context.Context) ([]model.VM, error)
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error

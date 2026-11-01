@@ -219,6 +219,21 @@ type ContainerEnv struct {
 	Value string `json:"value"`
 }
 
+type ContainerTemplate struct {
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Image         string            `json:"image"`
+	Network       string            `json:"network"`
+	RestartPolicy string            `json:"restartPolicy"`
+	Icon          string            `json:"icon"`
+	WebUI         string            `json:"webUi"`
+	Privileged    bool              `json:"privileged"`
+	Ports         []Port            `json:"ports"`
+	Volumes       []ContainerVolume `json:"volumes"`
+	Env           []ContainerEnv    `json:"env"`
+	Modified      time.Time         `json:"modified"`
+}
+
 type ContainerCreateOptions struct {
 	Name          string            `json:"name"`
 	Image         string            `json:"image"`
@@ -284,6 +299,10 @@ type VM struct {
 	Icon        string    `json:"icon"`
 	PrimaryGPU  string    `json:"primaryGpu"`
 	LastStarted time.Time `json:"lastStarted"`
+
+	ConsoleProtocol  string `json:"consoleProtocol"`
+	ConsolePort      int    `json:"consolePort"`
+	ConsoleWebSocket int    `json:"consoleWebSocket"`
 }
 
 type Notification struct {
@@ -407,6 +426,13 @@ type GPUProcess struct {
 	PID    int    `json:"pid"`
 	Name   string `json:"name"`
 	Memory uint64 `json:"memory"`
+}
+
+type VMConsole struct {
+	Name      string `json:"name"`
+	Protocol  string `json:"protocol"`
+	Port      int    `json:"port"`
+	WebSocket int    `json:"webSocket"`
 }
 
 type GPU struct {

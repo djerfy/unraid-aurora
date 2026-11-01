@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -170,6 +171,118 @@ func (e *xmlElement) setVersion(value string) {
 		}
 	}
 	e.Attrs = append([]xml.Attr{{Name: xml.Name{Local: "version"}, Value: value}}, e.Attrs...)
+}
+
+// ContainerTemplates lists the XML templates available on the flash drive so a
+// new container can be recreated from an existing definition.
+func (l *Live) ContainerTemplates(_ context.Context) ([]model.ContainerTemplate, error) {
+	if l.bootDir == "" {
+		return []model.ContainerTemplate{}, nil
+	}
+	directories := []string{
+		filepath.Join(l.bootDir, userTemplateDir),
+		filepath.Join(l.bootDir, "config/plugins/dockerMan/templates"),
+	}
+	seen := map[string]bool{}
+	templates := make([]model.ContainerTemplate, 0)
+	for _, directory := range directories {
+		entries, err := os.ReadDir(directory)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".xml") {
+				continue
+			}
+			raw, err := os.ReadFile(filepath.Join(directory, entry.Name()))
+			if err != nil {
+				slog.Warn("read container template", "file", entry.Name(), "error", err)
+				continue
+			}
+			root, err := parseXMLTree(raw)
+			if err != nil {
+				slog.Warn("parse container template", "file", entry.Name(), "error", err)
+				continue
+			}
+			template := templateFromXML(root)
+			if template.Name == "" {
+				continue
+			}
+			key := strings.ToLower(template.Name)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			template.ID = filepath.Base(directory) + ":" + entry.Name()
+			if info, err := entry.Info(); err == nil {
+				template.Modified = info.ModTime()
+			}
+			templates = append(templates, template)
+		}
+	}
+	sort.Slice(templates, func(i, j int) bool { return templates[i].Name < templates[j].Name })
+	return templates, nil
+}
+
+func templateFromXML(root *xmlElement) model.ContainerTemplate {
+	template := model.ContainerTemplate{
+		Name:          root.text("Name"),
+		Image:         root.text("Repository"),
+		Network:       root.text("Network"),
+		RestartPolicy: templateRestartPolicy(root),
+		Icon:          root.text("Icon"),
+		WebUI:         root.text("WebUI"),
+		Privileged:    strings.EqualFold(root.text("Privileged"), "true"),
+		Ports:         []model.Port{},
+		Volumes:       []model.ContainerVolume{},
+		Env:           []model.ContainerEnv{},
+	}
+	for _, node := range root.Children {
+		if node.Name.Local != "Config" {
+			continue
+		}
+		target := node.attribute("Target")
+		value := strings.TrimSpace(node.Text)
+		switch strings.ToLower(node.attribute("Type")) {
+		case "path":
+			if target == "" || value == "" {
+				continue
+			}
+			template.Volumes = append(template.Volumes, model.ContainerVolume{
+				Source:      value,
+				Destination: target,
+				ReadOnly:    strings.EqualFold(node.attribute("Mode"), "ro"),
+			})
+		case "port":
+			containerPort := atoi(target)
+			hostPort := atoi(value)
+			if containerPort < 1 || hostPort < 1 {
+				continue
+			}
+			protocol := node.attribute("Mode")
+			if protocol == "" {
+				protocol = "tcp"
+			}
+			template.Ports = append(template.Ports, model.Port{Host: hostPort, Container: containerPort, Protocol: protocol})
+		case "variable":
+			if target == "" || unraidInjectedEnv[target] {
+				continue
+			}
+			template.Env = append(template.Env, model.ContainerEnv{Key: target, Value: value})
+		}
+	}
+	return template
+}
+
+func templateRestartPolicy(root *xmlElement) string {
+	if policy := root.text("RestartPolicy"); policy != "" {
+		return policy
+	}
+	match := restartParamPattern.FindStringSubmatch(root.text("ExtraParams"))
+	if len(match) >= 4 {
+		return strings.TrimSpace(match[3])
+	}
+	return ""
 }
 
 /* -------------------------------------------------------------------------- */

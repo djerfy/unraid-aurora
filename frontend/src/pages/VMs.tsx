@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
+import { VMConsoleModal } from "../components/vms/VMConsoleModal";
 import { Drawer } from "../components/ui/overlays";
 import {
   Badge,
@@ -38,6 +39,7 @@ export function VMsPage() {
   const { snapshot, refresh } = useApp();
   const action = useAction();
   const [params, setParams] = useSearchParams();
+  const [consoleVm, setConsoleVm] = useState<VM | null>(null);
   const [view, setView] = useState<"grid" | "list">(() => {
     try {
       return localStorage.getItem("aurora.vms.view") === "list" ? "list" : "grid";
@@ -135,6 +137,7 @@ export function VMsPage() {
                   key={vm.id}
                   vm={vm}
                   onOpen={() => setSelected(vm)}
+                  onConsole={() => setConsoleVm(vm)}
                   busy={action.isPending && action.variables?.target === vm.name}
                 />
               ))}
@@ -147,6 +150,7 @@ export function VMsPage() {
                     key={vm.id}
                     vm={vm}
                     onOpen={() => setSelected(vm)}
+                    onConsole={() => setConsoleVm(vm)}
                     busy={action.isPending && action.variables?.target === vm.name}
                   />
                 ))}
@@ -256,6 +260,15 @@ export function VMsPage() {
                   Shut down
                 </Button>
               ) : null}
+              <Button
+                variant="secondary"
+                className="flex-1"
+                icon={<Monitor className="size-3.5" />}
+                disabled={selected.state !== "running" || !selected.consoleWebSocket}
+                onClick={() => setConsoleVm(selected)}
+              >
+                Console
+              </Button>
             </div>
           ) : null
         }
@@ -306,11 +319,18 @@ export function VMsPage() {
           </div>
         ) : null}
       </Drawer>
+
+      <VMConsoleModal
+        vm={consoleVm}
+        onClose={() => {
+          setConsoleVm(null);
+        }}
+      />
     </>
   );
 }
 
-function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolean }) {
+function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
@@ -376,6 +396,15 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
         </Button>
         <button
           type="button"
+          disabled={!running || !vm.consoleWebSocket}
+          onClick={onConsole}
+          title={running ? "Open console" : "Start the VM to open its console"}
+          className="grid size-7 place-items-center rounded-md text-muted transition hover:bg-[var(--surface-3)] hover:text-ink disabled:opacity-30"
+        >
+          <Monitor className="size-3.5" />
+        </button>
+        <button
+          type="button"
           disabled={busy}
           onClick={() =>
             action.mutate({
@@ -398,7 +427,9 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
           >
             <Square className="size-3.5" />
           </button>
-        ) : null}
+        ) : (
+          <span className="size-7" aria-hidden="true" />
+        )}
         {vm.ip ? (
           <button
             type="button"
@@ -408,13 +439,15 @@ function VMCard({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boole
           >
             <Network className="size-3.5" />
           </button>
-        ) : null}
+        ) : (
+          <span className="size-7" aria-hidden="true" />
+        )}
       </div>
     </Card>
   );
 }
 
-function VMRow({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolean }) {
+function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
@@ -433,6 +466,14 @@ function VMRow({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolea
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.cpuUsage.toFixed(0)}%` : "—"}</span>
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.memoryUsage.toFixed(0)}%` : "—"}</span>
       <div className="flex items-center gap-1">
+        <IconButton
+          label={running ? "Open console" : "Start the VM to open its console"}
+          size="sm"
+          disabled={!running || !vm.consoleWebSocket}
+          onClick={onConsole}
+        >
+          <Monitor className="size-3.5" />
+        </IconButton>
         <IconButton
           label={running ? "Suspend" : vm.state === "paused" ? "Resume" : "Start"}
           size="sm"
@@ -455,7 +496,9 @@ function VMRow({ vm, onOpen, busy }: { vm: VM; onOpen: () => void; busy?: boolea
           >
             <Square className="size-3.5" />
           </IconButton>
-        ) : null}
+        ) : (
+          <span className="size-8" aria-hidden="true" />
+        )}
         <IconButton label="Details" size="sm" onClick={onOpen}>
           <Monitor className="size-3.5" />
         </IconButton>

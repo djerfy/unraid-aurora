@@ -65,6 +65,7 @@ export const api = {
   removeContainer: (id: string) =>
     request<{ ok: boolean }>(`/api/v1/docker/containers/${encodeURIComponent(id)}`, { method: "DELETE" }),
   containerNetworks: () => request<string[]>("/api/v1/docker/networks"),
+  containerTemplates: () => request<import("./types").ContainerTemplate[]>("/api/v1/docker/templates"),
   checkContainerUpdates: () => request<import("./types").ImageCheck[]>("/api/v1/docker/check-updates", {
     method: "POST",
     body: "{}",

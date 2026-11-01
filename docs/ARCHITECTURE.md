@@ -88,7 +88,7 @@ Reads the same sources as the original webGUI:
 | Disk throughput | `/proc/diskstats` deltas over a 2 s window |
 | Temperatures | `/sys/class/hwmon/hwmon*/temp1_input` |
 | Docker | HTTP over `unix:/var/run/docker.sock`; image updates use registry v2 manifest digests, with credentials from `~/.docker/config.json` |
-| VM inventory | `virsh list --all`, `virsh domstate` |
+| VM inventory | `virsh list --all`, `virsh domstate`, `virsh dumpxml` (graphics websocket for the console) |
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |
 | UPS | `apcaccess status` |
@@ -128,10 +128,12 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `POST` | `/api/v1/docker/containers` | Create and start a container, pulling the image if needed |
 | `DELETE` | `/api/v1/docker/containers/{id}` | Remove a container (force stop first) |
 | `GET` | `/api/v1/docker/networks` | Docker networks for the create form |
+| `GET` | `/api/v1/docker/templates` | Unraid XML templates available for recreation |
 | `POST` | `/api/v1/docker/check-updates` | Compare local and registry image digests |
 | `POST` | `/api/v1/docker/containers/{id}/update` | Stream pull/recreate stages as NDJSON |
 | `GET` | `/api/v1/vms` | Virtual machines |
 | `GET` | `/api/v1/vms/{id}/icon` | Unraid OS icon for the VM |
+| `GET` | `/api/v1/vms/{id}/console` | WebSocket VNC/SPICE proxy to the libvirt console |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
 | `GET` | `/api/v1/users` | Accounts and access |
 | `GET` | `/api/v1/plugins` | Installed plugins |

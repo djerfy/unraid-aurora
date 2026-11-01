@@ -191,6 +191,21 @@ export type ContainerVolume = {
   readOnly: boolean;
 };
 
+export type ContainerTemplate = {
+  id: string;
+  name: string;
+  image: string;
+  network: string;
+  restartPolicy: string;
+  icon: string;
+  webUi: string;
+  privileged: boolean;
+  ports: Port[];
+  volumes: ContainerVolume[];
+  env: ContainerEnv[];
+  modified: string;
+};
+
 export type ContainerCreateOptions = {
   name: string;
   image: string;
@@ -278,6 +293,9 @@ export type VM = {
   icon: string;
   primaryGpu: string;
   lastStarted: string;
+  consoleProtocol: string;
+  consolePort: number;
+  consoleWebSocket: number;
 };
 
 export type Notification = {

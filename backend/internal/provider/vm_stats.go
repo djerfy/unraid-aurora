@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/xml"
+	"errors"
+	"fmt"
 	"math"
 	"os/exec"
 	"strconv"
@@ -48,10 +51,80 @@ func (l *Live) vmDetails(ctx context.Context, name string) model.VM {
 	}
 
 	if vm.State == "running" {
+		if console, err := virshGraphics(ctx, name); err == nil {
+			vm.ConsoleProtocol = console.Protocol
+			vm.ConsolePort = console.Port
+			vm.ConsoleWebSocket = console.WebSocket
+		}
 		l.applyVMRuntime(ctx, &vm)
 	}
 	vm.DiskSize, vm.DiskUsed = vmDiskUsage(ctx, name)
 	return vm
+}
+
+// VMConsole resolves the VNC/SPICE websocket exposed by libvirt for a running
+// domain. The client never supplies the port, so the proxy cannot be pointed at
+// an arbitrary local service.
+func (l *Live) VMConsole(ctx context.Context, id string) (model.VMConsole, error) {
+	vms, err := l.VMs(ctx)
+	if err != nil {
+		return model.VMConsole{}, err
+	}
+	for _, vm := range vms {
+		if vm.ID != id {
+			continue
+		}
+		if vm.State != "running" {
+			return model.VMConsole{}, errors.New("virtual machine is not running")
+		}
+		console, err := virshGraphics(ctx, vm.Name)
+		if err != nil {
+			return model.VMConsole{}, err
+		}
+		if console.WebSocket < 1 || console.WebSocket > 65535 {
+			return model.VMConsole{}, errors.New("this virtual machine does not expose a console")
+		}
+		return console, nil
+	}
+	return model.VMConsole{}, errors.New("virtual machine not found")
+}
+
+func virshGraphics(ctx context.Context, name string) (model.VMConsole, error) {
+	out, err := exec.CommandContext(ctx, "virsh", "dumpxml", name).Output()
+	if err != nil {
+		return model.VMConsole{}, fmt.Errorf("virsh dumpxml: %w", err)
+	}
+	return parseDomainGraphics(out, name)
+}
+
+func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
+	var domain struct {
+		Devices struct {
+			Graphics []struct {
+				Type      string `xml:"type,attr"`
+				Port      int    `xml:"port,attr"`
+				WebSocket int    `xml:"websocket,attr"`
+			} `xml:"graphics"`
+		} `xml:"devices"`
+	}
+	if err := xml.Unmarshal(raw, &domain); err != nil {
+		return model.VMConsole{}, fmt.Errorf("parse domain xml: %w", err)
+	}
+	var fallback model.VMConsole
+	for _, graphics := range domain.Devices.Graphics {
+		protocol := strings.ToLower(graphics.Type)
+		if protocol != "vnc" && protocol != "spice" {
+			continue
+		}
+		console := model.VMConsole{Name: name, Protocol: protocol, Port: graphics.Port, WebSocket: graphics.WebSocket}
+		if console.WebSocket > 0 {
+			return console, nil
+		}
+		if fallback.Protocol == "" {
+			fallback = console
+		}
+	}
+	return fallback, nil
 }
 
 func (l *Live) applyVMRuntime(ctx context.Context, vm *model.VM) {

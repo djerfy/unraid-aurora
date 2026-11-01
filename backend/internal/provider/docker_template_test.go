@@ -191,3 +191,45 @@ func templateConfigs(root *xmlElement) map[string]*xmlElement {
 	}
 	return out
 }
+
+func TestTemplateFromXML(t *testing.T) {
+	root, err := parseXMLTree([]byte(sampleTemplate))
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := templateFromXML(root)
+	if template.Name != "plex" || template.Image != "linuxserver/plex:latest" || template.Network != "bridge" {
+		t.Fatalf("template = %+v", template)
+	}
+	if !template.Privileged && template.Icon == "" {
+		t.Fatalf("metadata = %+v", template)
+	}
+	if len(template.Volumes) != 1 || template.Volumes[0].Destination != "/config" {
+		t.Fatalf("volumes = %+v", template.Volumes)
+	}
+	if len(template.Ports) != 1 || template.Ports[0].Host != 32400 {
+		t.Fatalf("ports = %+v", template.Ports)
+	}
+	if len(template.Env) != 2 {
+		t.Fatalf("env = %+v", template.Env)
+	}
+}
+
+func TestContainerTemplatesListsUserTemplates(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "my-plex.xml"), []byte(sampleTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{bootDir: boot}
+	templates, err := live.ContainerTemplates(context.Background())
+	if err != nil {
+		t.Fatalf("templates: %v", err)
+	}
+	if len(templates) != 1 || templates[0].Name != "plex" || templates[0].ID == "" {
+		t.Fatalf("templates = %+v", templates)
+	}
+}

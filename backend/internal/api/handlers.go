@@ -372,6 +372,17 @@ func (s *Server) removeContainer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+func (s *Server) containerTemplates(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	templates, err := s.provider.ContainerTemplates(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, templates)
+}
+
 func (s *Server) dockerNetworks(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
