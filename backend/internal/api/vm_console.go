@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -62,7 +63,14 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		upstream, err := net.DialTimeout("tcp", address, 5*time.Second)
 		if err == nil {
 			defer upstream.Close()
-			relayTCPConsole(ctx, client, upstream)
+			keyLogged := false
+			relayTCPConsole(ctx, client, upstream, func(keysym uint32, down bool) {
+				if keyLogged {
+					return
+				}
+				keyLogged = true
+				s.log.Info("vm console key event received", "vm", r.PathValue("id"), "keysym", fmt.Sprintf("0x%x", keysym), "down", down)
+			})
 			return
 		}
 		if console.WebSocket < 1 {
@@ -93,7 +101,7 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 }
 
 // relayTCPConsole bridges binary WebSocket frames to the raw RFB stream.
-func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.Conn) {
+func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.Conn, onKey func(keysym uint32, down bool)) {
 	errCh := make(chan error, 2)
 
 	go func() {
@@ -102,6 +110,10 @@ func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.C
 			if err != nil {
 				errCh <- err
 				return
+			}
+			// RFB KeyEvent: type 4, 8 bytes, keysym in the last four.
+			if onKey != nil && len(data) == 8 && data[0] == 4 {
+				onKey(binary.BigEndian.Uint32(data[4:8]), data[1] != 0)
 			}
 			if _, err := upstream.Write(data); err != nil {
 				errCh <- err

@@ -39,7 +39,7 @@ func TestRelayTCPConsoleEchoesBothDirections(t *testing.T) {
 			return
 		}
 		defer upstream.Close()
-		relayTCPConsole(context.Background(), client, upstream)
+		relayTCPConsole(context.Background(), client, upstream, nil)
 	}))
 	defer server.Close()
 

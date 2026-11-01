@@ -21,9 +21,10 @@ const SPECIAL_KEYS: Record<string, number> = {
 
 /** Minimal DOM-key → X11 keysym mapping used when noVNC's mapper is unavailable. */
 function keysymFor(event: KeyboardEvent): number | null {
-  if (event.code.startsWith("Numpad")) {
-    if (/^Numpad[0-9]$/.test(event.code)) return 0xffb0 + Number(event.code.slice(-1));
-    switch (event.code) {
+  const code = event.code ?? "";
+  if (code.startsWith("Numpad")) {
+    if (/^Numpad[0-9]$/.test(code)) return 0xffb0 + Number(code.slice(-1));
+    switch (code) {
       case "NumpadAdd": return 0xffab;
       case "NumpadSubtract": return 0xffad;
       case "NumpadMultiply": return 0xffaa;
@@ -35,9 +36,9 @@ function keysymFor(event: KeyboardEvent): number | null {
   const special = SPECIAL_KEYS[event.key];
   if (special !== undefined) {
     if (event.code === "ShiftRight") return 0xffe2;
-    if (event.code === "ControlRight") return 0xffe4;
-    if (event.code === "AltRight") return 0xffea;
-    if (event.code === "MetaRight") return 0xffec;
+    if (code === "ControlRight") return 0xffe4;
+    if (code === "AltRight") return 0xffea;
+    if (code === "MetaRight") return 0xffec;
     return special;
   }
   if (event.key.length === 1) {
@@ -79,7 +80,6 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
 
     let cancelled = false;
     let client: { disconnect: () => void; focus: (options?: FocusOptions) => void } | null = null;
-    let detach: (() => void) | null = null;
     // noVNC keeps its layout-aware keyboard mapper on the RFB instance. Calling
     // it directly bypasses canvas focus and DOM event plumbing entirely.
     let keyboard: {
@@ -110,7 +110,10 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
       event.stopPropagation();
       const keysym = keysymFor(event);
       if (keysym !== null && clientRef.current?.sendKey) {
-        clientRef.current.sendKey(keysym, event.code, event.type === "keydown");
+        if (localStorage.getItem("aurora.debug") === "1") {
+          console.debug("[vnc] key", event.type, event.key, event.code ?? "", `0x${keysym.toString(16)}`);
+        }
+        clientRef.current.sendKey(keysym, event.code ?? "", event.type === "keydown");
         return;
       }
       const handler = event.type === "keydown" ? keyboard?._handleKeyDown : keyboard?._handleKeyUp;
@@ -138,6 +141,15 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
           cancelable: true,
         }),
       );
+    };
+
+    document.addEventListener("keydown", forwardKey, true);
+    document.addEventListener("keyup", forwardKey, true);
+    host.addEventListener("pointerdown", focusCanvas);
+    const detach = () => {
+      document.removeEventListener("keydown", forwardKey, true);
+      document.removeEventListener("keyup", forwardKey, true);
+      host.removeEventListener("pointerdown", focusCanvas);
     };
 
     report("connecting");
@@ -175,15 +187,6 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
           _keyboard?: { _handleKeyDown?: (event: KeyboardEvent) => void; _handleKeyUp?: (event: KeyboardEvent) => void };
         })._keyboard ?? null;
 
-        document.addEventListener("keydown", forwardKey, true);
-        document.addEventListener("keyup", forwardKey, true);
-        host.addEventListener("pointerdown", focusCanvas);
-        detach = () => {
-          document.removeEventListener("keydown", forwardKey, true);
-          document.removeEventListener("keyup", forwardKey, true);
-          host.removeEventListener("pointerdown", focusCanvas);
-        };
-
         window.setTimeout(() => {
           if (!cancelled) connection.focus({ preventScroll: true });
         }, 120);
@@ -194,7 +197,7 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
 
     return () => {
       cancelled = true;
-      detach?.();
+      detach();
       client?.disconnect();
       clientRef.current = null;
       host.replaceChildren();
