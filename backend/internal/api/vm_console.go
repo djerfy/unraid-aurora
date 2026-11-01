@@ -2,17 +2,25 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/coder/websocket"
 )
 
-// vmConsole proxies the libvirt VNC/SPICE websocket. The upstream port comes
-// from the domain XML, never from the client, so the endpoint cannot be used to
+// vmConsole proxies the libvirt VNC/SPICE console. The target port comes from
+// the domain XML, never from the client, so the endpoint cannot be used to
 // reach arbitrary localhost services.
+//
+// noVNC tunnels the raw RFB stream over WebSocket. When the domain exposes a
+// TCP VNC port we bridge straight to it (the websockify model); otherwise we
+// fall back to QEMU's own websocket listener.
 func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 	if origin := r.Header.Get("Origin"); origin != "" {
 		originURL, err := url.Parse(origin)
@@ -38,39 +46,110 @@ func (s *Server) vmConsole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer client.Close(websocket.StatusNormalClosure, "console closed")
+	client.SetReadLimit(16 << 20)
 
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	upstreamURL := fmt.Sprintf("ws://127.0.0.1:%d/", console.WebSocket)
-	upstream, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
-		CompressionMode: websocket.CompressionDisabled,
-	})
-	if err != nil {
-		_ = client.Write(ctx, websocket.MessageText, []byte("Unable to reach the virtual machine console: "+err.Error()))
+	if console.Port > 0 && console.Port <= 65535 {
+		address := net.JoinHostPort("127.0.0.1", strconv.Itoa(console.Port))
+		upstream, err := net.DialTimeout("tcp", address, 5*time.Second)
+		if err == nil {
+			defer upstream.Close()
+			relayTCPConsole(ctx, client, upstream)
+			return
+		}
+		if console.WebSocket < 1 {
+			_ = client.Write(ctx, websocket.MessageText, []byte("Unable to reach the virtual machine console: "+err.Error()))
+			return
+		}
+	}
+
+	if console.WebSocket > 0 {
+		upstreamURL := fmt.Sprintf("ws://127.0.0.1:%d/", console.WebSocket)
+		upstream, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
+			CompressionMode: websocket.CompressionDisabled,
+		})
+		if err != nil {
+			_ = client.Write(ctx, websocket.MessageText, []byte("Unable to reach the virtual machine console: "+err.Error()))
+			return
+		}
+		defer upstream.Close(websocket.StatusNormalClosure, "console closed")
+		upstream.SetReadLimit(64 << 20)
+		relayWebSocket(ctx, client, upstream)
 		return
 	}
-	defer upstream.Close(websocket.StatusNormalClosure, "console closed")
 
-	// Framebuffer updates are much larger than the default 32 KiB read limit.
-	client.SetReadLimit(16 << 20)
-	upstream.SetReadLimit(64 << 20)
-
-	errors := make(chan error, 2)
-	go func() { errors <- relayWebSocket(ctx, upstream, client) }()
-	go func() { errors <- relayWebSocket(ctx, client, upstream) }()
-	<-errors
-	cancel()
+	_ = client.Write(ctx, websocket.MessageText, []byte("This virtual machine does not expose a console."))
 }
 
-func relayWebSocket(ctx context.Context, destination, source *websocket.Conn) error {
-	for {
-		messageType, data, err := source.Read(ctx)
-		if err != nil {
-			return err
+// relayTCPConsole bridges binary WebSocket frames to the raw RFB stream.
+func relayTCPConsole(ctx context.Context, client *websocket.Conn, upstream net.Conn) {
+	errCh := make(chan error, 2)
+
+	go func() {
+		for {
+			_, data, err := client.Read(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if _, err := upstream.Write(data); err != nil {
+				errCh <- err
+				return
+			}
 		}
-		if err := destination.Write(ctx, messageType, data); err != nil {
-			return err
+	}()
+
+	go func() {
+		buffer := make([]byte, 32*1024)
+		for {
+			read, err := upstream.Read(buffer)
+			if read > 0 {
+				if writeErr := client.Write(ctx, websocket.MessageBinary, buffer[:read]); writeErr != nil {
+					errCh <- writeErr
+					return
+				}
+			}
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					errCh <- err
+				}
+				return
+			}
 		}
-	}
+	}()
+
+	<-errCh
+}
+
+func relayWebSocket(ctx context.Context, client, upstream *websocket.Conn) error {
+	errCh := make(chan error, 2)
+	go func() {
+		for {
+			messageType, data, err := client.Read(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if err := upstream.Write(ctx, messageType, data); err != nil {
+				errCh <- err
+				return
+			}
+		}
+	}()
+	go func() {
+		for {
+			messageType, data, err := upstream.Read(ctx)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if err := client.Write(ctx, messageType, data); err != nil {
+				errCh <- err
+				return
+			}
+		}
+	}()
+	return <-errCh
 }

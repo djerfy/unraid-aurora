@@ -81,7 +81,7 @@ func (l *Live) VMConsole(ctx context.Context, id string) (model.VMConsole, error
 		if err != nil {
 			return model.VMConsole{}, err
 		}
-		if console.WebSocket < 1 || console.WebSocket > 65535 {
+		if console.WebSocket < 1 && console.Port < 1 {
 			return model.VMConsole{}, errors.New("this virtual machine does not expose a console")
 		}
 		return console, nil

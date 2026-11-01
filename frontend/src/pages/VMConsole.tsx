@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Monitor, RefreshCw, X } from "lucide-react";
+import { Keyboard, Monitor, RefreshCw, X } from "lucide-react";
 import { useApp } from "../app/AppDataProvider";
-import { VMConsolePanel, type ConsoleStatus } from "../components/vms/VMConsolePanel";
+import { VMConsolePanel, type VMConsoleHandle, type ConsoleStatus } from "../components/vms/VMConsolePanel";
 import { Badge, Button } from "../components/ui/primitives";
 
 const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
@@ -17,6 +17,7 @@ export function VMConsolePage() {
   const { snapshot } = useApp();
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
   const [token, setToken] = useState(0);
+  const panelRef = useRef<VMConsoleHandle>(null);
   const vm = snapshot?.vms.find((entry) => entry.id === id) ?? null;
 
   return (
@@ -28,6 +29,15 @@ export function VMConsolePage() {
           {status}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<Keyboard className="size-3" />}
+            onClick={() => panelRef.current?.sendCtrlAltDel()}
+            className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
+          >
+            Ctrl+Alt+Del
+          </Button>
           <Button
             size="sm"
             variant="secondary"
@@ -50,6 +60,7 @@ export function VMConsolePage() {
       </header>
       {vm ? (
         <VMConsolePanel
+          ref={panelRef}
           vm={vm}
           reconnectToken={token}
           onStatus={(next) => setStatus(next)}

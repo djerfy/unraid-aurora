@@ -16,5 +16,6 @@ declare module "@novnc/novnc" {
     focusOnClick: boolean;
     disconnect(): void;
     sendCredentials(credentials: Record<string, string>): void;
+    sendCtrlAltDel(): void;
   }
 }

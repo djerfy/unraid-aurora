@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { VM } from "../../lib/types";
 
 export type ConsoleStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -8,18 +8,19 @@ export type ConsoleStatus = "connecting" | "connected" | "disconnected" | "error
  * captured at the document level and forwarded to the canvas, because browser
  * focus can stay on the surrounding dialog even when the console is visible.
  */
-export function VMConsolePanel({
-  vm,
-  reconnectToken,
-  onStatus,
-  className,
-}: {
+export type VMConsoleHandle = {
+  sendCtrlAltDel: () => void;
+  focus: () => void;
+};
+
+export const VMConsolePanel = forwardRef<VMConsoleHandle, {
   vm: VM | null;
   reconnectToken: number;
   onStatus?: (status: ConsoleStatus, message: string) => void;
   className?: string;
-}) {
+}>(function VMConsolePanel({ vm, reconnectToken, onStatus, className }, ref) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const clientRef = useRef<{ disconnect: () => void; focus: (options?: FocusOptions) => void; sendCtrlAltDel: () => void } | null>(null);
   const statusRef = useRef(onStatus);
   statusRef.current = onStatus;
 
@@ -77,6 +78,7 @@ export function VMConsolePanel({
         connection.scaleViewport = true;
         connection.resizeSession = false;
         connection.focusOnClick = true;
+        connection.viewOnly = false;
         connection.addEventListener("connect", () => {
           if (cancelled) return;
           report("connected");
@@ -93,6 +95,7 @@ export function VMConsolePanel({
           report("error", "The virtual machine rejected the console connection.");
         });
         client = connection;
+        clientRef.current = connection;
 
         document.addEventListener("keydown", forwardKey, true);
         document.addEventListener("keyup", forwardKey, true);
@@ -119,6 +122,11 @@ export function VMConsolePanel({
     };
   }, [vm, reconnectToken]);
 
+  useImperativeHandle(ref, () => ({
+    sendCtrlAltDel: () => clientRef.current?.sendCtrlAltDel(),
+    focus: () => hostRef.current?.querySelector("canvas")?.focus({ preventScroll: true }),
+  }));
+
   return (
     <div className={className}>
       <div
@@ -127,4 +135,4 @@ export function VMConsolePanel({
       />
     </div>
   );
-}
+});

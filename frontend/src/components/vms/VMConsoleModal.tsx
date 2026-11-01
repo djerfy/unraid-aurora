@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { useRef, useState } from "react";
+import { ExternalLink, Keyboard, RefreshCw } from "lucide-react";
 import { Modal } from "../ui/overlays";
 import { Badge, Button } from "../ui/primitives";
-import { VMConsolePanel, type ConsoleStatus } from "./VMConsolePanel";
+import { VMConsolePanel, type VMConsoleHandle, type ConsoleStatus } from "./VMConsolePanel";
 import type { VM } from "../../lib/types";
 
 const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
@@ -15,6 +15,7 @@ const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
 export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
   const [token, setToken] = useState(0);
+  const panelRef = useRef<VMConsoleHandle>(null);
 
   if (!vm) return null;
 
@@ -42,6 +43,13 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
         <>
           <Button
             variant="secondary"
+            icon={<Keyboard className="size-3.5" />}
+            onClick={() => panelRef.current?.sendCtrlAltDel()}
+          >
+            Ctrl+Alt+Del
+          </Button>
+          <Button
+            variant="secondary"
             icon={<RefreshCw className="size-3.5" />}
             onClick={() => setToken((value) => value + 1)}
           >
@@ -57,6 +65,7 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
       }
     >
       <VMConsolePanel
+        ref={panelRef}
         vm={vm}
         reconnectToken={token}
         onStatus={(next) => setStatus(next)}
