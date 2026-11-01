@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# Serialize runs for the same tag/ref so two workflow runs cannot upload the
+# same release assets concurrently.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest

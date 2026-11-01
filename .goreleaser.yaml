@@ -81,3 +81,8 @@ release:
   name_template: "Aurora v{{ .Version }}"
   prerelease: auto
   draft: false
+  # A local publish and the tagged GitHub Actions run can overlap. In that case
+  # the second publisher must replace the existing assets instead of failing
+  # with a 422 "already_exists".
+  replace_existing_artifacts: true
+  mode: keep-existing

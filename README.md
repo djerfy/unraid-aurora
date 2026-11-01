@@ -143,6 +143,10 @@ git tag v0.0.4
 git push origin v0.0.4
 ```
 
+GitHub Actions owns publication for tagged releases: push the tag and let the workflow finish instead
+of running `goreleaser release` locally, otherwise both publishers race for the same assets. The
+configuration tolerates an existing release, but a single publisher keeps the run history clean.
+
 The workflow can also be started manually (`workflow_dispatch`); it then produces a snapshot build and
 uploads `aurora_*_linux_amd64` plus `checksums.txt` as a workflow artifact. The local equivalent is:
 
