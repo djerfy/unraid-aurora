@@ -8,6 +8,8 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +17,63 @@ import (
 )
 
 const containerStatsTTL = 10 * time.Second
+
+// dockerStatusUptime derives the running duration from Docker's human-readable
+// status ("Up 3 days"). The list endpoint does not expose StartedAt, and this
+// keeps the container page free of one inspect request per container.
+func dockerStatusUptime(status string) int64 {
+	_, rest, ok := strings.Cut(strings.TrimSpace(status), "Up ")
+	if !ok {
+		return 0
+	}
+	if i := strings.Index(rest, " ("); i >= 0 {
+		rest = rest[:i]
+	}
+	rest = strings.TrimSpace(strings.TrimPrefix(rest, "About "))
+	if rest == "" {
+		return 0
+	}
+	if strings.HasPrefix(rest, "Less than a second") {
+		return 1
+	}
+
+	fields := strings.Fields(rest)
+	if len(fields) == 0 {
+		return 0
+	}
+	value := int64(1)
+	unitIndex := 0
+	if parsed, err := strconv.ParseInt(fields[0], 10, 64); err == nil {
+		value = parsed
+		unitIndex = 1
+	} else if fields[0] == "a" || fields[0] == "an" {
+		unitIndex = 1
+	}
+	if unitIndex >= len(fields) {
+		return 0
+	}
+
+	var unit int64
+	switch strings.TrimSuffix(fields[unitIndex], "s") {
+	case "second":
+		unit = 1
+	case "minute":
+		unit = 60
+	case "hour":
+		unit = 3600
+	case "day":
+		unit = 86400
+	case "week":
+		unit = 7 * 86400
+	case "month":
+		unit = 30 * 86400
+	case "year":
+		unit = 365 * 86400
+	default:
+		return 0
+	}
+	return value * unit
+}
 
 type cachedContainerStats struct {
 	at     time.Time

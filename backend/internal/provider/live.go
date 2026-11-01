@@ -529,7 +529,8 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
 			Network: network, IP: ip,
 			State: c.State, Status: c.Status, Autostart: autostart[name],
-			Ports: ports, Color: color, Created: time.Unix(c.Created, 0),
+			Uptime: dockerStatusUptime(c.Status),
+			Ports:  ports, Color: color, Created: time.Unix(c.Created, 0),
 			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
 			RestartPolicy: "", UpdateAvailable: l.imageUpdate(c.Image),
 		})

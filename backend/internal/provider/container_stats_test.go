@@ -76,3 +76,31 @@ func TestVirshParsers(t *testing.T) {
 		t.Fatalf("value parser: %+v", values)
 	}
 }
+
+func TestDockerStatusUptime(t *testing.T) {
+	cases := []struct {
+		status string
+		want   int64
+	}{
+		{"Up 12 seconds", 12},
+		{"Up 5 minutes", 300},
+		{"Up 2 hours", 7200},
+		{"Up 3 days", 259200},
+		{"Up 2 weeks", 1209600},
+		{"Up 4 months", 10368000},
+		{"Up 1 year", 31536000},
+		{"Up About a minute", 60},
+		{"Up About an hour", 3600},
+		{"Up Less than a second", 1},
+		{"Up 3 days (Paused)", 259200},
+		{"Up 3 days (unhealthy)", 259200},
+		{"Exited (0) 2 days ago", 0},
+		{"Created", 0},
+		{"", 0},
+	}
+	for _, tc := range cases {
+		if got := dockerStatusUptime(tc.status); got != tc.want {
+			t.Errorf("dockerStatusUptime(%q) = %d, want %d", tc.status, got, tc.want)
+		}
+	}
+}
