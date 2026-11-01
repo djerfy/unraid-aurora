@@ -47,9 +47,48 @@ operational model and rebuilds the experience around it:
 | **Network** — interfaces, tunnels and services | **Notifications** — a calm operational inbox |
 | ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login-native.png) |
 | **Settings** — themes, accents and native auth | **Login** — root credentials checked against the host |
+| ![Historique](docs/screenshots/history.png) | ![Équilibrage](docs/screenshots/balance.png) |
+| **Historique** — configuration snapshots, unified diffs and rollback | **Équilibrage** — empty a disk with live per-file progress |
+| ![Tools](docs/screenshots/tools.png) | ![Mover](docs/screenshots/storage-mover.png) |
+| **Tools** — diagnostics archive and host summary | **Mover** — live phases, throughput and per-file history |
 
 More captures in [`docs/screenshots`](docs/screenshots): shares, pools, parity history, container logs,
 command palette, light theme, users, plugins, logs and mobile layouts.
+
+## Safe operations
+
+### Configuration history and rollback
+
+Every configuration file written by Aurora is snapshotted in
+`$AURORA_DATA_DIR/config-history/<id>/` before being modified: container templates, the Docker
+autostart list and future file-backed settings. The **Historique** page lists each change with:
+
+- the action and a human-readable description;
+- the affected files and their previous size;
+- a line-by-line **Différence** view (context included);
+- a **Rollback** button that restores the previous contents. The current state is snapshotted first,
+  so a rollback can itself be reverted.
+
+History is capped at 200 entries and survives restarts.
+
+### Disk rebalancing
+
+The **Équilibrage** page empties a disk or moves selected folders/files to other disks:
+
+- source and destination disks are detected from the mounted `/mnt` entries;
+- a folder/file browser lets you choose a subset, or empty the whole disk;
+- **dry-run** is enabled by default; nothing is written or deleted in that mode;
+- files are copied, size-verified, then the source is deleted (never the other way around);
+- symlinks and hardlinks are preserved, ownership/mode/timestamps are carried over;
+- jobs run in the background with live phases (scanning, copying, cleaning), bytes, files, speed,
+  ETA, errors and a per-file status list;
+- the last 20 jobs are persisted in `$AURORA_DATA_DIR/balance-history.json`.
+
+### Live mover
+
+The mover card now exposes its real phases (searching, calculating, moving, finishing), the current
+share/file, throughput and ETA. Each run records the observed moved files, and the history appears
+live as soon as the mover exits.
 
 ## Requirements
 
@@ -218,8 +257,12 @@ Deep dives:
 | Plugins | Real .plg metadata, version comparison against plugin repositories, streamed updates through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
+| Configuration history | `AURORA_DATA_DIR/config-history` (backup files, metas, unified diffs) |
+| Balance | Mounts under `/mnt`, `statfs`, `du`; copy → verify → delete pipeline |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
-| Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with progress, ETA and run history |
+| Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with live phases and per-file history |
+| Équilibrage | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
+| Historique | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
 | Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 

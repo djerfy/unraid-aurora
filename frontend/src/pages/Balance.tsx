@@ -53,16 +53,17 @@ export function BalancePage() {
   const job = status.data;
   const running = Boolean(job && ["scanning", "running", "cancelling"].includes(job.state));
   const diskList = disks.data ?? [];
+  const diskKey = diskList.map((disk) => disk.name).join(",");
 
   useEffect(() => {
     if (!source && diskList.length > 0) setSource(diskList[0].name);
   }, [diskList, source]);
 
   useEffect(() => {
-    setDestinations(diskList.filter((disk) => disk.name !== source).map((disk) => disk.name));
+    setDestinations(diskList.filter((disk) => disk.name !== source && disk.role === "data").map((disk) => disk.name));
     setSelectedPaths([]);
     setBrowsePath("");
-  }, [source, diskList]);
+  }, [source, diskKey]);
 
   const start = useMutation({
     mutationFn: api.startBalance,
@@ -121,7 +122,7 @@ export function BalancePage() {
               {running ? job?.state : "prêt"}
             </Badge>
             <span className="chip">{diskList.length} disques montés</span>
-            {dryRun ? <Badge tone="warning">dry run</Badge> : null}
+            {running ? (job?.dryRun ? <Badge tone="warning">dry run</Badge> : null) : dryRun ? <Badge tone="warning">dry run</Badge> : null}
           </>
         }
       />

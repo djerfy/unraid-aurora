@@ -100,6 +100,8 @@ Reads the same sources as the original webGUI:
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
+| Configuration history | `AURORA_DATA_DIR/config-history/<id>/{meta.json,files/}` |
+| Balance history | `AURORA_DATA_DIR/balance-history.json` |
 | Container templates | `/boot/config/plugins/dockerMan/templates-user/my-<name>.xml`, read and written like the official webGUI |
 
 Every read is best-effort. A missing file or binary yields zero values, never a failed snapshot. The only
@@ -143,6 +145,15 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `POST` | `/api/v1/plugins/check-updates` | Compare local and remote .plg versions |
 | `POST` | `/api/v1/plugins/{name}/update` | Stream the official plugin manager output |
 | `GET` | `/api/v1/tools/diagnostics` | Download a diagnostics ZIP |
+| `GET` | `/api/v1/config-history` | Configuration snapshots |
+| `GET` | `/api/v1/config-history/{id}` | Snapshot detail with unified diff |
+| `POST` | `/api/v1/config-history/{id}/rollback` | Restore a snapshot |
+| `GET` | `/api/v1/balance/disks` | Mounted disks and free space |
+| `GET` | `/api/v1/balance/browse` | Browse a disk for selective moves |
+| `GET` | `/api/v1/balance/status` | Current or last balance job |
+| `GET` | `/api/v1/balance/history` | Balance job history |
+| `POST` | `/api/v1/balance/start` | Start a background balance job |
+| `POST` | `/api/v1/balance/cancel` | Cancel the running job |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
 | `GET` | `/api/v1/users` | Accounts and access |
 | `GET` | `/api/v1/plugins` | Installed plugins |
@@ -220,6 +231,17 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 | `notification.ack/archive/ackall` | move `.notify` files from unread to archive |
 | mover start/stop | detached `/usr/local/sbin/mover start` and `mover stop` |
 | array start/stop | `emcmd`, with base64 `luksKey` or a host keyfile |
+
+## 6.1 Configuration history and rebalancing
+
+Aurora snapshots file-backed changes under `AURORA_DATA_DIR/config-history` before writing them
+(`writeConfigFile`). Each entry stores the previous bytes, a unified diff and file metadata. Rollback
+snapshots the current state first, then restores the backup, so it is reversible.
+
+Rebalancing (`internal/provider/balance.go`) scans selected paths, chooses destinations by free
+space, copies with `io.Copy`, verifies sizes, preserves metadata/hardlinks and only then removes the
+source. Jobs run in a detached goroutine with a mutex-protected snapshot consumed by
+`GET /api/v1/balance/status`; terminal runs are persisted to `balance-history.json`.
 
 ## 7. Realtime
 
