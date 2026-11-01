@@ -599,7 +599,7 @@ function DiskBay({ disk, cache = false }: { disk: Disk; cache?: boolean }) {
   const color = disk.status === "standby" ? "var(--subtle)" : cache ? "var(--info)" : disk.type === "Parity" ? "var(--violet)" : "var(--accent)";
   return (
     <div className="group/bay min-w-0 flex-1" title={`${disk.name} · ${disk.model} · ${formatBytes(disk.used)} used · ${disk.temp || "—"}°C`}>
-      <div className="relative h-9 overflow-hidden rounded-[5px] border border-line bg-[var(--surface-3)]/60">
+      <div className="relative h-9 overflow-hidden rounded-[4px] border border-line bg-[var(--surface-3)]/60">
         <div
           className="absolute inset-x-0 bottom-0 transition-all duration-700"
           style={{

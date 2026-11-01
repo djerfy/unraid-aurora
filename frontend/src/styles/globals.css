@@ -158,9 +158,10 @@
   --color-info: var(--info);
   --color-violet: var(--violet);
 
-  --radius-xl: 1.125rem;
-  --radius-2xl: 1.375rem;
-  --radius-3xl: 1.75rem;
+  --radius-lg: 0.4375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
 }
 
 /* ---------------------------------------------------------------------------
@@ -297,7 +298,7 @@
 .card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 1.375rem;
+  border-radius: 0.75rem;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, white 4%), var(--surface));
   box-shadow: var(--shadow-card);

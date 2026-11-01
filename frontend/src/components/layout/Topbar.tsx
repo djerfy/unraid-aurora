@@ -95,7 +95,7 @@ export function Topbar({
       <button
         type="button"
         onClick={onOpenCommand}
-        className="hidden h-9 w-full max-w-[270px] items-center gap-2 rounded-[10px] border border-line bg-[var(--surface-2)]/80 px-3 text-left text-[12px] text-subtle transition hover:border-line-strong hover:bg-[var(--surface-2)] hover:text-muted sm:flex"
+        className="hidden h-9 w-full max-w-[270px] items-center gap-2 rounded-[7px] border border-line bg-[var(--surface-2)]/80 px-3 text-left text-[12px] text-subtle transition hover:border-line-strong hover:bg-[var(--surface-2)] hover:text-muted sm:flex"
       >
         <Search className="size-3.5 shrink-0" />
         <span className="flex-1 truncate">Search or jump to…</span>

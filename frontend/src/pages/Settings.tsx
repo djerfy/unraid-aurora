@@ -299,7 +299,7 @@ export function SettingsPage() {
                   <input
                     value={settings.serverName}
                     onChange={(event) => update("serverName", event.target.value)}
-                    className="h-9 w-52 rounded-[10px] border border-line bg-[var(--surface-2)] px-3 text-[12px] text-ink outline-none transition focus:border-[var(--accent-line)]"
+                    className="h-9 w-52 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[12px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                   />
                 </SettingsRow>
                 <SettingsRow label="Refresh interval" description="How often widgets re-sync with the server.">
@@ -482,7 +482,7 @@ function Select({
       value={value}
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
-      className="h-9 rounded-[10px] border border-line bg-[var(--surface-2)] px-3 text-[11.5px] text-soft outline-none transition focus:border-[var(--accent-line)]"
+      className="h-9 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[11.5px] text-soft outline-none transition focus:border-[var(--accent-line)]"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>

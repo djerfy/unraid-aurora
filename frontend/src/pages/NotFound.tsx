@@ -20,7 +20,7 @@ export function NotFoundPage() {
           <div className="mt-6 flex justify-center gap-2">
             <Link
               to="/"
-              className="inline-flex h-9 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-medium text-[var(--accent-contrast)] shadow-[0_8px_24px_-12px_var(--accent)]"
+              className="inline-flex h-9 items-center gap-2 rounded-[7px] px-3.5 text-[13px] font-medium text-[var(--accent-contrast)] shadow-[0_8px_24px_-12px_var(--accent)]"
               style={{ backgroundImage: "linear-gradient(135deg, var(--accent), var(--accent-2))" }}
             >
               <ArrowLeft className="size-3.5" /> Back to dashboard

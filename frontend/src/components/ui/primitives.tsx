@@ -22,9 +22,9 @@ type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {
   sm: "h-8 rounded-lg px-3 text-xs gap-1.5",
-  md: "h-9 rounded-[10px] px-3.5 text-[13px] gap-2",
+  md: "h-9 rounded-[7px] px-3.5 text-[13px] gap-2",
   lg: "h-11 rounded-xl px-5 text-sm gap-2",
-  icon: "size-9 rounded-[10px]",
+  icon: "size-9 rounded-[7px]",
 };
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -84,7 +84,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={label}
       className={cn(
-        "relative grid place-items-center rounded-[10px] text-muted transition-all duration-200 hover:bg-[color-mix(in_srgb,var(--muted)_10%,transparent)] hover:text-ink active:scale-95 disabled:pointer-events-none disabled:opacity-40",
+        "relative grid place-items-center rounded-[7px] text-muted transition-all duration-200 hover:bg-[color-mix(in_srgb,var(--muted)_10%,transparent)] hover:text-ink active:scale-95 disabled:pointer-events-none disabled:opacity-40",
         size === "md" ? "size-9" : "size-8",
         className,
       )}
@@ -484,7 +484,7 @@ export function InputBase({
   return (
     <div
       className={cn(
-        "flex h-9 items-center gap-2 rounded-[10px] border border-line bg-[var(--surface-2)] px-3 transition focus-within:border-[var(--accent-line)] focus-within:bg-[var(--surface)]",
+        "flex h-9 items-center gap-2 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 transition focus-within:border-[var(--accent-line)] focus-within:bg-[var(--surface)]",
         className,
       )}
     >

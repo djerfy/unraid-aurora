@@ -143,7 +143,7 @@ export function Sidebar({
                       aria-label={collapsed ? item.label : undefined}
                       className={({ isActive }) =>
                         cn(
-                          "group/nav relative flex w-full items-center rounded-[10px] py-2 text-[12.5px] font-medium transition-all duration-200",
+                          "group/nav relative flex w-full items-center rounded-[7px] py-2 text-[12.5px] font-medium transition-all duration-200",
                           collapsed ? "justify-center px-0" : "gap-2.5 px-2.5",
                           isActive
                             ? "bg-[var(--surface-3)] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
@@ -283,7 +283,7 @@ export function MobileSidebar({
                     onClick={onClose}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[13px] font-medium",
+                        "flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13px] font-medium",
                         isActive ? "bg-[var(--surface-3)] text-ink" : "text-muted",
                       )
                     }
