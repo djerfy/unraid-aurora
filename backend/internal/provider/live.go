@@ -54,6 +54,11 @@ type Live struct {
 	pluginUpdates   map[string]pluginUpdate
 	pluginCheckedAt time.Time
 
+	mountBase      string
+	balanceMu      sync.Mutex
+	balance        *balanceRuntime
+	balanceHistory []model.BalanceJob
+
 	statsMu        sync.Mutex
 	containerStats map[string]cachedContainerStats
 	vmCPU          map[string]vmCPUSample
@@ -112,6 +117,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 	l.loadMoverHistory()
 	l.loadImageUpdates()
 	l.loadPluginUpdates()
+	l.loadBalanceHistory()
 	go l.watchMover()
 	l.client = &http.Client{
 		Timeout: 4 * time.Second,
@@ -1023,6 +1029,11 @@ func (l *Live) Close() error {
 	l.moverMu.Lock()
 	_ = l.saveMoverHistory()
 	l.moverMu.Unlock()
+	l.balanceMu.Lock()
+	if l.balance != nil {
+		l.balance.cancel()
+	}
+	l.balanceMu.Unlock()
 	return nil
 }
 

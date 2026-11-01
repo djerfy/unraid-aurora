@@ -727,6 +727,84 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) balanceDisks(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	disks, err := s.provider.BalanceDisks(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, disks)
+}
+
+func (s *Server) balanceBrowse(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	entries, err := s.provider.BalanceBrowse(ctx, r.URL.Query().Get("disk"), r.URL.Query().Get("path"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "browse_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, entries)
+}
+
+func (s *Server) balanceStatus(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	job, err := s.provider.BalanceStatus(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, job)
+}
+
+func (s *Server) balanceHistory(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	history, err := s.provider.BalanceHistory(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, history)
+}
+
+func (s *Server) startBalance(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var options model.BalanceOptions
+	if !s.decode(w, r, &options) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	job, err := s.provider.StartBalance(ctx, options)
+	if err != nil {
+		writeError(w, http.StatusConflict, "balance_failed", err.Error())
+		return
+	}
+	s.log.Info("balance job started", "source", options.Source, "destinations", options.Destinations, "dryRun", options.DryRun)
+	writeJSON(w, http.StatusOK, job)
+}
+
+func (s *Server) cancelBalance(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := s.provider.CancelBalance(ctx); err != nil {
+		writeError(w, http.StatusConflict, "cancel_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) configHistory(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

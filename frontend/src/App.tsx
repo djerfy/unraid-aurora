@@ -17,6 +17,7 @@ import { LogsPage } from "./pages/Logs";
 import { TerminalPage } from "./pages/Terminal";
 import { ToolsPage } from "./pages/Tools";
 import { HistoryPage } from "./pages/History";
+import { BalancePage } from "./pages/Balance";
 import { SettingsPage } from "./pages/Settings";
 import { LoginPage } from "./pages/Login";
 import { NotFoundPage } from "./pages/NotFound";
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/balance" element={<BalancePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

@@ -1,4 +1,5 @@
 import {
+  ArrowRightLeft,
   Bell,
   Boxes,
   Cpu,
@@ -34,6 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/vms", label: "Virtual machines", icon: MonitorPlay, group: "Infrastructure" },
   { to: "/network", label: "Network", icon: Network, group: "Infrastructure" },
   { to: "/gpus", label: "GPUs", icon: Cpu, group: "Infrastructure" },
+  { to: "/balance", label: "Équilibrage", icon: ArrowRightLeft, group: "Infrastructure" },
   { to: "/users", label: "Users", icon: Users, group: "System" },
   { to: "/plugins", label: "Plugins", icon: Puzzle, group: "System" },
   { to: "/logs", label: "Logs", icon: ScrollText, group: "System" },
@@ -51,6 +53,7 @@ export const PAGE_META: Record<string, { title: string; section: string }> = {
   "/vms": { title: "Virtual machines", section: "Infrastructure" },
   "/network": { title: "Network", section: "Infrastructure" },
   "/gpus": { title: "GPUs", section: "Infrastructure" },
+  "/balance": { title: "Équilibrage", section: "Infrastructure" },
   "/users": { title: "Users", section: "System" },
   "/plugins": { title: "Plugins", section: "System" },
   "/logs": { title: "Logs", section: "System" },

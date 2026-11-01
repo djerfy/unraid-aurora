@@ -442,6 +442,64 @@ type ConfigHistory struct {
 	Files       []ConfigFileChange `json:"files"`
 }
 
+type BalanceDisk struct {
+	Name       string `json:"name"`
+	Mount      string `json:"mount"`
+	Role       string `json:"role"`
+	Filesystem string `json:"filesystem"`
+	Size       uint64 `json:"size"`
+	Used       uint64 `json:"used"`
+	Free       uint64 `json:"free"`
+}
+
+type BalanceEntry struct {
+	Name     string    `json:"name"`
+	Path     string    `json:"path"`
+	Dir      bool      `json:"dir"`
+	Size     uint64    `json:"size"`
+	Modified time.Time `json:"modified"`
+}
+
+type BalanceOptions struct {
+	Source       string   `json:"source"`
+	Paths        []string `json:"paths"`
+	Destinations []string `json:"destinations"`
+	DeleteSource bool     `json:"deleteSource"`
+	DryRun       bool     `json:"dryRun"`
+	Overwrite    bool     `json:"overwrite"`
+}
+
+type BalanceMove struct {
+	Path        string `json:"path"`
+	Destination string `json:"destination"`
+	Size        uint64 `json:"size"`
+	Status      string `json:"status"`
+	Error       string `json:"error,omitempty"`
+}
+
+type BalanceJob struct {
+	ID           string        `json:"id"`
+	Source       string        `json:"source"`
+	Destinations []string      `json:"destinations"`
+	Mode         string        `json:"mode"`
+	State        string        `json:"state"`
+	Phase        string        `json:"phase"`
+	Started      time.Time     `json:"started"`
+	Finished     time.Time     `json:"finished"`
+	TotalBytes   uint64        `json:"totalBytes"`
+	DoneBytes    uint64        `json:"doneBytes"`
+	TotalFiles   int           `json:"totalFiles"`
+	DoneFiles    int           `json:"doneFiles"`
+	CurrentPath  string        `json:"currentPath"`
+	Speed        float64       `json:"speed"`
+	ETA          int64         `json:"eta"`
+	DryRun       bool          `json:"dryRun"`
+	DeleteSource bool          `json:"deleteSource"`
+	Files        []BalanceMove `json:"files"`
+	Log          []string      `json:"log"`
+	Errors       []string      `json:"errors"`
+}
+
 type MoverRun struct {
 	Started  time.Time `json:"started"`
 	Finished time.Time `json:"finished"`

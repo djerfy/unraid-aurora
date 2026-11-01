@@ -383,6 +383,64 @@ export type Plugin = {
   color: string;
 };
 
+export type BalanceDisk = {
+  name: string;
+  mount: string;
+  role: string;
+  filesystem: string;
+  size: number;
+  used: number;
+  free: number;
+};
+
+export type BalanceEntry = {
+  name: string;
+  path: string;
+  dir: boolean;
+  size: number;
+  modified: string;
+};
+
+export type BalanceOptions = {
+  source: string;
+  paths: string[];
+  destinations: string[];
+  deleteSource: boolean;
+  dryRun: boolean;
+  overwrite: boolean;
+};
+
+export type BalanceMove = {
+  path: string;
+  destination: string;
+  size: number;
+  status: string;
+  error?: string;
+};
+
+export type BalanceJob = {
+  id: string;
+  source: string;
+  destinations: string[];
+  mode: string;
+  state: string;
+  phase: string;
+  started: string;
+  finished: string;
+  totalBytes: number;
+  doneBytes: number;
+  totalFiles: number;
+  doneFiles: number;
+  currentPath: string;
+  speed: number;
+  eta: number;
+  dryRun: boolean;
+  deleteSource: boolean;
+  files: BalanceMove[];
+  log: string[];
+  errors: string[];
+};
+
 export type ConfigFileChange = {
   path: string;
   existed: boolean;

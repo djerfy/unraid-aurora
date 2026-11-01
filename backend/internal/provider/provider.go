@@ -39,6 +39,12 @@ type Provider interface {
 	ConfigHistory(ctx context.Context) ([]model.ConfigHistory, error)
 	ConfigHistoryDetail(ctx context.Context, id string) (model.ConfigHistory, error)
 	RollbackConfig(ctx context.Context, id string) error
+	BalanceDisks(ctx context.Context) ([]model.BalanceDisk, error)
+	BalanceBrowse(ctx context.Context, disk, path string) ([]model.BalanceEntry, error)
+	StartBalance(ctx context.Context, opts model.BalanceOptions) (model.BalanceJob, error)
+	BalanceStatus(ctx context.Context) (model.BalanceJob, error)
+	BalanceHistory(ctx context.Context) ([]model.BalanceJob, error)
+	CancelBalance(ctx context.Context) error
 	CheckPluginUpdates(ctx context.Context) ([]model.Plugin, error)
 	UpdatePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
 	VMs(ctx context.Context) ([]model.VM, error)

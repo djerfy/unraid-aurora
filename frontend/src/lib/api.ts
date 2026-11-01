@@ -85,6 +85,20 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  balanceDisks: () => request<import("./types").BalanceDisk[]>("/api/v1/balance/disks"),
+  balanceBrowse: (disk: string, path: string) =>
+    request<import("./types").BalanceEntry[]>(
+      `/api/v1/balance/browse?disk=${encodeURIComponent(disk)}&path=${encodeURIComponent(path)}`,
+    ),
+  balanceStatus: () => request<import("./types").BalanceJob>("/api/v1/balance/status"),
+  balanceHistory: () => request<import("./types").BalanceJob[]>("/api/v1/balance/history"),
+  startBalance: (options: import("./types").BalanceOptions) =>
+    request<import("./types").BalanceJob>("/api/v1/balance/start", {
+      method: "POST",
+      body: JSON.stringify(options),
+    }),
+  cancelBalance: () =>
+    request<{ ok: boolean }>("/api/v1/balance/cancel", { method: "POST", body: "{}" }),
   configHistory: () => request<import("./types").ConfigHistory[]>("/api/v1/config-history"),
   configHistoryDetail: (id: string) =>
     request<import("./types").ConfigHistory>(`/api/v1/config-history/${encodeURIComponent(id)}`),
