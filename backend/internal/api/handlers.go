@@ -548,6 +548,85 @@ func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var options model.UserCreateOptions
+	if !s.decode(w, r, &options) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.CreateUser(ctx, options); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "create_user_failed", err.Error())
+		return
+	}
+	s.log.Info("user created", "name", options.Name)
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+}
+
+func (s *Server) updateUser(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Description string `json:"description"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.UpdateUser(ctx, name, body.Description); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "update_user_failed", err.Error())
+		return
+	}
+	s.log.Info("user updated", "name", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) changeUserPassword(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Password string `json:"password"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.ChangeUserPassword(ctx, name, body.Password); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "change_password_failed", err.Error())
+		return
+	}
+	s.log.Info("user password changed", "name", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	name := r.PathValue("name")
+	if err := s.provider.DeleteUser(ctx, name); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "delete_user_failed", err.Error())
+		return
+	}
+	s.log.Info("user deleted", "name", name)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) userIcon(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -616,6 +695,56 @@ func (s *Server) updatePlugin(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if err := s.provider.UpdatePlugin(ctx, name, emit); err != nil {
 		s.log.Error("plugin update failed", "plugin", name, "error", err)
+	}
+}
+
+func (s *Server) installPlugin(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		URL string `json:"url"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	streamPluginCommand(w, r, s, func(ctx context.Context, emit func(model.PluginEvent)) error {
+		return s.provider.InstallPlugin(ctx, body.URL, emit)
+	})
+}
+
+func (s *Server) removePlugin(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	name := r.PathValue("name")
+	streamPluginCommand(w, r, s, func(ctx context.Context, emit func(model.PluginEvent)) error {
+		return s.provider.RemovePlugin(ctx, name, emit)
+	})
+}
+
+func streamPluginCommand(w http.ResponseWriter, r *http.Request, s *Server, run func(context.Context, func(model.PluginEvent)) error) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming", "streaming is not supported")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	encoder := json.NewEncoder(w)
+	emit := func(event model.PluginEvent) {
+		if err := encoder.Encode(event); err == nil {
+			flusher.Flush()
+		}
+	}
+	if err := run(ctx, emit); err != nil {
+		s.log.Error("plugin command failed", "error", err)
 	}
 }
 

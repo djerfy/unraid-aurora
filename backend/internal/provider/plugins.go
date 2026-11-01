@@ -3,9 +3,11 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -258,6 +260,66 @@ func versionNewer(remote, local string) bool {
 		}
 	}
 	return false
+}
+
+// InstallPlugin downloads and installs a .plg definition through the official
+// plugin manager. The caller must explicitly confirm the URL.
+func (l *Live) InstallPlugin(ctx context.Context, rawURL string, report func(model.PluginEvent)) error {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return errors.New("plugin URL must be an http(s) URL")
+	}
+	if info, err := os.Stat(pluginManagerScript); err != nil || info.IsDir() {
+		return errors.New("plugin manager is not available")
+	}
+	return l.runPluginCommand(ctx, "install", parsed.String(), report)
+}
+
+func (l *Live) RemovePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error {
+	plugins := l.pluginList()
+	filename := ""
+	for _, plugin := range plugins {
+		if strings.EqualFold(plugin.Name, name) || strings.EqualFold(plugin.Filename, name) {
+			filename = plugin.Filename
+			break
+		}
+	}
+	if filename == "" {
+		return fmt.Errorf("plugin %q not found", name)
+	}
+	if info, err := os.Stat(pluginManagerScript); err != nil || info.IsDir() {
+		return errors.New("plugin manager is not available")
+	}
+	return l.runPluginCommand(ctx, "remove", filename, report)
+}
+
+func (l *Live) runPluginCommand(ctx context.Context, action, argument string, report func(model.PluginEvent)) error {
+	emit := func(event model.PluginEvent) {
+		if report != nil {
+			report(event)
+		}
+	}
+	command := exec.CommandContext(ctx, pluginManagerScript, action, argument)
+	writer := &pluginLineWriter{emit: func(line string) { emit(model.PluginEvent{Line: line}) }}
+	command.Stdout = writer
+	command.Stderr = writer
+	err := command.Run()
+	writer.flush()
+	if err != nil {
+		emit(model.PluginEvent{Line: err.Error(), Error: true, Done: true})
+		return err
+	}
+	l.pluginMu.Lock()
+	delete(l.pluginUpdates, argument)
+	for key := range l.pluginUpdates {
+		if strings.EqualFold(key, argument) {
+			delete(l.pluginUpdates, key)
+		}
+	}
+	l.pluginMu.Unlock()
+	l.savePluginUpdates()
+	emit(model.PluginEvent{Done: true, Line: "Plugin " + action + " completed"})
+	return nil
 }
 
 // UpdatePlugin runs the official plugin manager and streams its output.

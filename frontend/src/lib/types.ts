@@ -354,6 +354,12 @@ export type NetworkInfo = {
   services: { name: string; port: number; protocol: string; status: string; url: string }[];
 };
 
+export type UserCreateOptions = {
+  name: string;
+  description: string;
+  password: string;
+};
+
 export type User = {
   name: string;
   description: string;

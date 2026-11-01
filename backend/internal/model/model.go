@@ -407,6 +407,12 @@ type User struct {
 	Color       string    `json:"color"`
 }
 
+type UserCreateOptions struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Password    string `json:"password"`
+}
+
 type Plugin struct {
 	Name            string `json:"name"`
 	Version         string `json:"version"`

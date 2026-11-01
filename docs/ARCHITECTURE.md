@@ -144,6 +144,8 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/plugins` | Installed plugin metadata |
 | `POST` | `/api/v1/plugins/check-updates` | Compare local and remote .plg versions |
 | `POST` | `/api/v1/plugins/{name}/update` | Stream the official plugin manager output |
+| `POST` | `/api/v1/plugins/install` | Stream a plugin installation from a URL |
+| `DELETE` | `/api/v1/plugins/{name}` | Stream a plugin removal |
 | `GET` | `/api/v1/tools/diagnostics` | Download a diagnostics ZIP |
 | `GET` | `/api/v1/config-history` | Configuration snapshots |
 | `GET` | `/api/v1/config-history/{id}` | Snapshot detail with unified diff |
@@ -156,6 +158,10 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `POST` | `/api/v1/balance/cancel` | Cancel the running job |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
 | `GET` | `/api/v1/users` | Accounts and access |
+| `POST` | `/api/v1/users` | Create an account through emhttpd |
+| `PUT` | `/api/v1/users/{name}` | Update the description |
+| `PUT` | `/api/v1/users/{name}/password` | Change the password |
+| `DELETE` | `/api/v1/users/{name}` | Delete a non-root account |
 | `GET` | `/api/v1/plugins` | Installed plugins |
 | `GET` | `/api/v1/notifications` | Inbox + archive |
 | `GET` | `/api/v1/parity/history` | Historical checks |

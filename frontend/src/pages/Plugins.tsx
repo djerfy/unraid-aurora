@@ -4,12 +4,14 @@ import {
   Boxes,
   CheckCircle2,
   Download,
+  Plus,
   Puzzle,
   RefreshCw,
   Search,
   ShieldCheck,
   Sparkles,
   Tag,
+  Trash2,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Drawer, Modal } from "../components/ui/overlays";
@@ -33,7 +35,10 @@ export function PluginsPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState<Plugin | null>(null);
-  const [updateRun, setUpdateRun] = useState<{ plugin: Plugin; lines: string[]; running: boolean; error: string } | null>(null);
+  const [updateRun, setUpdateRun] = useState<{ title: string; lines: string[]; running: boolean; error: string } | null>(null);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [installURL, setInstallURL] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<Plugin | null>(null);
   const queryClient = useQueryClient();
 
   const check = useMutation({
@@ -52,10 +57,10 @@ export function PluginsPage() {
     },
   });
 
-  const runUpdate = async (plugin: Plugin) => {
-    setUpdateRun({ plugin, lines: [], running: true, error: "" });
+  const streamPluginTask = async (title: string, task: (onEvent: (event: import("../lib/types").PluginEvent) => void) => Promise<void>, success: string) => {
+    setUpdateRun({ title, lines: [], running: true, error: "" });
     try {
-      await api.updatePlugin(plugin.name, (event) => {
+      await task((event) => {
         setUpdateRun((current) => {
           if (!current) return current;
           const lines = event.line ? [...current.lines.slice(-400), event.line] : current.lines;
@@ -64,11 +69,33 @@ export function PluginsPage() {
       });
       setUpdateRun((current) => (current ? { ...current, running: false } : current));
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
-      toast({ kind: "success", title: `${plugin.name} updated` });
+      toast({ kind: "success", title: success });
     } catch (error) {
       setUpdateRun((current) => (current ? { ...current, running: false, error: (error as Error).message } : current));
-      toast({ kind: "error", title: "Plugin update failed", description: (error as Error).message });
+      toast({ kind: "error", title: "Plugin operation failed", description: (error as Error).message });
     }
+  };
+
+  const runUpdate = (plugin: Plugin) =>
+    streamPluginTask(`Updating ${plugin.name}`, (onEvent) => api.updatePlugin(plugin.name, onEvent), `${plugin.name} updated`);
+
+  const runInstall = () => {
+    const target = installURL.trim();
+    if (!/^https?:\/\//i.test(target)) {
+      toast({ kind: "error", title: "Invalid plugin URL" });
+      return;
+    }
+    setInstallOpen(false);
+    setInstallURL("");
+    void streamPluginTask("Installing plugin", (onEvent) => api.installPlugin(target, onEvent), "Plugin installed");
+  };
+
+  const runRemove = () => {
+    if (!removeTarget) return;
+    const plugin = removeTarget;
+    setRemoveTarget(null);
+    setSelected(null);
+    void streamPluginTask(`Removing ${plugin.name}`, (onEvent) => api.removePlugin(plugin.name, onEvent), `${plugin.name} removed`);
   };
 
   if (!snapshot) return null;
@@ -109,8 +136,11 @@ export function PluginsPage() {
             >
               Check updates
             </Button>
+            <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setInstallOpen(true)}>
+              Install plugin
+            </Button>
             <Button
-              variant="primary"
+              variant="secondary"
               icon={<Sparkles className="size-3.5" />}
               onClick={() => window.open("https://ca.unraid.net", "_blank", "noopener")}
             >
@@ -281,6 +311,14 @@ export function PluginsPage() {
               Plugins extend Unraid at the system level. Only install plugins you trust, and keep a current
               flash backup before updating.
             </div>
+
+            <Button
+              variant="danger"
+              icon={<Trash2 className="size-3.5" />}
+              onClick={() => setRemoveTarget(selected)}
+            >
+              Remove plugin
+            </Button>
           </div>
         ) : null}
       </Drawer>
@@ -290,7 +328,7 @@ export function PluginsPage() {
         onClose={() => {
           if (!updateRun?.running) setUpdateRun(null);
         }}
-        title={`Updating ${updateRun?.plugin.name ?? ""}`}
+        title={updateRun?.title ?? ""}
         description="Output from the official Unraid plugin manager."
         size="xl"
         footer={
@@ -310,6 +348,60 @@ export function PluginsPage() {
           ) : null}
           {updateRun?.running ? <p className="text-[10px] text-subtle">Update in progress…</p> : null}
         </div>
+      </Modal>
+
+      <Modal
+        open={installOpen}
+        onClose={() => setInstallOpen(false)}
+        title="Install a plugin"
+        description="Downloads a .plg definition and runs it through the official Unraid plugin manager."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setInstallOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" icon={<Download className="size-3.5" />} onClick={runInstall}>
+              Install
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <label className="block space-y-1">
+            <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Plugin URL</span>
+            <input
+              value={installURL}
+              onChange={(event) => setInstallURL(event.target.value)}
+              placeholder="https://example.com/my-plugin.plg"
+              className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none focus:border-[var(--accent-line)]"
+            />
+          </label>
+          <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3 text-[10.5px] leading-relaxed text-muted">
+            <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--warning)]" />
+            Plugins run as root. Only install definitions from sources you trust.
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(removeTarget)}
+        onClose={() => setRemoveTarget(null)}
+        title={`Remove ${removeTarget?.name ?? "plugin"}?`}
+        description="The official plugin manager removes the plugin files and its installed marker."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={<Trash2 className="size-3.5" />} onClick={runRemove}>
+              Remove plugin
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[10.5px] leading-relaxed text-muted">
+          Settings and data stored outside the plugin directory are preserved.
+        </p>
       </Modal>
     </>
   );

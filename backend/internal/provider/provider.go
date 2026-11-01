@@ -47,6 +47,8 @@ type Provider interface {
 	CancelBalance(ctx context.Context) error
 	CheckPluginUpdates(ctx context.Context) ([]model.Plugin, error)
 	UpdatePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
+	InstallPlugin(ctx context.Context, url string, report func(model.PluginEvent)) error
+	RemovePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
 	VMs(ctx context.Context) ([]model.VM, error)
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error
@@ -58,6 +60,10 @@ type Provider interface {
 	Network(ctx context.Context) (model.Network, error)
 	Users(ctx context.Context) ([]model.User, error)
 	UserIcon(ctx context.Context, name string) ([]byte, string, error)
+	CreateUser(ctx context.Context, opts model.UserCreateOptions) error
+	UpdateUser(ctx context.Context, name, description string) error
+	ChangeUserPassword(ctx context.Context, name, password string) error
+	DeleteUser(ctx context.Context, name string) error
 	Plugins(ctx context.Context) ([]model.Plugin, error)
 	Notifications(ctx context.Context) ([]model.Notification, error)
 	ParityHistory(ctx context.Context) ([]model.ParityCheck, error)

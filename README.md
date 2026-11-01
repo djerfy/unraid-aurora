@@ -252,9 +252,9 @@ Deep dives:
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, autostart toggle, read-only libvirt XML view, lifecycle actions and a VNC/SPICE console |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
-| Users | Accounts, roles, share access matrix, account drawer |
+| Users | Accounts, roles, share access matrix, add/edit/password/delete through Unraid account management |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
-| Plugins | Real .plg metadata, version comparison against plugin repositories, streamed updates through the official plugin manager |
+| Plugins | Real .plg metadata, update checks, streamed update/install/remove through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
 | Configuration history | `AURORA_DATA_DIR/config-history` (backup files, metas, unified diffs) |

@@ -41,6 +41,33 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return payload as T;
 }
 
+async function readNDJSON<T>(body: ReadableStream<Uint8Array>, onEvent: (event: T) => void) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let index = buffer.indexOf("\n");
+    while (index >= 0) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (line) {
+        try {
+          onEvent(JSON.parse(line) as T);
+        } catch {
+          // Ignore a truncated line; the next chunk completes it.
+        }
+      }
+      index = buffer.indexOf("\n");
+    }
+  }
+  if (buffer.trim()) {
+    onEvent(JSON.parse(buffer) as T);
+  }
+}
+
 export const api = {
   bootstrap: () => request<Snapshot>("/api/v1/bootstrap"),
   session: () => request<SessionInfo>("/api/v1/auth/session"),
@@ -57,6 +84,53 @@ export const api = {
     }),
   containerLogs: (id: string, lines = 160) =>
     request<LogLine[]>(`/api/v1/docker/containers/${encodeURIComponent(id)}/logs?lines=${lines}`),
+  createUser: (options: import("./types").UserCreateOptions) =>
+    request<{ ok: boolean }>("/api/v1/users", { method: "POST", body: JSON.stringify(options) }),
+  updateUser: (name: string, description: string) =>
+    request<{ ok: boolean }>(`/api/v1/users/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      body: JSON.stringify({ description }),
+    }),
+  changeUserPassword: (name: string, password: string) =>
+    request<{ ok: boolean }>(`/api/v1/users/${encodeURIComponent(name)}/password`, {
+      method: "PUT",
+      body: JSON.stringify({ password }),
+    }),
+  deleteUser: (name: string) =>
+    request<{ ok: boolean }>(`/api/v1/users/${encodeURIComponent(name)}`, { method: "DELETE" }),
+  installPlugin: async (
+    url: string,
+    onEvent: (event: import("./types").PluginEvent) => void,
+  ) => {
+    const res = await fetch("/api/v1/plugins/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Aurora-Request": "aurora" },
+      body: JSON.stringify({ url }),
+      credentials: "same-origin",
+    });
+    if (!res.ok || !res.body) {
+      const payload = await res.json().catch(() => null);
+      const body = payload as { error?: { code?: string; message?: string } } | null;
+      throw new ApiError(res.status, body?.error?.code ?? "http_error", body?.error?.message ?? res.statusText);
+    }
+    await readNDJSON(res.body, onEvent);
+  },
+  removePlugin: async (
+    name: string,
+    onEvent: (event: import("./types").PluginEvent) => void,
+  ) => {
+    const res = await fetch(`/api/v1/plugins/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "X-Aurora-Request": "aurora" },
+      credentials: "same-origin",
+    });
+    if (!res.ok || !res.body) {
+      const payload = await res.json().catch(() => null);
+      const body = payload as { error?: { code?: string; message?: string } } | null;
+      throw new ApiError(res.status, body?.error?.code ?? "http_error", body?.error?.message ?? res.statusText);
+    }
+    await readNDJSON(res.body, onEvent);
+  },
   createContainer: (options: import("./types").ContainerCreateOptions) =>
     request<{ id: string }>("/api/v1/docker/containers", {
       method: "POST",

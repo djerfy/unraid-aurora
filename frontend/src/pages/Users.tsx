@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
   Clock3,
@@ -9,12 +10,14 @@ import {
   Minus,
   Search,
   ShieldCheck,
+  Plus,
+  Trash2,
   UserCog,
   Users,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, userIconURL } from "../components/ui/entity-icon";
-import { Drawer, Menu } from "../components/ui/overlays";
+import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
   Badge,
   Button,
@@ -24,16 +27,71 @@ import {
   InputBase,
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
+import { useToast } from "../app/ToastProvider";
+import { api } from "../lib/api";
 import { formatDateTime, relativeTime } from "../lib/format";
-import type { User } from "../lib/types";
 
 export function UsersPage() {
   const { snapshot, refresh } = useApp();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<User | null>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addDraft, setAddDraft] = useState({ name: "", description: "", password: "", confirm: "" });
+  const [description, setDescription] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [error, setError] = useState("");
+
+  const invalidateUsers = () => {
+    void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+  };
+  const createUser = useMutation({
+    mutationFn: api.createUser,
+    onSuccess: () => {
+      toast({ kind: "success", title: "User created", description: addDraft.name });
+      setAddOpen(false);
+      invalidateUsers();
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+  const updateUser = useMutation({
+    mutationFn: ({ name, value }: { name: string; value: string }) => api.updateUser(name, value),
+    onSuccess: () => {
+      toast({ kind: "success", title: "User updated" });
+      setEditOpen(false);
+      invalidateUsers();
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+  const changePassword = useMutation({
+    mutationFn: ({ name, value }: { name: string; value: string }) => api.changeUserPassword(name, value),
+    onSuccess: () => {
+      toast({ kind: "success", title: "Password changed" });
+      setPasswordOpen(false);
+      setPassword("");
+      setPasswordConfirm("");
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+  const deleteUser = useMutation({
+    mutationFn: (name: string) => api.deleteUser(name),
+    onSuccess: () => {
+      toast({ kind: "info", title: "User deleted" });
+      setDeleteOpen(false);
+      setSelectedName(null);
+      invalidateUsers();
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
 
   if (!snapshot) return null;
   const users = snapshot.users;
+  const selected = users.find((user) => user.name === selectedName) ?? null;
   const admins = users.filter((user) => user.role === "administrator");
   const readOnly = users.filter((user) => user.role === "read-only");
   const shares = new Set(users.flatMap((user) => user.shares));
@@ -61,9 +119,22 @@ export function UsersPage() {
           </>
         }
         actions={
-          <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-            Refresh
-          </Button>
+          <>
+            <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Plus className="size-3.5" />}
+              onClick={() => {
+                setAddDraft({ name: "", description: "", password: "", confirm: "" });
+                setError("");
+                setAddOpen(true);
+              }}
+            >
+              Add user
+            </Button>
+          </>
         }
       />
 
@@ -106,7 +177,7 @@ export function UsersPage() {
                   key={user.name}
                   className="grid grid-cols-1 gap-3 px-5 py-3.5 transition hover:bg-[var(--surface-2)]/40 lg:grid-cols-[minmax(0,2fr)_120px_minmax(0,2fr)_140px_40px] lg:items-center lg:gap-4"
                 >
-                  <button type="button" onClick={() => setSelected(user)} className="flex min-w-0 items-center gap-3 text-left">
+                  <button type="button" onClick={() => setSelectedName(user.name)} className="flex min-w-0 items-center gap-3 text-left">
                     <EntityIcon src={userIconURL(user.name)} name={user.name} size={34} />
                     <span className="min-w-0">
                       <span className="flex items-center gap-1.5">
@@ -151,8 +222,8 @@ export function UsersPage() {
                         </IconButton>
                       }
                       items={[
-                        { label: "View profile", onSelect: () => setSelected(user) },
-                        { label: "Share permissions", onSelect: () => setSelected(user) },
+                        { label: "View profile", onSelect: () => setSelectedName(user.name) },
+                        { label: "Share permissions", onSelect: () => setSelectedName(user.name) },
                       ]}
                     />
                   </div>
@@ -248,9 +319,50 @@ export function UsersPage() {
 
       <Drawer
         open={Boolean(selected)}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedName(null)}
         title={selected?.name ?? ""}
         subtitle={selected?.description}
+        footer={
+          selected ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                icon={<KeyRound className="size-3.5" />}
+                onClick={() => {
+                  setPassword("");
+                  setPasswordConfirm("");
+                  setError("");
+                  setPasswordOpen(true);
+                }}
+              >
+                Change password
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<UserCog className="size-3.5" />}
+                onClick={() => {
+                  setDescription(selected.description);
+                  setError("");
+                  setEditOpen(true);
+                }}
+              >
+                Edit
+              </Button>
+              {selected.root ? null : (
+                <Button
+                  variant="danger"
+                  icon={<Trash2 className="size-3.5" />}
+                  onClick={() => {
+                    setError("");
+                    setDeleteOpen(true);
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+          ) : null
+        }
       >
         {selected ? (
           <div className="space-y-5">
@@ -298,14 +410,191 @@ export function UsersPage() {
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
               <p className="flex items-center gap-1.5 font-medium text-soft"><UserCog className="size-3.5" /> Account management</p>
               <p className="mt-1.5">
-                Users are managed by Unraid itself. Aurora mirrors the account list and validates permissions,
-                but never stores passwords.
+                Accounts are created through Unraid's own user manager. Passwords are sent once to emhttpd,
+                never stored by Aurora.
               </p>
             </div>
           </div>
         ) : null}
       </Drawer>
+
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add user"
+        description="Creates a Unix account, a Samba account and a share access entry, like the official Add User page."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setAddOpen(false)} disabled={createUser.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={createUser.isPending}
+              onClick={() => {
+                setError("");
+                if (!/^[a-z_][a-z0-9_-]{0,39}$/.test(addDraft.name)) {
+                  setError("Use a lowercase name starting with a letter or underscore.");
+                  return;
+                }
+                if (!addDraft.password) {
+                  setError("A password is required.");
+                  return;
+                }
+                if (addDraft.password !== addDraft.confirm) {
+                  setError("Passwords do not match.");
+                  return;
+                }
+                createUser.mutate({
+                  name: addDraft.name,
+                  description: addDraft.description,
+                  password: addDraft.password,
+                });
+              }}
+            >
+              Create user
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="User name" value={addDraft.name} onChange={(value) => setAddDraft((current) => ({ ...current, name: value }))} placeholder="jellyfin" />
+          <Field label="Description" value={addDraft.description} onChange={(value) => setAddDraft((current) => ({ ...current, description: value }))} placeholder="Media account" />
+          <Field label="Password" type="password" value={addDraft.password} onChange={(value) => setAddDraft((current) => ({ ...current, password: value }))} />
+          <Field label="Confirm password" type="password" value={addDraft.confirm} onChange={(value) => setAddDraft((current) => ({ ...current, confirm: value }))} />
+          {error ? <ErrorLine message={error} /> : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={`Edit · ${selected?.name ?? ""}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={updateUser.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={updateUser.isPending}
+              onClick={() => {
+                setError("");
+                if (selectedName) updateUser.mutate({ name: selectedName, value: description });
+              }}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="Description" value={description} onChange={setDescription} />
+          {error ? <ErrorLine message={error} /> : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+        title={`Change password · ${selected?.name ?? ""}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPasswordOpen(false)} disabled={changePassword.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={changePassword.isPending}
+              onClick={() => {
+                setError("");
+                if (!password) {
+                  setError("Enter a new password.");
+                  return;
+                }
+                if (password !== passwordConfirm) {
+                  setError("Passwords do not match.");
+                  return;
+                }
+                if (selectedName) changePassword.mutate({ name: selectedName, value: password });
+              }}
+            >
+              Change password
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label="New password" type="password" value={password} onChange={setPassword} />
+          <Field label="Confirm password" type="password" value={passwordConfirm} onChange={setPasswordConfirm} />
+          {error ? <ErrorLine message={error} /> : null}
+        </div>
+      </Modal>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Delete ${selected?.name ?? "user"}?`}
+        description="The account, its Samba credentials and share access entries are removed."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleteUser.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              icon={<Trash2 className="size-3.5" />}
+              loading={deleteUser.isPending}
+              onClick={() => {
+                if (selectedName) deleteUser.mutate(selectedName);
+              }}
+            >
+              Delete user
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <ErrorLine message={error} />
+        </div>
+      </Modal>
     </>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <label className="block space-y-1">
+      <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{label}</span>
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-ink outline-none focus:border-[var(--accent-line)]"
+      />
+    </label>
+  );
+}
+
+function ErrorLine({ message }: { message: string }) {
+  if (!message) return null;
+  return (
+    <p className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-[10.5px] text-[var(--danger)]">
+      {message}
+    </p>
   );
 }
 
