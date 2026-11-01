@@ -77,7 +77,7 @@ func TestValidateShareConfig(t *testing.T) {
 		t.Fatalf("valid config rejected: %v", err)
 	}
 	for name, mutate := range map[string]func(*model.ShareConfig){
-		"rename":       func(cfg *model.ShareConfig) { cfg.Name = "other" },
+		"invalid name": func(cfg *model.ShareConfig) { cfg.Name = "1bad" },
 		"allocator":    func(cfg *model.ShareConfig) { cfg.Allocator = "random" },
 		"split level":  func(cfg *model.ShareConfig) { cfg.SplitLevel = "9" },
 		"cache mode":   func(cfg *model.ShareConfig) { cfg.UseCache = "maybe" },
@@ -90,6 +90,26 @@ func TestValidateShareConfig(t *testing.T) {
 		if err := validateShareConfig(cfg, "media"); err == nil {
 			t.Fatalf("%s should be rejected", name)
 		}
+	}
+}
+
+func TestShareFormValues(t *testing.T) {
+	values := shareFormValues("old", model.ShareConfig{
+		Name: "new", Comment: "comment", Floor: "10G", Allocator: "highwater",
+		SplitLevel: "2", UseCache: "yes", CachePool: "cache", CachePool2: "",
+		COW: "auto", Include: []string{"disk1", "disk2"}, Exclude: []string{"disk3"},
+	})
+	if values.Get("shareName") != "new" || values.Get("shareNameOrig") != "old" {
+		t.Fatalf("names = %q / %q", values.Get("shareName"), values.Get("shareNameOrig"))
+	}
+	if values.Get("shareInclude") != "disk1,disk2" || values.Get("shareExclude") != "disk3" {
+		t.Fatalf("disk lists = %q / %q", values.Get("shareInclude"), values.Get("shareExclude"))
+	}
+	if values.Get("shareUseCache") != "yes" || values.Get("shareCachePool") != "cache" {
+		t.Fatalf("cache = %q / %q", values.Get("shareUseCache"), values.Get("shareCachePool"))
+	}
+	if values.Get("cmdEditShare") != "Apply" {
+		t.Fatalf("command = %q", values.Get("cmdEditShare"))
 	}
 }
 

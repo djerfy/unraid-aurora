@@ -15,6 +15,7 @@ import {
   LockKeyhole,
   Pause,
   Play,
+  Plus,
   RefreshCw,
   Square,
   Search,
@@ -75,7 +76,7 @@ export function StoragePage() {
   const [showIO, setShowIO] = useState(true);
   const [query, setQuery] = useState("");
   const [arrayModal, setArrayModal] = useState<"start" | "stop" | null>(null);
-  const [editingShare, setEditingShare] = useState<Share | null>(null);
+  const [shareEditor, setShareEditor] = useState<{ share: Share | null } | null>(null);
 
   if (!snapshot) return null;
   const { array, disks, shares, pools } = snapshot;
@@ -269,6 +270,9 @@ export function StoragePage() {
               icon={<Search className="size-3.5" />}
               className="w-56"
             />
+            <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setShareEditor({ share: null })}>
+              New share
+            </Button>
           </div>
         ) : tab === "array" ? (
           <label className="flex items-center gap-2 text-[11px] text-muted">
@@ -629,7 +633,7 @@ export function StoragePage() {
         subtitle={selectedShare?.comment}
         footer={
           selectedShare ? (
-            <Button variant="primary" className="w-full" onClick={() => setEditingShare(selectedShare)}>
+            <Button variant="primary" className="w-full" onClick={() => setShareEditor({ share: selectedShare })}>
               Edit settings
             </Button>
           ) : null
@@ -667,8 +671,14 @@ export function StoragePage() {
         ) : null}
       </Drawer>
 
-      {editingShare ? (
-        <ShareEditModal share={editingShare} onClose={() => setEditingShare(null)} />
+      {shareEditor ? (
+        <ShareEditModal
+          share={shareEditor.share}
+          onClose={() => {
+            setShareEditor(null);
+            setSelectedShare(null);
+          }}
+        />
       ) : null}
     </>
   );
@@ -822,7 +832,7 @@ function DiskGroup({
   );
 }
 
-function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void }) {
+function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { snapshot } = useApp();
   const { toast } = useToast();
@@ -833,10 +843,25 @@ function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void 
   const [saving, setSaving] = useState(false);
 
   const config = useQuery({
-    queryKey: ["share-config", share.name],
-    queryFn: () => api.shareConfig(share.name),
+    queryKey: ["share-config", share?.name ?? "new"],
+    queryFn: () => api.shareConfig(share?.name ?? ""),
+    enabled: Boolean(share),
     staleTime: 0,
   });
+
+  useEffect(() => {
+    if (share) return;
+    setDraft({
+      name: "", comment: "", floor: "0", allocator: "highwater", splitLevel: "",
+      include: [], exclude: [], useCache: "no", cachePool: "", cachePool2: "",
+      cow: "auto", exclusive: false, smbExport: "-", smbSecurity: "public",
+      smbCaseSensitive: "auto", smbVolumeSizeLimit: "", nfsExport: "-",
+      nfsSecurity: "public", nfsHostList: "",
+    });
+    setIncludeText("");
+    setExcludeText("");
+    setError("");
+  }, [share]);
 
   useEffect(() => {
     if (!config.data) return;
@@ -853,21 +878,28 @@ function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void 
 
   const save = async () => {
     if (!draft) return;
-    const csrf = draft;
+    if (!/^[A-Za-z][A-Za-z0-9._-]{0,39}$/.test(draft.name)) {
+      setError("Share name must start with a letter and contain only letters, digits, '.', '_' or '-'.");
+      return;
+    }
     const next: ShareConfig = {
-      ...csrf,
+      ...draft,
       include: includeText.split(",").map((item) => item.trim()).filter(Boolean),
       exclude: excludeText.split(",").map((item) => item.trim()).filter(Boolean),
     };
     setSaving(true);
     setError("");
     try {
-      await api.updateShare(share.name, next);
-      await api.updateShareSMB(share.name, next);
-      await api.updateShareNFS(share.name, next);
+      if (share) {
+        await api.updateShare(share.name, next);
+      } else {
+        await api.createShare(next);
+      }
+      await api.updateShareSMB(next.name, next);
+      await api.updateShareNFS(next.name, next);
       toast({
         kind: "success",
-        title: "Share updated",
+        title: share ? (share.name === next.name ? "Share updated" : "Share renamed") : "Share created",
         description: "A snapshot is available in Historique for rollback.",
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
@@ -886,7 +918,7 @@ function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void 
     <Modal
       open
       onClose={onClose}
-      title={`Settings · ${share.name}`}
+      title={share ? `Settings · ${share.name}` : "New share"}
       description="Share properties, SMB export and NFS export. The current configuration file is snapshotted before applying."
       size="xl"
       footer={
@@ -908,10 +940,14 @@ function ShareEditModal({ share, onClose }: { share: Share; onClose: () => void 
         <div className="space-y-5">
           <section>
             <SectionTitle title="Share" hint="Name, description and free-space floor" />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <TextInput label="Name" value={draft.name} onChange={(value) => update({ name: value })} placeholder="media" />
               <TextInput label="Comment" value={draft.comment} onChange={(value) => update({ comment: value })} />
               <TextInput label="Minimum free space" value={draft.floor} onChange={(value) => update({ floor: value })} placeholder="0 or 10G" />
             </div>
+            {share ? (
+              <p className="mt-1 text-[9.5px] text-subtle">Renaming moves the share configuration; existing data stays on disk.</p>
+            ) : null}
           </section>
 
           <section>

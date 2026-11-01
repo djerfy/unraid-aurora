@@ -159,6 +159,8 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  createShare: (config: import("./types").ShareConfig) =>
+    request<{ ok: boolean }>("/api/v1/shares", { method: "POST", body: JSON.stringify(config) }),
   shareConfig: (name: string) =>
     request<import("./types").ShareConfig>(`/api/v1/shares/${encodeURIComponent(name)}/config`),
   updateShare: (name: string, config: import("./types").ShareConfig) =>

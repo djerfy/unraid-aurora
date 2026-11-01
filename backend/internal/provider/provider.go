@@ -61,6 +61,7 @@ type Provider interface {
 	Users(ctx context.Context) ([]model.User, error)
 	UserIcon(ctx context.Context, name string) ([]byte, string, error)
 	ShareConfig(ctx context.Context, name string) (model.ShareConfig, error)
+	CreateShare(ctx context.Context, cfg model.ShareConfig) error
 	UpdateShareProperties(ctx context.Context, name string, cfg model.ShareConfig) error
 	UpdateShareSMB(ctx context.Context, name string, cfg model.ShareConfig) error
 	UpdateShareNFS(ctx context.Context, name string, cfg model.ShareConfig) error

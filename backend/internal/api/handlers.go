@@ -248,6 +248,25 @@ func (s *Server) pools(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) createShare(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var cfg model.ShareConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	if err := s.provider.CreateShare(ctx, cfg); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "create_share_failed", err.Error())
+		return
+	}
+	s.log.Info("share created", "share", cfg.Name)
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+}
+
 func (s *Server) shareConfig(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

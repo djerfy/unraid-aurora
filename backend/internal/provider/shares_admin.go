@@ -114,9 +114,9 @@ func applyShareNFSConfig(cfg *model.ShareConfig, stateDir string) {
 	cfg.NFSHostList = section["hostList"]
 }
 
-func validateShareConfig(cfg model.ShareConfig, name string) error {
-	if cfg.Name != name || !shareNamePattern.MatchString(name) {
-		return errors.New("share name cannot be changed here")
+func validateShareConfig(cfg model.ShareConfig, _ string) error {
+	if !shareNamePattern.MatchString(cfg.Name) {
+		return errors.New("invalid share name")
 	}
 	if len(cfg.Comment) > 256 || strings.ContainsAny(cfg.Comment, "\x00\n\r") {
 		return errors.New("comment must be a single line of 256 characters or fewer")
@@ -215,17 +215,13 @@ func (l *Live) finishShareChange(action, description, name string, before []byte
 	l.recordExternalConfigChange(action, description, l.shareConfigPath(name), before, after)
 }
 
-func (l *Live) UpdateShareProperties(ctx context.Context, name string, cfg model.ShareConfig) error {
-	if err := validateShareConfig(cfg, name); err != nil {
-		return err
-	}
-	before := l.captureShareConfig(name)
+func shareFormValues(original string, cfg model.ShareConfig) url.Values {
 	include := strings.Join(cfg.Include, ",")
 	exclude := strings.Join(cfg.Exclude, ",")
-	values := url.Values{
+	return url.Values{
 		"cmdEditShare":     {"Apply"},
-		"shareNameOrig":    {name},
-		"shareName":        {name},
+		"shareNameOrig":    {original},
+		"shareName":        {cfg.Name},
 		"shareComment":     {cfg.Comment},
 		"shareFloor":       {cfg.Floor},
 		"shareCachePool":   {cfg.CachePool},
@@ -245,10 +241,68 @@ func (l *Live) UpdateShareProperties(ctx context.Context, name string, cfg model
 		"shareExclude1":    {exclude},
 		"shareExclude2":    {exclude},
 	}
-	if err := runEmcmd(ctx, values.Encode()); err != nil {
+}
+
+func (l *Live) shareNameExists(ctx context.Context, name string) bool {
+	shares, err := l.Shares(ctx)
+	if err != nil {
+		return false
+	}
+	for _, share := range shares {
+		if strings.EqualFold(share.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Live) CreateShare(ctx context.Context, cfg model.ShareConfig) error {
+	if err := validateShareConfig(cfg, ""); err != nil {
+		return err
+	}
+	if l.shareNameExists(ctx, cfg.Name) {
+		return errors.New("a share with this name already exists")
+	}
+	if err := runEmcmd(ctx, shareFormValues("", cfg).Encode()); err != nil {
+		return fmt.Errorf("create share: %w", err)
+	}
+	after, err := os.ReadFile(l.shareConfigPath(cfg.Name))
+	if err == nil {
+		l.recordExternalConfigChanges("share.create", "Create share · "+cfg.Name, []externalConfigChange{
+			{Path: l.shareConfigPath(cfg.Name), After: after},
+		})
+	}
+	return nil
+}
+
+func (l *Live) UpdateShareProperties(ctx context.Context, name string, cfg model.ShareConfig) error {
+	if err := validateShareConfig(cfg, name); err != nil {
+		return err
+	}
+	renaming := !strings.EqualFold(cfg.Name, name)
+	if renaming && l.shareNameExists(ctx, cfg.Name) {
+		return errors.New("a share with the new name already exists")
+	}
+	oldPath := l.shareConfigPath(name)
+	newPath := l.shareConfigPath(cfg.Name)
+	beforeOld := l.captureShareConfig(name)
+	if err := runEmcmd(ctx, shareFormValues(name, cfg).Encode()); err != nil {
 		return fmt.Errorf("update share: %w", err)
 	}
-	l.finishShareChange("share.update", "Update share settings · "+name, name, before)
+	if renaming {
+		afterOld, _ := os.ReadFile(oldPath)
+		afterNew, _ := os.ReadFile(newPath)
+		l.recordExternalConfigChanges("share.rename", fmt.Sprintf("Rename share %s → %s", name, cfg.Name), []externalConfigChange{
+			{Path: oldPath, Before: beforeOld, After: afterOld},
+			{Path: newPath, After: afterNew},
+		})
+		return nil
+	}
+	after, err := os.ReadFile(newPath)
+	if err != nil {
+		return nil
+	}
+	l.recordExternalConfigChange("share.update", "Update share settings · "+name, newPath, beforeOld, after)
 	return nil
 }
 

@@ -204,7 +204,17 @@ func isTextContent(data []byte) bool {
 // recordExternalConfigChange records a change applied by an external process
 // (emhttpd). before/after are the file contents around the command.
 func (l *Live) recordExternalConfigChange(action, description, path string, before, after []byte) {
-	if l.dataDir == "" {
+	l.recordExternalConfigChanges(action, description, []externalConfigChange{{Path: path, Before: before, After: after}})
+}
+
+type externalConfigChange struct {
+	Path   string
+	Before []byte
+	After  []byte
+}
+
+func (l *Live) recordExternalConfigChanges(action, description string, changes []externalConfigChange) {
+	if l.dataDir == "" || len(changes) == 0 {
 		return
 	}
 	entryID := newHistoryID()
@@ -214,18 +224,26 @@ func (l *Live) recordExternalConfigChange(action, description, path string, befo
 		return
 	}
 	meta := historyMeta{ID: entryID, Created: time.Now().UTC(), Action: action, Description: description}
-	file := historyFile{
-		Path: path, Existed: before != nil,
-		Diff: renderConfigDiff(path, before, after, false),
-		Size: int64(len(before)), Mode: 0o644,
-	}
-	if before != nil {
-		file.Backup = "000.bak"
-		if err := os.WriteFile(filepath.Join(filesDir, file.Backup), before, 0o600); err != nil {
-			return
+	for index, change := range changes {
+		if change.Before == nil && change.After == nil {
+			continue
 		}
+		file := historyFile{
+			Path: change.Path, Existed: change.Before != nil,
+			Diff: renderConfigDiff(change.Path, change.Before, change.After, change.After == nil),
+			Size: int64(len(change.Before)), Mode: 0o644,
+		}
+		if change.Before != nil {
+			file.Backup = fmt.Sprintf("%03d.bak", index)
+			if err := os.WriteFile(filepath.Join(filesDir, file.Backup), change.Before, 0o600); err != nil {
+				return
+			}
+		}
+		meta.Files = append(meta.Files, file)
 	}
-	meta.Files = append(meta.Files, file)
+	if len(meta.Files) == 0 {
+		return
+	}
 	if raw, err := json.MarshalIndent(meta, "", "  "); err == nil {
 		_ = os.WriteFile(filepath.Join(entryDir, "meta.json"), raw, 0o600)
 	}

@@ -51,6 +51,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/disks/{device}/smart", s.diskSmart)
 	api.HandleFunc("POST /api/v1/disks/{device}/smart-test", s.diskSmartTest)
 	api.HandleFunc("GET /api/v1/shares", s.shares)
+	api.HandleFunc("POST /api/v1/shares", s.createShare)
 	api.HandleFunc("GET /api/v1/shares/{name}/config", s.shareConfig)
 	api.HandleFunc("PUT /api/v1/shares/{name}", s.updateShare)
 	api.HandleFunc("PUT /api/v1/shares/{name}/smb", s.updateShareSMB)
