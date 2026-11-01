@@ -44,6 +44,12 @@ type Live struct {
 	settings  model.Settings
 	collected model.Metrics
 	client    *http.Client
+
+	statsMu        sync.Mutex
+	containerStats map[string]cachedContainerStats
+	vmCPU          map[string]vmCPUSample
+	vmCache        []model.VM
+	vmCacheAt      time.Time
 }
 
 type cpuSample struct {
@@ -75,6 +81,8 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 			Theme: "dark", Accent: "ember", Density: "comfortable",
 			RefreshInterval: 5, Language: "en", TemperatureUnit: "celsius",
 		},
+		containerStats: map[string]cachedContainerStats{},
+		vmCPU:          map[string]vmCPUSample{},
 	}
 	l.loadSettings()
 	l.client = &http.Client{
@@ -475,6 +483,7 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	l.enrichContainerStats(ctx, out)
 	return out, nil
 }
 
@@ -528,6 +537,14 @@ func (l *Live) ContainerLogs(ctx context.Context, id string, lines int) ([]model
 }
 
 func (l *Live) VMs(ctx context.Context) ([]model.VM, error) {
+	l.statsMu.Lock()
+	if len(l.vmCache) > 0 && time.Since(l.vmCacheAt) < 5*time.Second {
+		cached := append([]model.VM(nil), l.vmCache...)
+		l.statsMu.Unlock()
+		return cached, nil
+	}
+	l.statsMu.Unlock()
+
 	cmd := exec.CommandContext(ctx, "virsh", "list", "--all", "--name")
 	outBytes, err := cmd.Output()
 	if err != nil {
@@ -539,18 +556,12 @@ func (l *Live) VMs(ctx context.Context) ([]model.VM, error) {
 		if name == "" {
 			continue
 		}
-		state := "stopped"
-		if s, err := exec.CommandContext(ctx, "virsh", "domstate", name).Output(); err == nil {
-			state = strings.TrimSpace(string(s))
-			if strings.HasPrefix(state, "running") {
-				state = "running"
-			}
-		}
-		vms = append(vms, model.VM{
-			ID: "vm-" + slug(name), Name: name, State: state, OS: name,
-			Machine: "q35", Color: colorFor(name), Icon: "server",
-		})
+		vms = append(vms, l.vmDetails(ctx, name))
 	}
+	l.statsMu.Lock()
+	l.vmCache = append([]model.VM(nil), vms...)
+	l.vmCacheAt = time.Now()
+	l.statsMu.Unlock()
 	return vms, nil
 }
 
