@@ -33,7 +33,13 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
         connection.scaleViewport = true;
         connection.resizeSession = false;
         connection.addEventListener("connect", () => {
-          if (!cancelled) setStatus("connected");
+          if (cancelled) return;
+          setStatus("connected");
+          // Grab the keyboard as soon as the framebuffer is live, otherwise
+          // keystrokes stay in the surrounding page.
+          window.setTimeout(() => {
+            if (!cancelled) connection.focus({ preventScroll: true });
+          }, 50);
         });
         connection.addEventListener("disconnect", (event: Event) => {
           if (cancelled) return;
@@ -47,8 +53,11 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
             setMessage("The virtual machine rejected the console connection.");
           }
         });
-        connection.focus();
+        connection.focusOnClick = true;
         client = connection;
+        window.requestAnimationFrame(() => {
+          if (!cancelled) connection.focus({ preventScroll: true });
+        });
       } catch (error) {
         if (!cancelled) {
           setStatus("error");
@@ -63,6 +72,13 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
       host.replaceChildren();
     };
   }, [vm, generation]);
+
+  const focusConsole = () => {
+    const host = hostRef.current;
+    if (!host) return;
+    const canvas = host.querySelector("canvas");
+    canvas?.focus({ preventScroll: true });
+  };
 
   if (!vm) return null;
 
@@ -91,7 +107,7 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-2 text-[10.5px] text-muted">
-            <Monitor className="size-3.5" /> Live framebuffer over the authenticated session
+            <Monitor className="size-3.5" /> Live framebuffer · click the screen to capture the keyboard
           </span>
           <Badge
             tone={status === "connected" ? "success" : status === "connecting" ? "warning" : "danger"}
@@ -103,6 +119,7 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
         </div>
         <div
           ref={hostRef}
+          onPointerDown={focusConsole}
           className="grid h-[68vh] min-h-[420px] w-full place-items-center overflow-hidden rounded-xl border border-[#1f2230] bg-[#08090d]"
         />
         {message ? <p className="text-[10.5px] text-[var(--danger)]">{message}</p> : null}

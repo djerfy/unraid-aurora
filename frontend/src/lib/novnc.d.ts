@@ -11,7 +11,9 @@ declare module "@novnc/novnc" {
     clipViewport: boolean;
     resizeSession: boolean;
     viewOnly: boolean;
-    focus(): void;
+    focus(options?: FocusOptions): void;
+    blur(): void;
+    focusOnClick: boolean;
     disconnect(): void;
     sendCredentials(credentials: Record<string, string>): void;
   }

@@ -22,6 +22,13 @@ import { NAV_ITEMS } from "./nav";
 import { EntityIcon, containerIconURL, vmIconURL } from "../ui/entity-icon";
 import { AuroraWordmark } from "./Brand";
 
+// Shortcuts must not steal keystrokes from editors, terminals or consoles.
+function isTypingTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  if (!element) return false;
+  return ["INPUT", "TEXTAREA", "SELECT", "CANVAS"].includes(element.tagName) || element.isContentEditable;
+}
+
 function BootScreen({ message = "Connecting to your server" }: { message?: string }) {
   return (
     <div className="relative grid min-h-dvh place-items-center bg-[var(--bg)]">
@@ -81,12 +88,12 @@ export function AppShell() {
     useMemo(
       () => ({
         "mod+k": (event: KeyboardEvent) => {
+          if (isTypingTarget(event.target)) return;
           event.preventDefault();
           setCommandOpen((value) => !value);
         },
         "/": (event: KeyboardEvent) => {
-          const target = event.target as HTMLElement;
-          if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+          if (isTypingTarget(event.target)) return;
           event.preventDefault();
           setCommandOpen(true);
         },
