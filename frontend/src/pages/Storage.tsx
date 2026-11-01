@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   Activity,
   ArrowDownToLine,
@@ -61,7 +61,6 @@ export function StoragePage() {
   const { snapshot, metrics, history, refresh } = useApp();
   const action = useAction();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "array";
   const [selectedDisk, setSelectedDisk] = useState<Disk | null>(null);
@@ -552,24 +551,19 @@ export function StoragePage() {
         subtitle={selectedDisk?.model}
         footer={
           selectedDisk && selectedDisk.type !== "Parity" ? (
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() =>
-                  action.mutate({
-                    kind: selectedDisk.status === "active" ? "disk.spindown" : "disk.spinup",
-                    target: selectedDisk.name,
-                    success: selectedDisk.status === "active" ? `${selectedDisk.name} spinning down` : `${selectedDisk.name} spinning up`,
-                  })
-                }
-              >
-                {selectedDisk.status === "active" ? "Spin down" : "Spin up"}
-              </Button>
-              <Button variant="primary" className="flex-1" onClick={() => navigate("/settings")}>
-                Device settings
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() =>
+                action.mutate({
+                  kind: selectedDisk.status === "active" ? "disk.spindown" : "disk.spinup",
+                  target: selectedDisk.name,
+                  success: selectedDisk.status === "active" ? `${selectedDisk.name} spinning down` : `${selectedDisk.name} spinning up`,
+                })
+              }
+            >
+              {selectedDisk.status === "active" ? "Spin down" : "Spin up"}
+            </Button>
           ) : null
         }
       >
@@ -595,6 +589,8 @@ export function StoragePage() {
               <Detail label="Spinup group" value={selectedDisk.spinupGroup || "—"} />
               <Detail label="Encrypted" value={selectedDisk.luks ? "Yes" : "No"} />
             </div>
+            <DiskSmartSection device={selectedDisk.device} />
+
             {(selectedDisk.warnings ?? []).length > 0 ? (
               <div className="rounded-xl border border-[color-mix(in_srgb,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] p-3">
                 <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--warning)]">
@@ -802,6 +798,106 @@ function DiskGroup({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function DiskSmartSection({ device }: { device: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const smart = useQuery({
+    queryKey: ["smart", device],
+    queryFn: () => api.diskSmart(device),
+    staleTime: 30_000,
+  });
+  const test = useMutation({
+    mutationFn: () => api.runSmartTest(device),
+    onSuccess: () => {
+      toast({ kind: "success", title: "SMART test started", description: "The short self-test runs in the background." });
+      void queryClient.invalidateQueries({ queryKey: ["smart", device] });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: "SMART test failed", description: error.message });
+    },
+  });
+
+  const report = smart.data;
+
+  return (
+    <div className="rounded-xl border border-line">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">
+          <ShieldCheck className="size-3.5" /> SMART
+        </p>
+        {report ? (
+          <Badge tone={report.passed ? "success" : report.available ? "danger" : "neutral"} dot>
+            {report.available ? (report.passed ? "passed" : "failing") : "unavailable"}
+          </Badge>
+        ) : null}
+      </div>
+      <div className="space-y-3 p-3">
+        {smart.isLoading ? (
+          <p className="text-[10.5px] text-muted">Reading SMART data…</p>
+        ) : smart.isError ? (
+          <p className="text-[10.5px] text-[var(--danger)]">{(smart.error as Error).message}</p>
+        ) : report ? (
+          <>
+            {!report.available ? (
+              <p className="text-[10.5px] text-muted">{report.message || "SMART data is not available for this disk."}</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <Detail label="Temperature" value={report.temperature ? `${report.temperature}°C` : "—"} />
+                  <Detail label="Power-on" value={report.powerOnHours ? `${report.powerOnHours} h` : "—"} />
+                  <Detail label="Self-test" value={report.selfTest || "—"} />
+                </div>
+                {report.attributes.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto rounded-lg border border-line/70">
+                    <table className="w-full text-left">
+                      <thead className="sticky top-0 bg-[var(--surface-2)] text-[8.5px] uppercase tracking-[0.08em] text-subtle">
+                        <tr>
+                          <th className="px-2 py-1.5 font-medium">Attribute</th>
+                          <th className="px-2 py-1.5 text-right font-medium">Value</th>
+                          <th className="px-2 py-1.5 text-right font-medium">Worst</th>
+                          <th className="px-2 py-1.5 text-right font-medium">Thr.</th>
+                          <th className="px-2 py-1.5 text-right font-medium">Raw</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.attributes.map((attribute, index) => (
+                          <tr
+                            key={`${attribute.id}-${attribute.name}-${index}`}
+                            className={cn("border-t border-line/50 text-[10px]", attribute.failing && "bg-[var(--danger-soft)] text-[var(--danger)]")}
+                          >
+                            <td className="px-2 py-1.5 text-soft">{attribute.name}</td>
+                            <td className="px-2 py-1.5 text-right num text-muted">{attribute.value || "—"}</td>
+                            <td className="px-2 py-1.5 text-right num text-muted">{attribute.worst || "—"}</td>
+                            <td className="px-2 py-1.5 text-right num text-muted">{attribute.threshold || "—"}</td>
+                            <td className="px-2 py-1.5 text-right font-mono text-[9.5px] text-subtle">{attribute.raw}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[9.5px] text-subtle">Serial {report.serial || "—"} · firmware {report.firmware || "—"}</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Play className="size-3" />}
+                loading={test.isPending}
+                disabled={!report.available}
+                onClick={() => test.mutate()}
+              >
+                Short test
+              </Button>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

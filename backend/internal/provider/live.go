@@ -50,6 +50,10 @@ type Live struct {
 	imageUpdates   map[string]bool
 	imageCheckedAt time.Time
 
+	pluginMu        sync.Mutex
+	pluginUpdates   map[string]pluginUpdate
+	pluginCheckedAt time.Time
+
 	statsMu        sync.Mutex
 	containerStats map[string]cachedContainerStats
 	vmCPU          map[string]vmCPUSample
@@ -97,12 +101,14 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 		},
 		containerStats: map[string]cachedContainerStats{},
 		imageUpdates:   map[string]bool{},
+		pluginUpdates:  map[string]pluginUpdate{},
 		vmCPU:          map[string]vmCPUSample{},
 		moverStop:      make(chan struct{}),
 	}
 	l.loadSettings()
 	l.loadMoverHistory()
 	l.loadImageUpdates()
+	l.loadPluginUpdates()
 	go l.watchMover()
 	l.client = &http.Client{
 		Timeout: 4 * time.Second,
@@ -494,6 +500,7 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		return nil, fmt.Errorf("decode docker containers: %w", err)
 	}
 	out := make([]model.Container, 0, len(raw))
+	autostart := l.containerAutostart()
 	for _, c := range raw {
 		name := ""
 		if len(c.Names) > 0 {
@@ -512,7 +519,7 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		out = append(out, model.Container{
 			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
 			Network: network, IP: ip,
-			State: c.State, Status: c.Status, Autostart: c.Labels["com.centurylinklabs.watchtower.enable"] != "false",
+			State: c.State, Status: c.Status, Autostart: autostart[name],
 			Ports: ports, Color: color, Created: time.Unix(c.Created, 0),
 			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
 			RestartPolicy: "", UpdateAvailable: l.imageUpdate(c.Image),
@@ -670,23 +677,8 @@ func (l *Live) Users(ctx context.Context) ([]model.User, error) {
 	return out, nil
 }
 
-func (l *Live) Plugins(ctx context.Context) ([]model.Plugin, error) {
-	dir := filepath.Join(l.bootDir, "config", "plugins")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, nil
-	}
-	var out []model.Plugin
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		out = append(out, model.Plugin{
-			Name: e.Name(), Category: "Plugin", Enabled: true, Color: colorFor(e.Name()),
-		})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out, nil
+func (l *Live) Plugins(_ context.Context) ([]model.Plugin, error) {
+	return l.pluginList(), nil
 }
 
 func (l *Live) Notifications(ctx context.Context) ([]model.Notification, error) {

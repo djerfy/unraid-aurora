@@ -1,9 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Apple,
+  Check,
   Clock3,
+  Copy,
   Cpu,
+  FileCode2,
   Gauge,
   HardDrive,
   LayoutGrid,
@@ -20,7 +24,7 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { VMConsoleModal } from "../components/vms/VMConsoleModal";
-import { Drawer } from "../components/ui/overlays";
+import { Drawer, Modal } from "../components/ui/overlays";
 import {
   Badge,
   Button,
@@ -28,10 +32,13 @@ import {
   EmptyState,
   IconButton,
   Progress,
+  Switch,
   cn,
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
+import { useToast } from "../app/ToastProvider";
 import { useAction } from "../lib/useAction";
+import { api } from "../lib/api";
 import { formatBytes, formatMemory, formatUptime, hexToRgba, relativeTime } from "../lib/format";
 import type { VM } from "../lib/types";
 
@@ -40,6 +47,22 @@ export function VMsPage() {
   const action = useAction();
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
+  const [xmlVm, setXmlVm] = useState<VM | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const autostart = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => api.setVMAutostart(id, enabled),
+    onSuccess: (_result, variables) => {
+      toast({
+        kind: "success",
+        title: variables.enabled ? "Autostart enabled" : "Autostart disabled",
+      });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: "Autostart update failed", description: error.message });
+    },
+  });
   const [view, setView] = useState<"grid" | "list">(() => {
     try {
       return localStorage.getItem("aurora.vms.view") === "list" ? "list" : "grid";
@@ -282,10 +305,27 @@ export function VMsPage() {
               <Info label="vCPUs" value={String(selected.vcpus)} />
               <Info label="Memory" value={formatMemory(selected.memory)} />
               <Info label="IP address" value={selected.ip || "—"} />
-              <Info label="Autostart" value={selected.autostart ? "enabled" : "disabled"} />
               <Info label="Uptime" value={selected.state === "running" ? formatUptime(selected.uptime) : "—"} />
               <Info label="Last started" value={relativeTime(selected.lastStarted)} />
               <Info label="Primary GPU" value={selected.primaryGpu || "virtual"} className="col-span-2" />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+              <span>
+                <span className="block text-[11px] font-medium text-soft">Start with the array</span>
+                <span className="block text-[9.5px] text-subtle">libvirt autostart</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="secondary" icon={<FileCode2 className="size-3" />} onClick={() => setXmlVm(selected)}>
+                  XML
+                </Button>
+                <Switch
+                  checked={selected.autostart}
+                  onChange={(enabled) => autostart.mutate({ id: selected.id, enabled })}
+                  label="Autostart virtual machine"
+                  disabled={autostart.isPending}
+                />
+              </div>
             </div>
 
             <div>
@@ -327,7 +367,58 @@ export function VMsPage() {
           setConsoleVm(null);
         }}
       />
+
+      <VMXMLModal vm={xmlVm} onClose={() => setXmlVm(null)} />
     </>
+  );
+}
+
+function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  const query = useQuery({
+    queryKey: ["vm-xml", vm?.id],
+    queryFn: () => api.vmXML(vm?.id ?? ""),
+    enabled: Boolean(vm),
+    staleTime: 10_000,
+  });
+
+  const copy = async () => {
+    if (!query.data) return;
+    await navigator.clipboard.writeText(query.data.xml);
+    setCopied(true);
+    toast({ kind: "info", title: "XML copied" });
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <Modal
+      open={Boolean(vm)}
+      onClose={onClose}
+      title={`XML · ${vm?.name ?? ""}`}
+      description="Read-only libvirt domain definition, like the XML view of the official VM editor."
+      size="xl"
+      footer={
+        <>
+          <Button variant="secondary" icon={copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} onClick={() => void copy()} disabled={!query.data}>
+            {copied ? "Copied" : "Copy XML"}
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </>
+      }
+    >
+      {query.isLoading ? (
+        <p className="text-[11px] text-muted">Loading domain XML…</p>
+      ) : query.isError ? (
+        <p className="text-[11px] text-[var(--danger)]">{(query.error as Error).message}</p>
+      ) : (
+        <pre className="max-h-[60vh] overflow-auto rounded-xl border border-[#1f2230] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed text-[#c7cbd6]">
+          {query.data?.xml}
+        </pre>
+      )}
+    </Modal>
   );
 }
 

@@ -118,6 +118,8 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/system` | System identity, CPU, memory, sensors |
 | `GET` | `/api/v1/array` | Array + parity state |
 | `GET` | `/api/v1/disks` | Devices with live I/O |
+| `GET` | `/api/v1/disks/{device}/smart` | SMART health and attributes |
+| `POST` | `/api/v1/disks/{device}/smart-test` | Start a short self-test |
 | `GET` | `/api/v1/shares` | Shares and protocols |
 | `GET` | `/api/v1/pools` | Cache/boot pools |
 | `GET` | `/api/v1/docker/containers` | Containers |
@@ -125,6 +127,7 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
 | `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
 | `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |
+| `PUT` | `/api/v1/docker/containers/{id}/autostart` | Toggle the Unraid autostart list |
 | `POST` | `/api/v1/docker/containers` | Create and start a container, pulling the image if needed |
 | `DELETE` | `/api/v1/docker/containers/{id}` | Remove a container (force stop first) |
 | `GET` | `/api/v1/docker/networks` | Docker networks for the create form |
@@ -134,6 +137,12 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/vms` | Virtual machines |
 | `GET` | `/api/v1/vms/{id}/icon` | Unraid OS icon for the VM |
 | `GET` | `/api/v1/vms/{id}/console` | WebSocket VNC/SPICE proxy to the libvirt console |
+| `PUT` | `/api/v1/vms/{id}/autostart` | Toggle libvirt autostart |
+| `GET` | `/api/v1/vms/{id}/xml` | Read-only domain XML |
+| `GET` | `/api/v1/plugins` | Installed plugin metadata |
+| `POST` | `/api/v1/plugins/check-updates` | Compare local and remote .plg versions |
+| `POST` | `/api/v1/plugins/{name}/update` | Stream the official plugin manager output |
+| `GET` | `/api/v1/tools/diagnostics` | Download a diagnostics ZIP |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
 | `GET` | `/api/v1/users` | Accounts and access |
 | `GET` | `/api/v1/plugins` | Installed plugins |

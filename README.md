@@ -209,16 +209,17 @@ Deep dives:
 |---|---|
 | Dashboard | Health score, CPU per-core matrix, memory, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
-| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
-| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, lifecycle actions and a VNC/SPICE console |
+| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, autostart toggle, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
+| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, autostart toggle, read-only libvirt XML view, lifecycle actions and a VNC/SPICE console |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
 | Users | Accounts, roles, share access matrix, account drawer |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
-| Plugins | Installed extensions, versions, categories, update visibility |
+| Plugins | Real .plg metadata, version comparison against plugin repositories, streamed updates through the official plugin manager |
 | Logs | Syslog/Docker/parity tail, level + text filters, follow mode, export |
+| Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
-| Storage operations | Start/stop array with passphrase or keyfile, background mover with progress, ETA and run history |
+| Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with progress, ETA and run history |
 | Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
 | Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 

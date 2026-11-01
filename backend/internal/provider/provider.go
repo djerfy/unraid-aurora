@@ -23,6 +23,7 @@ type Provider interface {
 	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error
+	SetContainerAutostart(ctx context.Context, id string, enabled bool) error
 	CreateContainer(ctx context.Context, opts model.ContainerCreateOptions) (string, error)
 	RemoveContainer(ctx context.Context, id string) error
 	CheckContainerUpdates(ctx context.Context) ([]model.ImageCheck, error)
@@ -30,6 +31,13 @@ type Provider interface {
 	DockerNetworks(ctx context.Context) ([]string, error)
 	ContainerTemplates(ctx context.Context) ([]model.ContainerTemplate, error)
 	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
+	SetVMAutostart(ctx context.Context, id string, enabled bool) error
+	VMXML(ctx context.Context, id string) (string, error)
+	SmartReport(ctx context.Context, device string) (model.SmartReport, error)
+	RunSmartTest(ctx context.Context, device string) error
+	Diagnostics(ctx context.Context) ([]byte, error)
+	CheckPluginUpdates(ctx context.Context) ([]model.Plugin, error)
+	UpdatePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
 	VMs(ctx context.Context) ([]model.VM, error)
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error

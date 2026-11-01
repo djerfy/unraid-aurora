@@ -39,6 +39,7 @@ import {
   IconButton,
   InputBase,
   Progress,
+  Switch,
   Tabs,
   cn,
 } from "../components/ui/primitives";
@@ -692,9 +693,25 @@ function ContainerDrawer({
   busy?: boolean;
 }) {
   const action = useAction();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const running = container?.state === "running";
+  const autostart = useMutation({
+    mutationFn: (enabled: boolean) => api.setContainerAutostart(container?.id ?? "", enabled),
+    onSuccess: (_result, enabled) => {
+      toast({
+        kind: "success",
+        title: enabled ? "Autostart enabled" : "Autostart disabled",
+        description: container?.name,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: "Autostart update failed", description: error.message });
+    },
+  });
 
   const logs = useQuery({
     queryKey: ["container-logs", container?.id],
@@ -791,12 +808,24 @@ function ContainerDrawer({
           <Info label="Category" value={container.category || "—"} />
           <Info label="Restart policy" value={container.restartPolicy || "—"} />
           <Info label="Created" value={relativeTime(container.created)} />
-          <Info label="Autostart" value={container.autostart ? "enabled" : "disabled"} />
           <Info label="Network" value={container.network || "—"} />
           <Info label="IP address" value={container.ip || "—"} />
           <Info label="Uptime" value={running ? formatUptime(container.uptime) : "—"} />
           <Info label="Memory" value={formatMemory(container.memory)} />
         </div>
+
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+          <span>
+            <span className="block text-[11px] font-medium text-soft">Start with the array</span>
+            <span className="block text-[9.5px] text-subtle">Unraid autostart list</span>
+          </span>
+          <Switch
+            checked={container.autostart}
+            onChange={(enabled) => autostart.mutate(enabled)}
+            label="Autostart container"
+            disabled={autostart.isPending}
+          />
+        </label>
 
         {container.updateAvailable ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3">

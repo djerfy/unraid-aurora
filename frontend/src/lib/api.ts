@@ -66,6 +66,78 @@ export const api = {
     request<{ ok: boolean }>(`/api/v1/docker/containers/${encodeURIComponent(id)}`, { method: "DELETE" }),
   containerNetworks: () => request<string[]>("/api/v1/docker/networks"),
   containerTemplates: () => request<import("./types").ContainerTemplate[]>("/api/v1/docker/templates"),
+  diskSmart: (device: string) =>
+    request<import("./types").SmartReport>(`/api/v1/disks/${encodeURIComponent(device)}/smart`),
+  runSmartTest: (device: string) =>
+    request<{ ok: boolean }>(`/api/v1/disks/${encodeURIComponent(device)}/smart-test`, {
+      method: "POST",
+      body: "{}",
+    }),
+  setContainerAutostart: (id: string, enabled: boolean) =>
+    request<{ ok: boolean }>(`/api/v1/docker/containers/${encodeURIComponent(id)}/autostart`, {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    }),
+  setVMAutostart: (id: string, enabled: boolean) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/autostart`, {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    }),
+  vmXML: (id: string) =>
+    request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  checkPluginUpdates: () =>
+    request<import("./types").Plugin[]>("/api/v1/plugins/check-updates", { method: "POST", body: "{}" }),
+  updatePlugin: async (
+    name: string,
+    onEvent: (event: import("./types").PluginEvent) => void,
+  ) => {
+    const res = await fetch(`/api/v1/plugins/${encodeURIComponent(name)}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Aurora-Request": "aurora" },
+      body: "{}",
+      credentials: "same-origin",
+    });
+    if (!res.ok || !res.body) {
+      const payload = await res.json().catch(() => null);
+      const body = payload as { error?: { code?: string; message?: string } } | null;
+      throw new ApiError(
+        res.status,
+        body?.error?.code ?? "http_error",
+        body?.error?.message ?? res.statusText,
+      );
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let index = buffer.indexOf("\n");
+      while (index >= 0) {
+        const line = buffer.slice(0, index).trim();
+        buffer = buffer.slice(index + 1);
+        if (line) {
+          try {
+            onEvent(JSON.parse(line) as import("./types").PluginEvent);
+          } catch {
+            // Ignore a truncated line; the next chunk completes it.
+          }
+        }
+        index = buffer.indexOf("\n");
+      }
+    }
+    if (buffer.trim()) {
+      onEvent(JSON.parse(buffer) as import("./types").PluginEvent);
+    }
+  },
+  diagnostics: async () => {
+    const response = await fetch("/api/v1/tools/diagnostics", { credentials: "same-origin" });
+    if (!response.ok) {
+      throw new ApiError(response.status, "diagnostics_failed", response.statusText || "diagnostics failed");
+    }
+    return response.blob();
+  },
   checkContainerUpdates: () => request<import("./types").ImageCheck[]>("/api/v1/docker/check-updates", {
     method: "POST",
     body: "{}",

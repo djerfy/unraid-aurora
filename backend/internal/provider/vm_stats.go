@@ -179,6 +179,54 @@ func parseDomainGraphics(raw []byte, name string) (model.VMConsole, error) {
 	return fallback, nil
 }
 
+// SetVMAutostart toggles libvirt's autostart flag, which is what the Unraid VM
+// page edits with its "Autostart" switch.
+func (l *Live) SetVMAutostart(ctx context.Context, id string, enabled bool) error {
+	name, err := l.vmNameForID(ctx, id)
+	if err != nil {
+		return err
+	}
+	args := []string{"autostart", name}
+	if !enabled {
+		args = []string{"autostart", "--disable", name}
+	}
+	output, err := exec.CommandContext(ctx, "virsh", args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("virsh autostart: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	l.statsMu.Lock()
+	l.vmCacheAt = time.Time{}
+	l.statsMu.Unlock()
+	return nil
+}
+
+// VMXML returns the libvirt domain definition, mirroring the XML view of the
+// official VM editor.
+func (l *Live) VMXML(ctx context.Context, id string) (string, error) {
+	name, err := l.vmNameForID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	output, err := exec.CommandContext(ctx, "virsh", "dumpxml", name).Output()
+	if err != nil {
+		return "", fmt.Errorf("virsh dumpxml: %w", err)
+	}
+	return string(output), nil
+}
+
+func (l *Live) vmNameForID(ctx context.Context, id string) (string, error) {
+	vms, err := l.VMs(ctx)
+	if err != nil {
+		return "", err
+	}
+	for _, vm := range vms {
+		if vm.ID == id {
+			return vm.Name, nil
+		}
+	}
+	return "", errors.New("virtual machine not found")
+}
+
 func (l *Live) applyVMRuntime(ctx context.Context, vm *model.VM) {
 	memStats := virshSpaceInfo(ctx, "dommemstat", vm.Name)
 	usedKiB := firstInt(memStats["rss"])

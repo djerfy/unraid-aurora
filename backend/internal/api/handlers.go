@@ -182,6 +182,49 @@ func (s *Server) disks(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) diskSmart(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	report, err := s.provider.SmartReport(ctx, r.PathValue("device"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "smart_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
+func (s *Server) diskSmartTest(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	device := r.PathValue("device")
+	if err := s.provider.RunSmartTest(ctx, device); err != nil {
+		writeError(w, http.StatusInternalServerError, "smart_test_failed", err.Error())
+		return
+	}
+	s.log.Info("smart self-test started", "device", device)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	data, err := s.provider.Diagnostics(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	filename := fmt.Sprintf("aurora-diagnostics-%s.zip", time.Now().Format("20060102-150405"))
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
 func (s *Server) shares(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -383,6 +426,28 @@ func (s *Server) containerTemplates(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, templates)
 }
 
+func (s *Server) containerAutostart(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	id := r.PathValue("id")
+	if err := s.provider.SetContainerAutostart(ctx, id, body.Enabled); err != nil {
+		writeError(w, http.StatusInternalServerError, "autostart_failed", err.Error())
+		return
+	}
+	s.log.Info("container autostart updated", "id", id, "enabled", body.Enabled)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) dockerNetworks(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -414,6 +479,39 @@ func (s *Server) checkContainerUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 	s.log.Info("container image check completed", "images", len(checks), "updates", updates)
 	writeJSON(w, http.StatusOK, checks)
+}
+
+func (s *Server) vmAutostart(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	id := r.PathValue("id")
+	if err := s.provider.SetVMAutostart(ctx, id, body.Enabled); err != nil {
+		writeError(w, http.StatusInternalServerError, "autostart_failed", err.Error())
+		return
+	}
+	s.log.Info("vm autostart updated", "id", id, "enabled", body.Enabled)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) vmXML(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	xml, err := s.provider.VMXML(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"xml": xml})
 }
 
 func (s *Server) vms(w http.ResponseWriter, r *http.Request) {
@@ -469,6 +567,55 @@ func (s *Server) plugins(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) checkPluginUpdates(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	plugins, err := s.provider.CheckPluginUpdates(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	updates := 0
+	for _, plugin := range plugins {
+		if plugin.UpdateAvailable {
+			updates++
+		}
+	}
+	s.log.Info("plugin update check completed", "plugins", len(plugins), "updates", updates)
+	writeJSON(w, http.StatusOK, plugins)
+}
+
+// updatePlugin streams the plugin manager output as newline-delimited JSON.
+func (s *Server) updatePlugin(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming", "streaming is not supported")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+
+	encoder := json.NewEncoder(w)
+	emit := func(event model.PluginEvent) {
+		if err := encoder.Encode(event); err == nil {
+			flusher.Flush()
+		}
+	}
+	name := r.PathValue("name")
+	if err := s.provider.UpdatePlugin(ctx, name, emit); err != nil {
+		s.log.Error("plugin update failed", "plugin", name, "error", err)
+	}
 }
 
 func (s *Server) notifications(w http.ResponseWriter, r *http.Request) {

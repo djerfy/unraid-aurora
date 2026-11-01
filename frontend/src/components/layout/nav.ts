@@ -10,6 +10,7 @@ import {
   ScrollText,
   Settings2,
   SquareTerminal,
+  Wrench,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/plugins", label: "Plugins", icon: Puzzle, group: "System" },
   { to: "/logs", label: "Logs", icon: ScrollText, group: "System" },
   { to: "/terminal", label: "Terminal", icon: SquareTerminal, group: "System" },
+  { to: "/tools", label: "Tools", icon: Wrench, group: "System" },
   { to: "/settings", label: "Settings", icon: Settings2, group: "System" },
 ];
 
@@ -51,5 +53,6 @@ export const PAGE_META: Record<string, { title: string; section: string }> = {
   "/plugins": { title: "Plugins", section: "System" },
   "/logs": { title: "Logs", section: "System" },
   "/terminal": { title: "Terminal", section: "System" },
+  "/tools": { title: "Tools", section: "System" },
   "/settings": { title: "Settings", section: "System" },
 };

@@ -15,6 +15,7 @@ import { NotificationsPage } from "./pages/Notifications";
 import { PluginsPage } from "./pages/Plugins";
 import { LogsPage } from "./pages/Logs";
 import { TerminalPage } from "./pages/Terminal";
+import { ToolsPage } from "./pages/Tools";
 import { SettingsPage } from "./pages/Settings";
 import { LoginPage } from "./pages/Login";
 import { NotFoundPage } from "./pages/NotFound";
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/plugins" element={<PluginsPage />} />
           <Route path="/logs" element={<LogsPage />} />
           <Route path="/terminal" element={<TerminalPage />} />
+          <Route path="/tools" element={<ToolsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Boxes,
   CheckCircle2,
@@ -11,7 +12,7 @@ import {
   Tag,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
-import { Drawer } from "../components/ui/overlays";
+import { Drawer, Modal } from "../components/ui/overlays";
 import {
   Badge,
   Button,
@@ -21,16 +22,54 @@ import {
   cn,
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
+import { api } from "../lib/api";
 import { useToast } from "../app/ToastProvider";
 import { hexToRgba } from "../lib/format";
 import type { Plugin } from "../lib/types";
 
 export function PluginsPage() {
-  const { snapshot, refresh } = useApp();
+  const { snapshot } = useApp();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState<Plugin | null>(null);
+  const [updateRun, setUpdateRun] = useState<{ plugin: Plugin; lines: string[]; running: boolean; error: string } | null>(null);
+  const queryClient = useQueryClient();
+
+  const check = useMutation({
+    mutationFn: api.checkPluginUpdates,
+    onSuccess: (plugins) => {
+      const available = plugins.filter((plugin) => plugin.updateAvailable).length;
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({
+        kind: available ? "warning" : "success",
+        title: available ? `${available} plugin update${available > 1 ? "s" : ""} available` : "All plugins are up to date",
+        description: `${plugins.length} plugin${plugins.length > 1 ? "s" : ""} checked`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: "Plugin update check failed", description: error.message });
+    },
+  });
+
+  const runUpdate = async (plugin: Plugin) => {
+    setUpdateRun({ plugin, lines: [], running: true, error: "" });
+    try {
+      await api.updatePlugin(plugin.name, (event) => {
+        setUpdateRun((current) => {
+          if (!current) return current;
+          const lines = event.line ? [...current.lines.slice(-400), event.line] : current.lines;
+          return { ...current, lines, error: event.error ? event.line : current.error };
+        });
+      });
+      setUpdateRun((current) => (current ? { ...current, running: false } : current));
+      await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({ kind: "success", title: `${plugin.name} updated` });
+    } catch (error) {
+      setUpdateRun((current) => (current ? { ...current, running: false, error: (error as Error).message } : current));
+      toast({ kind: "error", title: "Plugin update failed", description: (error as Error).message });
+    }
+  };
 
   if (!snapshot) return null;
   const plugins = snapshot.plugins;
@@ -65,10 +104,8 @@ export function PluginsPage() {
             <Button
               variant="secondary"
               icon={<RefreshCw className="size-3.5" />}
-              onClick={() => {
-                refresh();
-                toast({ kind: "info", title: "Checking plugin repositories" });
-              }}
+              loading={check.isPending}
+              onClick={() => check.mutate()}
             >
               Check updates
             </Button>
@@ -159,7 +196,23 @@ export function PluginsPage() {
                   <span className={cn("status-dot", plugin.enabled ? "live" : "muted")} />
                   {plugin.enabled ? "Enabled" : "Disabled"}
                 </span>
-                <Button size="sm" variant="ghost" className="ml-auto px-2 text-[11px]" onClick={() => setSelected(plugin)}>
+                {plugin.updateAvailable ? (
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    className="ml-auto px-2 text-[11px]"
+                    icon={<Download className="size-3" />}
+                    onClick={() => void runUpdate(plugin)}
+                  >
+                    Update
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={`${plugin.updateAvailable ? "" : "ml-auto"} px-2 text-[11px]`}
+                  onClick={() => setSelected(plugin)}
+                >
                   Details
                 </Button>
               </div>
@@ -206,10 +259,16 @@ export function PluginsPage() {
                 <p className="flex items-center gap-2 text-[11px] font-semibold text-[var(--warning)]">
                   <Download className="size-3.5" /> Version {selected.latest} is available
                 </p>
-                <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
-                  Plugin updates are applied by Unraid itself. Open the Plugins tab in the classic interface to
-                  review the changelog and install.
-                </p>
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    variant="soft"
+                    icon={<Download className="size-3" />}
+                    onClick={() => void runUpdate(selected)}
+                  >
+                    Update plugin
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-xl border border-line p-3 text-[10.5px] text-[var(--success)]">
@@ -225,6 +284,33 @@ export function PluginsPage() {
           </div>
         ) : null}
       </Drawer>
+
+      <Modal
+        open={Boolean(updateRun)}
+        onClose={() => {
+          if (!updateRun?.running) setUpdateRun(null);
+        }}
+        title={`Updating ${updateRun?.plugin.name ?? ""}`}
+        description="Output from the official Unraid plugin manager."
+        size="xl"
+        footer={
+          <Button variant="secondary" onClick={() => setUpdateRun(null)} disabled={updateRun?.running}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          <pre className="max-h-[55vh] overflow-auto rounded-xl border border-[#1f2230] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed text-[#c7cbd6]">
+            {updateRun?.lines.length ? updateRun.lines.join("\n") : "Starting plugin manager…"}
+          </pre>
+          {updateRun?.error ? (
+            <p className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-[10.5px] text-[var(--danger)]">
+              {updateRun.error}
+            </p>
+          ) : null}
+          {updateRun?.running ? <p className="text-[10px] text-subtle">Update in progress…</p> : null}
+        </div>
+      </Modal>
     </>
   );
 }

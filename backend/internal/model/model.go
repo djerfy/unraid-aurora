@@ -119,6 +119,30 @@ type Array struct {
 	StartedAt  string  `json:"startedAt"`
 }
 
+type SmartAttribute struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Value     int    `json:"value"`
+	Worst     int    `json:"worst"`
+	Threshold int    `json:"threshold"`
+	Raw       string `json:"raw"`
+	Failing   bool   `json:"failing"`
+}
+
+type SmartReport struct {
+	Device       string           `json:"device"`
+	Model        string           `json:"model"`
+	Serial       string           `json:"serial"`
+	Firmware     string           `json:"firmware"`
+	Passed       bool             `json:"passed"`
+	Temperature  int              `json:"temperature"`
+	PowerOnHours int              `json:"powerOnHours"`
+	SelfTest     string           `json:"selfTest"`
+	Attributes   []SmartAttribute `json:"attributes"`
+	Available    bool             `json:"available"`
+	Message      string           `json:"message"`
+}
+
 type Disk struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -393,6 +417,14 @@ type Plugin struct {
 	UpdateAvailable bool   `json:"updateAvailable"`
 	Enabled         bool   `json:"enabled"`
 	Color           string `json:"color"`
+	Filename        string `json:"filename"`
+	PluginURL       string `json:"pluginUrl"`
+}
+
+type PluginEvent struct {
+	Line  string `json:"line"`
+	Done  bool   `json:"done"`
+	Error bool   `json:"error"`
 }
 
 type MoverRun struct {

@@ -362,6 +362,12 @@ export type User = {
   color: string;
 };
 
+export type PluginEvent = {
+  line: string;
+  done: boolean;
+  error: boolean;
+};
+
 export type Plugin = {
   name: string;
   version: string;
@@ -372,6 +378,30 @@ export type Plugin = {
   updateAvailable: boolean;
   enabled: boolean;
   color: string;
+};
+
+export type SmartAttribute = {
+  id: number;
+  name: string;
+  value: number;
+  worst: number;
+  threshold: number;
+  raw: string;
+  failing: boolean;
+};
+
+export type SmartReport = {
+  device: string;
+  model: string;
+  serial: string;
+  firmware: string;
+  passed: boolean;
+  temperature: number;
+  powerOnHours: number;
+  selfTest: string;
+  attributes: SmartAttribute[];
+  available: boolean;
+  message: string;
 };
 
 export type GPUProcess = { pid: number; name: string; memory: number };

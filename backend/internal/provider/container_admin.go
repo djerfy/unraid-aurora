@@ -22,6 +22,10 @@ import (
 )
 
 var containerNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+
+// Unraid keeps the autostart list outside Docker, one container per line.
+const dockerAutostartFile = "/var/lib/docker/unraid-autostart"
+
 var networkNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 // CreateContainer creates and starts a container from the options gathered by
@@ -332,6 +336,86 @@ func shortLayerID(id string) string {
 		return id[:12]
 	}
 	return id
+}
+
+func (l *Live) containerAutostart() map[string]bool {
+	entries, err := readAutostartFile(dockerAutostartFile)
+	if err != nil {
+		return map[string]bool{}
+	}
+	names := map[string]bool{}
+	for _, line := range entries {
+		name, _, _ := strings.Cut(line, ";")
+		if name = strings.TrimSpace(name); name != "" {
+			names[name] = true
+		}
+	}
+	return names
+}
+
+func readAutostartFile(path string) ([]string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+	entries := []string{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			entries = append(entries, line)
+		}
+	}
+	return entries, nil
+}
+
+func writeAutostartFile(path, name string, enabled bool) error {
+	entries, err := readAutostartFile(path)
+	if err != nil {
+		return fmt.Errorf("read autostart file: %w", err)
+	}
+	kept := make([]string, 0, len(entries)+1)
+	for _, line := range entries {
+		entryName, _, _ := strings.Cut(line, ";")
+		if strings.TrimSpace(entryName) != name {
+			kept = append(kept, line)
+		}
+	}
+	if enabled {
+		kept = append(kept, name)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create autostart directory: %w", err)
+	}
+	if len(kept) == 0 {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove autostart file: %w", err)
+		}
+		return nil
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(kept, "\n")+"\n"), 0o644); err != nil {
+		return fmt.Errorf("write autostart file: %w", err)
+	}
+	return nil
+}
+
+// SetContainerAutostart updates Unraid's own autostart list so the official
+// Docker page and the array startup script see the same setting.
+func (l *Live) SetContainerAutostart(ctx context.Context, id string, enabled bool) error {
+	inspect, err := l.inspectContainer(ctx, id)
+	if err != nil {
+		return err
+	}
+	name := strings.TrimPrefix(stringValue(inspect["Name"]), "/")
+	if name == "" {
+		return errors.New("container name is missing")
+	}
+
+	if err := writeAutostartFile(dockerAutostartFile, name, enabled); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (l *Live) imageUpdate(image string) bool {
