@@ -173,7 +173,7 @@ export function AppShell() {
       label: container.name,
       hint: `Container · ${container.state} · ${container.image}`,
       group: "Containers",
-      keywords: `container docker ${container.state} ${container.image} ${container.category}`,
+      keywords: `container docker ${container.state} ${container.image} ${container.category} ${container.network} ${container.ip}`,
       icon: (
         <EntityIcon
           src={containerIconURL(container.id)}

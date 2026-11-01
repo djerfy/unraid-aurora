@@ -29,7 +29,7 @@ export function EntityIcon({
   return (
     <span
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-xl border",
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-lg border",
         className,
       )}
       style={{

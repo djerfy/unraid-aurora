@@ -9,8 +9,10 @@ import {
   Copy,
   Cpu,
   ExternalLink,
+  Info as InfoIcon,
   List,
   MemoryStick,
+  Network,
   Play,
   RefreshCw,
   RotateCw,
@@ -93,7 +95,7 @@ export function DockerPage() {
       })
       .filter((container) => {
         if (!query.trim()) return true;
-        const haystack = `${container.name} ${container.image} ${container.category}`.toLowerCase();
+        const haystack = `${container.name} ${container.image} ${container.category} ${container.network} ${container.ip}`.toLowerCase();
         return haystack.includes(query.toLowerCase());
       })
       .sort((a, b) => {
@@ -372,6 +374,13 @@ function ContainerCard({ container, onOpen, onEdit, busy }: { container: Contain
         {ports.length === 0 ? <span className="text-[9.5px] text-subtle">No published ports</span> : null}
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
+        <span className="flex items-center gap-1">
+          <Network className="size-3" /> {container.network || "—"}
+        </span>
+        <span className="font-mono">{container.ip || "no address"}</span>
+      </div>
+
       <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
         <span className="flex items-center gap-1 text-[9.5px] text-subtle">
           <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : "stopped"}
@@ -417,7 +426,7 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
   const action = useAction();
   const running = container.state === "running";
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+    <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <EntityIcon
           src={containerIconURL(container.id)}
@@ -426,19 +435,25 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
           size={32}
           className="rounded-lg"
         />
-        <span className="min-w-0">
-          <span className="flex items-center gap-2 text-[12px] font-medium text-ink">
-            {container.name}
-            {container.updateAvailable ? <Badge tone="warning">update</Badge> : null}
-          </span>
-          <span className="block truncate text-[9.5px] text-subtle">{container.image}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[12px] font-medium text-ink">{container.name}</span>
+          {container.updateAvailable ? <Badge tone="warning">update</Badge> : null}
         </span>
       </button>
-      <Badge tone={running ? "success" : "neutral"} dot>{running ? "Running" : container.state}</Badge>
+      <span className="hidden w-44 shrink-0 truncate text-[9.5px] text-subtle md:block" title={container.image}>
+        {container.image}
+      </span>
+      <span className="hidden w-24 shrink-0 truncate text-[10px] text-muted lg:block" title={container.network || "—"}>
+        {container.network || "—"}
+      </span>
+      <span className="hidden w-28 shrink-0 truncate font-mono text-[9.5px] text-subtle lg:block" title={container.ip || "—"}>
+        {container.ip || "—"}
+      </span>
+      <Badge tone={running ? "success" : "neutral"} dot className="shrink-0">{running ? "Running" : container.state}</Badge>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
       <span className="hidden w-16 text-right font-mono text-[9px] text-subtle md:block">{running ? formatUptime(container.uptime) : "—"}</span>
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <IconButton
           label={running ? "Restart" : "Start"}
           size="sm"
@@ -456,8 +471,8 @@ function ContainerRow({ container, onOpen, onEdit, busy }: { container: Containe
         <IconButton label="Edit settings" size="sm" onClick={onEdit}>
           <Settings2 className="size-3.5" />
         </IconButton>
-        <IconButton label="Details" size="sm" onClick={onOpen}>
-          <Terminal className="size-3.5" />
+        <IconButton label="Details and logs" size="sm" onClick={onOpen}>
+          <InfoIcon className="size-3.5" />
         </IconButton>
       </div>
     </div>
@@ -568,6 +583,8 @@ function ContainerDrawer({
           <Info label="Restart policy" value={container.restartPolicy || "—"} />
           <Info label="Created" value={relativeTime(container.created)} />
           <Info label="Autostart" value={container.autostart ? "enabled" : "disabled"} />
+          <Info label="Network" value={container.network || "—"} />
+          <Info label="IP address" value={container.ip || "—"} />
           <Info label="Uptime" value={running ? formatUptime(container.uptime) : "—"} />
           <Info label="Memory" value={formatMemory(container.memory)} />
         </div>

@@ -213,6 +213,8 @@ export type Container = {
   status: string;
   uptime: number;
   autostart: boolean;
+  network: string;
+  ip: string;
   ports: Port[];
   cpu: number;
   memory: number;

@@ -197,6 +197,8 @@ type Container struct {
 	Status          string    `json:"status"`
 	Uptime          int64     `json:"uptime"`
 	Autostart       bool      `json:"autostart"`
+	Network         string    `json:"network"`
+	IP              string    `json:"ip"`
 	Ports           []Port    `json:"ports"`
 	CPU             float64   `json:"cpu"`
 	Memory          uint64    `json:"memory"`

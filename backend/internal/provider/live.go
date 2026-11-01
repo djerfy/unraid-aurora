@@ -455,15 +455,18 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 		return nil, fmt.Errorf("docker socket returned %s", resp.Status)
 	}
 	var raw []struct {
-		ID      string            `json:"Id"`
-		Names   []string          `json:"Names"`
-		Image   string            `json:"Image"`
-		ImageID string            `json:"ImageID"`
-		State   string            `json:"State"`
-		Status  string            `json:"Status"`
-		Created int64             `json:"Created"`
-		Labels  map[string]string `json:"Labels"`
-		Ports   []struct {
+		ID              string            `json:"Id"`
+		Names           []string          `json:"Names"`
+		Image           string            `json:"Image"`
+		ImageID         string            `json:"ImageID"`
+		State           string            `json:"State"`
+		Status          string            `json:"Status"`
+		Created         int64             `json:"Created"`
+		Labels          map[string]string `json:"Labels"`
+		NetworkSettings struct {
+			Networks map[string]containerNetwork `json:"Networks"`
+		} `json:"NetworkSettings"`
+		Ports []struct {
 			IP          string `json:"IP"`
 			PrivatePort int    `json:"PrivatePort"`
 			PublicPort  int    `json:"PublicPort"`
@@ -488,8 +491,10 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 			repo, tag = c.Image[:i], c.Image[i+1:]
 		}
 		color := colorFor(name)
+		network, ip := pickContainerNetwork(c.NetworkSettings.Networks)
 		out = append(out, model.Container{
 			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
+			Network: network, IP: ip,
 			State: c.State, Status: c.Status, Autostart: c.Labels["com.centurylinklabs.watchtower.enable"] != "false",
 			Ports: ports, Color: color, Created: time.Unix(c.Created, 0),
 			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
