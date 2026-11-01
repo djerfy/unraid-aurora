@@ -32,10 +32,22 @@ export function Ring({
   const circumference = 2 * Math.PI * radius;
   const safe = Math.min(100, Math.max(0, value));
   const offset = circumference - (safe / 100) * circumference;
+  // The glow filter paints outside the circle. Render the SVG on a larger
+  // canvas so the halo is never clipped by the viewport edges.
+  const padding = Math.max(10, Math.ceil(stroke / 2) + 8);
+  const canvas = size + padding * 2;
+  const center = canvas / 2;
 
   return (
     <div className={cn("relative inline-grid place-items-center", className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+      <svg
+        width={canvas}
+        height={canvas}
+        viewBox={`0 0 ${canvas} ${canvas}`}
+        className="absolute -rotate-90"
+        style={{ left: -padding, top: -padding }}
+        aria-hidden="true"
+      >
         <defs>
           <linearGradient id={`ring-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="var(--accent)" />
@@ -50,16 +62,16 @@ export function Ring({
           </filter>
         </defs>
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={radius}
           fill="none"
           stroke="var(--border)"
           strokeWidth={stroke}
         />
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={center}
+          cy={center}
           r={radius}
           fill="none"
           stroke={`url(#ring-${id})`}
