@@ -90,6 +90,10 @@ The mover card now exposes its real phases (searching, calculating, moving, fini
 share/file, throughput and ETA. Each run records the observed moved files, and the history appears
 live as soon as the mover exits.
 
+## Documentation
+
+Full page-by-page guide with screenshots: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+
 ## Requirements
 
 - Unraid 7.x (the state files and `/etc/shadow` must be readable).
