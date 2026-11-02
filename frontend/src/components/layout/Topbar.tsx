@@ -104,11 +104,6 @@ export function Topbar({
         <Kbd>⌘K</Kbd>
       </button>
 
-      <div className="hidden items-center gap-1.5 rounded-full border border-line bg-[var(--surface-2)]/60 px-2.5 py-1 text-[10.5px] font-medium text-muted md:flex">
-        <span className={cn("status-dot", live ? "live" : "danger")} />
-        {live ? t("Live") : t("Reconnecting")}
-      </div>
-
       <IconButton
         label={resolvedTheme === "dark" ? t("Switch to light theme") : t("Switch to dark theme")}
         onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
