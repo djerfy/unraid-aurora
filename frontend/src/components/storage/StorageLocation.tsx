@@ -69,6 +69,12 @@ function diskBrandModel(disk: Disk): string {
   return disk.brand ? `${disk.brand} · ${model}` : model;
 }
 
+function diskPlacement(disk: Disk): string {
+  if (disk.type === "Parity") return disk.device || "—";
+  const mount = disk.type === "Cache" ? `/mnt/${disk.pool || disk.name}` : `/mnt/${disk.name}`;
+  return disk.device ? `${disk.device} → ${mount}` : mount;
+}
+
 export function StorageLocation({
   disks,
   onOpenDisk,
@@ -869,7 +875,7 @@ function DiskCard({
           : "border-line hover:border-line-strong hover:bg-[var(--surface-2)]",
       )}
     >
-      <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: disk.color || "#8a8f98" }} />
+      <span className="h-14 w-1 shrink-0 rounded-full" style={{ background: disk.color || "#8a8f98" }} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className="truncate text-[10.5px] font-medium text-ink">{disk.name}</p>
@@ -877,8 +883,17 @@ function DiskCard({
             {t(disk.type)}
           </Badge>
         </div>
-        <p className="truncate text-[8.5px] text-subtle">
-          {formatBytes(disk.size)} · {diskBrandModel(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
+        <p className="truncate text-[9px] text-muted" title={diskBrandModel(disk)}>
+          {diskBrandModel(disk)}
+        </p>
+        <p className="truncate font-mono text-[8.5px] text-subtle" title={disk.serial || undefined}>
+          S/N {disk.serial || "—"}
+        </p>
+        <p
+          className="truncate text-[8.5px] text-subtle"
+          title={`${formatBytes(disk.size)} · ${diskPlacement(disk)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}
+        >
+          {formatBytes(disk.size)} · {diskPlacement(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
         </p>
       </div>
       <button

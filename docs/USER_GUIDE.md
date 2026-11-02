@@ -144,7 +144,8 @@ disk assignments.
 - **Reset layout** clears every slot while keeping the views.
 - Each bay shows the disk name, brand/model, type, size and temperature; the info button opens the
   existing disk drawer with SMART and I/O details.
-- **Disks to place** shows the brand and model reported by Unraid for each drive.
+- **Disks to place** shows, per drive: brand + model, serial number, size, mapped device/mount point
+  and temperature.
 - The layout is stored server-side in `$AURORA_DATA_DIR/storage-layout.json` and reloads with the page.
   The original single-view format is migrated automatically.
 - The legend and LEDs use the same colours as the rest of Storage: parity, data, cache and disk health.
