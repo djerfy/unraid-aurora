@@ -40,6 +40,11 @@ function ExternalLink({ href, icon, children }: { href: string; icon: ReactNode;
   );
 }
 
+function displayVersion(value?: string): string {
+  if (!value) return "—";
+  return value.startsWith("v") ? value : `v${value}`;
+}
+
 function AboutRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-line/60 py-1.5 last:border-0">
@@ -68,7 +73,7 @@ export function AboutPage() {
           <>
             <Badge tone="success" dot>{t("Open source")}</Badge>
             <span className="chip">{t("License AGPL-3.0")}</span>
-            {health.data?.version ? <span className="chip">Aurora {health.data.version}</span> : null}
+            {health.data?.version ? <span className="chip">Aurora {displayVersion(health.data.version)}</span> : null}
           </>
         }
       />
@@ -146,7 +151,7 @@ export function AboutPage() {
           <Card className="card-pad">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Runtime")}</h3>
             <div className="mt-2">
-              <AboutRow label={t("Aurora version")} value={health.data?.version ?? "—"} />
+              <AboutRow label={t("Aurora version")} value={displayVersion(health.data?.version)} />
               <AboutRow label={t("Unraid version")} value={snapshot?.system.version ?? "—"} />
               <AboutRow label={t("API provider")} value={health.data?.provider ?? "—"} />
               <AboutRow label={t("Host")} value={snapshot?.system.hostname ?? "—"} />

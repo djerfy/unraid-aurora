@@ -36,7 +36,7 @@ func main() {
 	)
 	flag.Parse()
 	if *showVer {
-		os.Stdout.WriteString("aurora " + version + "\n")
+		os.Stdout.WriteString("aurora " + displayVersion() + "\n")
 		return
 	}
 
@@ -178,6 +178,13 @@ func resolveTLS(cfg config.Config) (certPath, keyPath string, err error) {
 		keyPath = certPath
 	}
 	return certPath, keyPath, nil
+}
+
+func displayVersion() string {
+	if strings.HasPrefix(version, "v") {
+		return version
+	}
+	return "v" + version
 }
 
 func envString(key, fallback string) string {

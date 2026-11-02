@@ -4,6 +4,14 @@ GO    := go
 BIN   := bin/aurora
 TMP_BIN ?= /tmp/aurora-linux-amd64
 
+# Tags use vX.Y.Z; the binary and the UI display X.Y.Z. Override with
+# `make VERSION=...` for a one-off build.
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+ifeq ($(strip $(VERSION)),)
+VERSION := 0.0.0-dev
+endif
+LDFLAGS := -s -w -X main.version=$(VERSION)
+
 .PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp
 
 all: build
@@ -19,7 +27,7 @@ ui:
 	cp -R frontend/dist backend/internal/webui/dist
 
 backend:
-	cd backend && $(GO) build -trimpath -ldflags "-s -w" -o ../$(BIN) ./cmd/aurorad
+	cd backend && $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o ../$(BIN) ./cmd/aurorad
 
 run: build
 	./$(BIN)
@@ -32,7 +40,7 @@ build-tmp:
 	trap cleanup EXIT; \
 	if [ -d backend/internal/webui/dist ]; then cp -R backend/internal/webui/dist "$$restore/dist"; fi; \
 	$(MAKE) --no-print-directory ui; \
-	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags "-s -w" -o $(TMP_BIN) ./cmd/aurorad; \
+	cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(TMP_BIN) ./cmd/aurorad; \
 	cd "$$root"; \
 	echo; \
 	echo "binary: $(TMP_BIN)"; \

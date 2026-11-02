@@ -193,12 +193,17 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 
 Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
+`make build` injects the latest reachable Git tag, and `/api/v1/health` exposes the same version to
+the About page.
 
 Durable configuration and history are stored under `AURORA_CONFIG_DIR`, on the Unraid flash by
 default, so they survive a reboot. `AURORA_DATA_DIR` is intentionally tmpfs: it only holds runtime
 caches and the mover output log, which can be regenerated.
 
 ```bash
+# Print the build version
+./aurora -version
+
 # Foreground, JSON logs in a file
 ./aurora -log-format json -log-file /var/log/aurora.log
 
