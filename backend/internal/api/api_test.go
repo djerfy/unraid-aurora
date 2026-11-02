@@ -374,12 +374,15 @@ func TestSaveStorageLayoutIgnoresClientTimestamp(t *testing.T) {
 	resp.Body.Close()
 
 	body := map[string]any{
-		"columns": 2,
+		"version": 2,
 		"updated": "",
 		"views": []map[string]any{{
-			"id": "tower", "name": "Tower", "orientation": "vertical",
-			"column": 0, "bays": 8,
-			"assignments": map[string]int{"disk1": 0},
+			"id": "tower", "name": "Tower", "kind": "tower", "size": "m",
+			"x": 0, "y": 0, "w": 6, "h": 20,
+			"sections": []map[string]any{{
+				"id": "data", "name": "Data", "color": "#fff", "media": "any",
+				"rows": 2, "cols": 2, "assignments": map[string]int{"disk1": 0},
+			}},
 		}},
 	}
 	resp = env.request(t, http.MethodPut, "/api/v1/storage-layout", body, headers)
@@ -391,7 +394,7 @@ func TestSaveStorageLayoutIgnoresClientTimestamp(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&layout); err != nil {
 		t.Fatal(err)
 	}
-	if layout.Columns != 2 || len(layout.Views) != 1 || layout.Views[0].Column != 0 {
+	if layout.Version != 2 || len(layout.Views) != 1 || layout.Views[0].Kind != "tower" {
 		t.Fatalf("unexpected layout: %+v", layout)
 	}
 }

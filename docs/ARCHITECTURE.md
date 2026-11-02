@@ -99,7 +99,7 @@ Reads the same sources as the original webGUI:
 | Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_CONFIG_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `$AURORA_CONFIG_DIR/settings.json` (defaults to `$AURORA_BOOT_DIR/config/aurora`) |
-| Storage location map | `$AURORA_CONFIG_DIR/storage-layout.json` (multiple tower/server/NAS views, visual only, never written to Unraid) |
+| Storage location map | `$AURORA_CONFIG_DIR/storage-layout.json` (v2: grid panels, chassis sections, physical media; visual only, never written to Unraid) |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
 | Configuration history | `$AURORA_CONFIG_DIR/config-history/<id>/{meta.json,files/}` |
 | Balance history | `$AURORA_CONFIG_DIR/balance-history.json` |

@@ -144,6 +144,7 @@ export type Disk = {
   serial: string;
   brand: string;
   model: string;
+  media: string;
   firmware: string;
   spinupGroup: string;
   luks: boolean;
@@ -557,17 +558,30 @@ export type UPS = {
   onBattery: boolean;
 };
 
-export type StorageView = {
+export type StorageSection = {
   id: string;
   name: string;
-  orientation: "vertical" | "horizontal" | "nas";
-  column: number;
-  bays: number;
+  color: string;
+  media: "any" | "hdd" | "ssd" | "nvme";
+  rows: number;
+  cols: number;
   assignments: Record<string, number>;
 };
 
+export type StorageView = {
+  id: string;
+  name: string;
+  kind: "tower" | "server" | "nas";
+  size: "s" | "m" | "l";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  sections: StorageSection[];
+};
+
 export type StorageLayout = {
-  columns: number;
+  version: number;
   views: StorageView[];
   updated: string;
 };

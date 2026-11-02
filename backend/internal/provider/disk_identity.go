@@ -59,6 +59,22 @@ func isBrandToken(value string) bool {
 	return false
 }
 
+func diskMedia(entry map[string]string) string {
+	device := strings.ToLower(strings.TrimSpace(entry["device"]))
+	transport := strings.ToLower(strings.TrimSpace(entry["transport"]))
+	if strings.HasPrefix(device, "nvme") || transport == "nvme" {
+		return "nvme"
+	}
+	switch entry["rotational"] {
+	case "0":
+		return "ssd"
+	case "1":
+		return "hdd"
+	default:
+		return ""
+	}
+}
+
 func stripDiskBrand(model, brand string) string {
 	if brand == "" || len(model) <= len(brand) || !strings.EqualFold(model[:len(brand)], brand) {
 		return model

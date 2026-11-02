@@ -124,34 +124,26 @@ Storage is organised in tabs: **Array**, **Shares**, **Pools**, **Parity** and *
 
 ![Storage location](screenshots/storage-location.png)
 
-Location is a visual map of the physical chassis. It is server-specific and does not change Unraid's
+Location is a visual canvas of the physical chassis. It is server-specific and never changes Unraid's
 disk assignments.
 
-- **Add tower** creates a vertical PC-style case; **Add server** creates a horizontal rack-style case;
-  **Add NAS** creates a compact desktop NAS.
-- Bay choices follow the form factor: tower 2–48 (including 2/4/6/10), server 8–48, NAS 1/2/4/6/8.
-- Each view can be renamed, switched between tower/server/NAS orientation, resized, moved between
-  columns, or removed.
-- The **Columns** selector (1–4) defines the board width. Drag a view by its grip into a column or
-  above another view to place it exactly; the left/right arrows also move it between columns.
-- With four columns and enough width, the disk list stays beside a compact board; below that width
-  it moves under the board so the views keep their columns.
-- On narrow screens the board falls back to a single column, but the saved positions are retained.
-  Views and column positions are stored in the layout file.
-- Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
-- Drag a placed disk to another bay or another view to move/swap disks; use the trash button to
-  return one to the list.
-- **Auto-place** fills the views in creation order, in parity → data → cache order, following each
-  disk's Unraid position.
-- **Reset layout** clears every slot while keeping the views.
-- Each assigned bay shows the same identity block as the disk list: name/type, brand + model,
-  serial, size, device/mount and temperature; the info button opens the existing disk drawer with
-  SMART and I/O details.
-- **Disks to place** shows, per drive: brand + model, serial number, size, mapped device/mount point
-  and temperature.
-- The layout is stored server-side in `$AURORA_CONFIG_DIR/storage-layout.json` (default `/boot/config/aurora`) and reloads with the page.
-  The original single-view format is migrated automatically.
-- The legend and LEDs use the same colours as the rest of Storage: parity, data, cache and disk health.
+- **Add tower**, **Add server** or **Add NAS** creates a 3D-style chassis panel.
+- Panels snap to a **12-column grid**, cannot overlap, and can be dragged anywhere on the board.
+- Each panel has **S / M / L** presets, a rename field, a delete action and **Auto-arrange** support.
+- On narrow screens the board becomes a stacked list while keeping saved positions.
+- Inside each chassis, add and reorder **horizontal sections** (Data, Cache, Parity, custom).
+- A section has a name, colour, media type (**Any / HDD / SSD / NVMe**), rows and columns.
+- A media mismatch is allowed but shows a warning on the section and affected disk.
+- Drag a disk from **Disks to place** into a bay, or select a disk then click an empty bay.
+- Drag disks between bays, sections and chassis; removing a section returns its disks to the list.
+- **Auto-place** fills the sections in reading order, preferring disks matching the section media, then
+  parity → data → cache.
+- **Reset layout** clears assignments but keeps panels and sections.
+- Each assigned bay and tray card shows: name/type, physical media, brand + model, serial, size,
+  device/mount and temperature. The info button opens the existing disk drawer.
+- **Disks to place** contains every unassigned drive with the same identity details.
+- The v2 layout is stored in `$AURORA_CONFIG_DIR/storage-layout.json` (default
+  `/boot/config/aurora`) and the previous column-based format is migrated automatically.
 
 ### 5.3 Disks and SMART
 

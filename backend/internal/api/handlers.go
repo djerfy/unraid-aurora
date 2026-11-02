@@ -1115,7 +1115,7 @@ func (s *Server) saveStorageLayout(w http.ResponseWriter, r *http.Request) {
 	// The client timestamp is informational; accepting the model directly would
 	// make an empty "updated":"" fail JSON decoding before validation.
 	var body struct {
-		Columns int                 `json:"columns"`
+		Version int                 `json:"version"`
 		Views   []model.StorageView `json:"views"`
 		Updated any                 `json:"updated"`
 	}
@@ -1124,7 +1124,7 @@ func (s *Server) saveStorageLayout(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := s.serverContext()
 	defer cancel()
-	layout := model.StorageLayout{Columns: body.Columns, Views: body.Views}
+	layout := model.StorageLayout{Version: body.Version, Views: body.Views}
 	if err := s.provider.SaveStorageLayout(ctx, layout); err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "invalid_layout", err.Error())
 		return

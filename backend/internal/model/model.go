@@ -163,6 +163,7 @@ type Disk struct {
 	Serial      string   `json:"serial"`
 	Brand       string   `json:"brand"`
 	Model       string   `json:"model"`
+	Media       string   `json:"media"`
 	Firmware    string   `json:"firmware"`
 	SpinupGroup string   `json:"spinupGroup"`
 	Luks        bool     `json:"luks"`
@@ -621,17 +622,30 @@ type UPS struct {
 	OnBattery     bool    `json:"onBattery"`
 }
 
-type StorageView struct {
+type StorageSection struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
-	Orientation string         `json:"orientation"`
-	Column      int            `json:"column"`
-	Bays        int            `json:"bays"`
+	Color       string         `json:"color"`
+	Media       string         `json:"media"`
+	Rows        int            `json:"rows"`
+	Cols        int            `json:"cols"`
 	Assignments map[string]int `json:"assignments"`
 }
 
+type StorageView struct {
+	ID       string           `json:"id"`
+	Name     string           `json:"name"`
+	Kind     string           `json:"kind"`
+	Size     string           `json:"size"`
+	X        int              `json:"x"`
+	Y        int              `json:"y"`
+	W        int              `json:"w"`
+	H        int              `json:"h"`
+	Sections []StorageSection `json:"sections"`
+}
+
 type StorageLayout struct {
-	Columns int           `json:"columns"`
+	Version int           `json:"version"`
 	Views   []StorageView `json:"views"`
 	Updated time.Time     `json:"updated"`
 }

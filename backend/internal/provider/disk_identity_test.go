@@ -28,3 +28,21 @@ func TestDiskIdentityFallsBackToSerialField(t *testing.T) {
 		t.Fatalf("identity = %q/%q/%q", brand, model, serial)
 	}
 }
+
+func TestDiskMedia(t *testing.T) {
+	cases := []struct {
+		entry map[string]string
+		want  string
+	}{
+		{map[string]string{"device": "sdh", "rotational": "1"}, "hdd"},
+		{map[string]string{"device": "sdi", "rotational": "0"}, "ssd"},
+		{map[string]string{"device": "nvme0n1", "rotational": "0"}, "nvme"},
+		{map[string]string{"device": "sda", "transport": "nvme"}, "nvme"},
+		{map[string]string{"device": "sda"}, ""},
+	}
+	for _, tc := range cases {
+		if got := diskMedia(tc.entry); got != tc.want {
+			t.Errorf("diskMedia(%v) = %q, want %q", tc.entry, got, tc.want)
+		}
+	}
+}
