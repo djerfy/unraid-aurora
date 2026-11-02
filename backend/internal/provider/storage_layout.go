@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -72,10 +71,10 @@ func normalizeStorageViews(views []model.StorageView) []model.StorageView {
 // changes Unraid's array configuration.
 func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
 	layout := model.StorageLayout{Columns: 2, Views: []model.StorageView{defaultStorageView()}}
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return layout, nil
 	}
-	raw, err := os.ReadFile(filepath.Join(l.dataDir, "storage-layout.json"))
+	raw, err := l.readConfigFile("storage-layout.json")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return layout, nil
@@ -180,17 +179,14 @@ func (l *Live) SaveStorageLayout(ctx context.Context, layout model.StorageLayout
 	layout.Views = views
 	layout.Updated = time.Now().UTC()
 
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return nil
-	}
-	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
-		return fmt.Errorf("create data dir: %w", err)
 	}
 	raw, err := json.MarshalIndent(layout, "", "  ")
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(l.dataDir, "storage-layout.json")
+	path := l.configPath("storage-layout.json")
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
 		return err

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -13,6 +14,7 @@ type Config struct {
 	BootDir      string
 	DockerSocket string
 	DataDir      string
+	ConfigDir    string
 	TLSCert      string // explicit override; empty derives from the server name
 	TLSCertDir   string
 	TLSKey       string
@@ -29,6 +31,7 @@ func Load(version string) (Config, error) {
 		BootDir:      env("AURORA_BOOT_DIR", "/boot"),
 		DockerSocket: env("AURORA_DOCKER_SOCKET", "/var/run/docker.sock"),
 		DataDir:      env("AURORA_DATA_DIR", "/var/lib/aurora"),
+		ConfigDir:    env("AURORA_CONFIG_DIR", ""),
 		TLSCert:      env("AURORA_TLS_CERT", ""),
 		TLSCertDir:   env("AURORA_TLS_CERT_DIR", "/boot/config/ssl/certs"),
 		ServerName:   env("AURORA_SERVER_NAME", ""),
@@ -49,6 +52,12 @@ func Load(version string) (Config, error) {
 	}
 	if cfg.StateDir == "" {
 		return cfg, fmt.Errorf("AURORA_STATE_DIR must not be empty")
+	}
+	if cfg.ConfigDir == "" {
+		cfg.ConfigDir = filepath.Join(cfg.BootDir, "config", "aurora")
+	}
+	if cfg.ConfigDir == "" {
+		return cfg, fmt.Errorf("AURORA_CONFIG_DIR must not be empty")
 	}
 	if cfg.TLSCertDir == "" {
 		return cfg, fmt.Errorf("AURORA_TLS_CERT_DIR must not be empty")

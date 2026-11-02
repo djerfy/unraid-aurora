@@ -34,6 +34,7 @@ type Live struct {
 	bootDir      string
 	dockerSocket string
 	dataDir      string
+	configRoot   string
 	startedAt    time.Time
 
 	mu        sync.Mutex
@@ -93,7 +94,7 @@ type diskSample struct {
 	write uint64
 }
 
-func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
+func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live, error) {
 	if _, err := os.Stat(filepath.Join(stateDir, "var.ini")); err != nil {
 		return nil, fmt.Errorf("not an Unraid host: %s/var.ini is missing: %w", stateDir, err)
 	}
@@ -102,6 +103,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 		bootDir:      bootDir,
 		dockerSocket: dockerSocket,
 		dataDir:      dataDir,
+		configRoot:   configDir,
 		startedAt:    time.Now(),
 		settings: model.Settings{
 			Theme: "dark", Accent: "ember", Density: "comfortable",
@@ -114,6 +116,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir string) (*Live, error) {
 		moverStop:      make(chan struct{}),
 		moverSeen:      map[string]bool{},
 	}
+	l.migrateDurableState()
 	l.loadSettings()
 	l.loadMoverHistory()
 	l.loadImageUpdates()
@@ -808,18 +811,18 @@ func (l *Live) SaveSettings(ctx context.Context, s model.Settings) error {
 	l.mu.Lock()
 	l.settings = s
 	l.mu.Unlock()
-	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
-		return fmt.Errorf("create data dir: %w", err)
+	if err := os.MkdirAll(l.configDir(), 0o750); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
 	}
 	raw, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(l.dataDir, "settings.json"), raw, 0o600)
+	return l.saveConfigFile("settings.json", raw)
 }
 
 func (l *Live) loadSettings() {
-	raw, err := os.ReadFile(filepath.Join(l.dataDir, "settings.json"))
+	raw, err := l.readConfigFile("settings.json")
 	if err != nil {
 		return
 	}

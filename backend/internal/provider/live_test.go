@@ -96,7 +96,7 @@ cachePool="cache"
 
 func TestLiveReadsUnraidState(t *testing.T) {
 	stateDir, bootDir, dataDir := fixtureHost(t)
-	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir)
+	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir, "")
 	if err != nil {
 		t.Fatalf("NewLive: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestLiveReadsUnraidState(t *testing.T) {
 
 func TestLiveSnapshotNeverContainsNullSlices(t *testing.T) {
 	stateDir, bootDir, dataDir := fixtureHost(t)
-	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir)
+	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir, "")
 	if err != nil {
 		t.Fatalf("NewLive: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestLiveSnapshotNeverContainsNullSlices(t *testing.T) {
 
 func TestLiveSettingsPersistence(t *testing.T) {
 	stateDir, bootDir, dataDir := fixtureHost(t)
-	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir)
+	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir, "")
 	if err != nil {
 		t.Fatalf("NewLive: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestLiveSettingsPersistence(t *testing.T) {
 	}
 	l.Close()
 
-	reloaded, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir)
+	reloaded, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir, "")
 	if err != nil {
 		t.Fatalf("reload: %v", err)
 	}
@@ -234,10 +234,33 @@ func TestLiveSettingsPersistence(t *testing.T) {
 	if got.Theme != "light" || got.Accent != "cyan" || got.Density != "compact" {
 		t.Fatalf("settings were not persisted: %+v", got)
 	}
+	if _, err := os.Stat(filepath.Join(bootDir, "config", "aurora", "settings.json")); err != nil {
+		t.Fatalf("settings are not stored on persistent config dir: %v", err)
+	}
+}
+
+func TestLiveMigratesSettingsFromDataDir(t *testing.T) {
+	stateDir, bootDir, dataDir := fixtureHost(t)
+	legacy := `{"theme":"light","accent":"violet","density":"compact","refreshInterval":5,"language":"en","temperatureUnit":"celsius"}`
+	if err := os.WriteFile(filepath.Join(dataDir, "settings.json"), []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	l, err := NewLive(stateDir, bootDir, filepath.Join(t.TempDir(), "absent.sock"), dataDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	got, _ := l.Settings(context.Background())
+	if got.Theme != "light" || got.Accent != "violet" {
+		t.Fatalf("legacy settings were not migrated: %+v", got)
+	}
+	if _, err := os.Stat(filepath.Join(bootDir, "config", "aurora", "settings.json")); err != nil {
+		t.Fatalf("migrated settings file is missing: %v", err)
+	}
 }
 
 func TestNewLiveRequiresUnraidState(t *testing.T) {
-	_, err := NewLive(t.TempDir(), t.TempDir(), filepath.Join(t.TempDir(), "absent.sock"), t.TempDir())
+	_, err := NewLive(t.TempDir(), t.TempDir(), filepath.Join(t.TempDir(), "absent.sock"), t.TempDir(), "")
 	if err == nil {
 		t.Fatal("expected an error when var.ini is absent")
 	}

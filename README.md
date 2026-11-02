@@ -63,7 +63,7 @@ command palette, light theme, users, plugins, logs and mobile layouts.
 ### Configuration history and rollback
 
 Every configuration file written by Aurora is snapshotted in
-`$AURORA_DATA_DIR/config-history/<id>/` before being modified: container templates, the Docker
+`$AURORA_CONFIG_DIR/config-history/<id>/` before being modified: container templates, the Docker
 autostart list and future file-backed settings. The **Historique** page lists each change with:
 
 - the action and a human-readable description;
@@ -85,7 +85,7 @@ The **Équilibrage** page empties a disk or moves selected folders/files to othe
 - symlinks and hardlinks are preserved, ownership/mode/timestamps are carried over;
 - jobs run in the background with live phases (scanning, copying, cleaning), bytes, files, speed,
   ETA, errors and a per-file status list;
-- the last 20 jobs are persisted in `$AURORA_DATA_DIR/balance-history.json`.
+- the last 20 jobs are persisted in `$AURORA_CONFIG_DIR/balance-history.json`.
 
 ### Live mover
 
@@ -178,8 +178,9 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_ADDR` | `:8484` | Listen address |
 | `AURORA_STATE_DIR` | `/var/local/emhttp` | Unraid state directory (must contain `var.ini`) |
 | `AURORA_BOOT_DIR` | `/boot` | Flash/boot directory |
+| `AURORA_CONFIG_DIR` | `<AURORA_BOOT_DIR>/config/aurora` | Durable JSON config/history (settings, layout, history) |
 | `AURORA_DOCKER_SOCKET` | `/var/run/docker.sock` | Docker Engine socket |
-| `AURORA_DATA_DIR` | `/var/lib/aurora` | Persisted UI settings |
+| `AURORA_DATA_DIR` | `/var/lib/aurora` | Runtime cache and mover output (tmpfs on Unraid) |
 | `AURORA_TLS_CERT` | derived | Explicit PEM bundle path (default: `/boot/config/ssl/certs/<server>_unraid_bundle.pem`) |
 | `AURORA_TLS_CERT_DIR` | `/boot/config/ssl/certs` | Directory used for certificate lookup |
 | `AURORA_TLS_KEY` | same as the bundle | Optional separate private key path |
@@ -192,6 +193,10 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 
 Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
+
+Durable configuration and history are stored under `AURORA_CONFIG_DIR`, on the Unraid flash by
+default, so they survive a reboot. `AURORA_DATA_DIR` is intentionally tmpfs: it only holds runtime
+caches and the mover output log, which can be regenerated.
 
 ```bash
 # Foreground, JSON logs in a file
@@ -220,7 +225,7 @@ and prints the child PID before exiting.
 | Logs | `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` |
 | TLS | `/boot/config/ssl/certs/<server>_unraid_bundle.pem` |
 | Icons | Docker icon cache, `templates-user` XML, `dynamix.vm.manager/templates/images` |
-| Settings | `AURORA_DATA_DIR/settings.json` |
+| Settings | `$AURORA_CONFIG_DIR/settings.json` (persistent on flash) |
 | Credentials | `getent shadow root`, `/etc/shadow` |
 
 Actions use fixed binaries and validated targets: `emcmd`, `mdcmd`, `docker`, `virsh` and the stock
@@ -268,7 +273,7 @@ Deep dives:
 | Plugins | Real .plg metadata, update checks, streamed update/install/remove through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
-| Configuration history | `AURORA_DATA_DIR/config-history` (backup files, metas, unified diffs) |
+| Configuration history | `$AURORA_CONFIG_DIR/config-history` (backup files, metas, unified diffs) |
 | Balance | Mounts under `/mnt`, `statfs`, `du`; copy → verify → delete pipeline |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
 | Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with live phases and per-file history |

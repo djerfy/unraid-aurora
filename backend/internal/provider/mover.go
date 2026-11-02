@@ -219,10 +219,10 @@ func moverFileFromLine(line string) (string, bool) {
 }
 
 func (l *Live) loadMoverHistory() {
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return
 	}
-	raw, err := os.ReadFile(filepath.Join(l.dataDir, "mover-history.json"))
+	raw, err := l.readConfigFile("mover-history.json")
 	if err != nil {
 		return
 	}
@@ -234,17 +234,14 @@ func (l *Live) loadMoverHistory() {
 }
 
 func (l *Live) saveMoverHistory() error {
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return nil
-	}
-	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
-		return err
 	}
 	raw, err := json.MarshalIndent(l.moverHistory, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(l.dataDir, "mover-history.json"), raw, 0o600)
+	return l.saveConfigFile("mover-history.json", raw)
 }
 
 func (l *Live) StartMover(ctx context.Context) error {
@@ -261,6 +258,7 @@ func (l *Live) StartMover(ctx context.Context) error {
 	outputPath := l.moverOutputPath()
 	var output *os.File
 	if outputPath != "" {
+		_ = os.MkdirAll(filepath.Dir(outputPath), 0o750)
 		if file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600); err == nil {
 			output = file
 			cmd.Stdout = output

@@ -149,7 +149,7 @@ disk assignments.
   SMART and I/O details.
 - **Disks to place** shows, per drive: brand + model, serial number, size, mapped device/mount point
   and temperature.
-- The layout is stored server-side in `$AURORA_DATA_DIR/storage-layout.json` and reloads with the page.
+- The layout is stored server-side in `$AURORA_CONFIG_DIR/storage-layout.json` (default `/boot/config/aurora`) and reloads with the page.
   The original single-view format is migrated automatically.
 - The legend and LEDs use the same colours as the rest of Storage: parity, data, cache and disk health.
 
@@ -248,7 +248,7 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
 - Live details: phase, bytes, files, speed, ETA, current path, per-file status
   (moved/planned/skipped/failed), errors and a journal.
 - **Cancel** stops after the current file. The last 20 runs are kept in
-  `$AURORA_DATA_DIR/balance-history.json` and shown on the page.
+  `$AURORA_CONFIG_DIR/balance-history.json` and shown on the page.
 
 ---
 
@@ -487,7 +487,7 @@ Each entry shows the action, description, affected files, previous size and a **
 **Rollback** restores the previous contents; the current state is snapshotted first, so a rollback
 can itself be reverted.
 
-- Storage: `$AURORA_DATA_DIR/config-history/<id>/` (`meta.json`, `files/`).
+- Storage: `$AURORA_CONFIG_DIR/config-history/<id>/` (`meta.json`, `files/`).
 - Limit: 200 entries.
 - Some emhttpd-managed changes (shares, users) may require a service reload or restart before the
   restored file is applied in memory.

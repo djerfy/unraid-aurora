@@ -685,7 +685,7 @@ func (l *Live) finishBalance(runtime *balanceRuntime, state, message string) {
 }
 
 func (l *Live) saveBalanceHistory() {
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return
 	}
 	l.balanceMu.Lock()
@@ -702,17 +702,14 @@ func (l *Live) saveBalanceHistory() {
 	if err != nil {
 		return
 	}
-	if err := os.MkdirAll(l.dataDir, 0o750); err != nil {
-		return
-	}
-	_ = os.WriteFile(filepath.Join(l.dataDir, "balance-history.json"), raw, 0o600)
+	_ = l.saveConfigFile("balance-history.json", raw)
 }
 
 func (l *Live) loadBalanceHistory() {
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return
 	}
-	raw, err := os.ReadFile(filepath.Join(l.dataDir, "balance-history.json"))
+	raw, err := l.readConfigFile("balance-history.json")
 	if err != nil {
 		return
 	}

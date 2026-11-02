@@ -64,7 +64,7 @@ func (l *Live) writeConfigChanges(action, description string, changes []configCh
 	if len(changes) == 0 {
 		return nil
 	}
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		// Tests and configurations without a data directory: keep the write
 		// but skip history persistence.
 		for _, change := range changes {
@@ -76,7 +76,7 @@ func (l *Live) writeConfigChanges(action, description string, changes []configCh
 	}
 
 	entryID := newHistoryID()
-	entryDir := filepath.Join(l.dataDir, configHistoryDir, entryID)
+	entryDir := filepath.Join(l.configDir(), configHistoryDir, entryID)
 	filesDir := filepath.Join(entryDir, "files")
 	if err := os.MkdirAll(filesDir, 0o750); err != nil {
 		return fmt.Errorf("create history directory: %w", err)
@@ -214,11 +214,11 @@ type externalConfigChange struct {
 }
 
 func (l *Live) recordExternalConfigChanges(action, description string, changes []externalConfigChange) {
-	if l.dataDir == "" || len(changes) == 0 {
+	if l.configDir() == "" || len(changes) == 0 {
 		return
 	}
 	entryID := newHistoryID()
-	entryDir := filepath.Join(l.dataDir, configHistoryDir, entryID)
+	entryDir := filepath.Join(l.configDir(), configHistoryDir, entryID)
 	filesDir := filepath.Join(entryDir, "files")
 	if err := os.MkdirAll(filesDir, 0o750); err != nil {
 		return
@@ -251,7 +251,7 @@ func (l *Live) recordExternalConfigChanges(action, description string, changes [
 }
 
 func (l *Live) ConfigHistory(_ context.Context) ([]model.ConfigHistory, error) {
-	directory := filepath.Join(l.dataDir, configHistoryDir)
+	directory := filepath.Join(l.configDir(), configHistoryDir)
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -338,7 +338,7 @@ func (l *Live) loadHistoryMeta(id string) (historyMeta, string, error) {
 	if !historyIDPattern.MatchString(id) {
 		return historyMeta{}, "", errors.New("invalid history id")
 	}
-	entryDir := filepath.Join(l.dataDir, configHistoryDir, id)
+	entryDir := filepath.Join(l.configDir(), configHistoryDir, id)
 	raw, err := os.ReadFile(filepath.Join(entryDir, "meta.json"))
 	if err != nil {
 		return historyMeta{}, "", err
@@ -364,10 +364,10 @@ func historyToModel(meta historyMeta) model.ConfigHistory {
 }
 
 func (l *Live) pruneConfigHistory() {
-	if l.dataDir == "" {
+	if l.configDir() == "" {
 		return
 	}
-	directory := filepath.Join(l.dataDir, configHistoryDir)
+	directory := filepath.Join(l.configDir(), configHistoryDir)
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return

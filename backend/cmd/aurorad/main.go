@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	p, err := provider.NewLive(cfg.StateDir, cfg.BootDir, cfg.DockerSocket, cfg.DataDir)
+	p, err := provider.NewLive(cfg.StateDir, cfg.BootDir, cfg.DockerSocket, cfg.DataDir, cfg.ConfigDir)
 	if err != nil {
 		log.Error("cannot read the Unraid host", "error", err,
 			"hint", "Aurora must run on Unraid with access to /var/local/emhttp, /etc/shadow and the Docker socket")

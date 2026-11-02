@@ -96,13 +96,13 @@ Reads the same sources as the original webGUI:
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
 | User icons | `/boot/config/plugins/dynamix/users/<name>.png` |
 | GPUs | `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD): utilisation, VRAM, temperature, power, processes |
-| Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_DATA_DIR/mover-history.json` |
+| Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_CONFIG_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
-| Settings | `AURORA_DATA_DIR/settings.json` |
-| Storage location map | `AURORA_DATA_DIR/storage-layout.json` (multiple tower/server/NAS views, visual only, never written to Unraid) |
+| Settings | `$AURORA_CONFIG_DIR/settings.json` (defaults to `$AURORA_BOOT_DIR/config/aurora`) |
+| Storage location map | `$AURORA_CONFIG_DIR/storage-layout.json` (multiple tower/server/NAS views, visual only, never written to Unraid) |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
-| Configuration history | `AURORA_DATA_DIR/config-history/<id>/{meta.json,files/}` |
-| Balance history | `AURORA_DATA_DIR/balance-history.json` |
+| Configuration history | `$AURORA_CONFIG_DIR/config-history/<id>/{meta.json,files/}` |
+| Balance history | `$AURORA_CONFIG_DIR/balance-history.json` |
 | Container templates | `/boot/config/plugins/dockerMan/templates-user/my-<name>.xml`, read and written like the official webGUI |
 
 Every read is best-effort. A missing file or binary yields zero values, never a failed snapshot. The only
@@ -248,7 +248,7 @@ argument arrays (no shell). `AURORA_READ_ONLY=1` rejects every mutation before v
 
 ## 6.1 Configuration history and rebalancing
 
-Aurora snapshots file-backed changes under `AURORA_DATA_DIR/config-history` before writing them
+Aurora snapshots file-backed changes under `$AURORA_CONFIG_DIR/config-history` before writing them
 (`writeConfigFile`). Each entry stores the previous bytes, a unified diff and file metadata. Rollback
 snapshots the current state first, then restores the backup, so it is reversible.
 
