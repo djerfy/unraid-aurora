@@ -1,4 +1,11 @@
 const storage: Record<string, string> = {
+  "Moving files": "Déplacement des fichiers",
+  "{count} files moved": "{count} fichiers déplacés",
+  "1 file moved": "1 fichier déplacé",
+  "Byte progress is disabled in Unraid (Settings → Scheduler → Mover). File tracking still works for runs started from Aurora.":
+    "La progression en octets est désactivée dans Unraid (Paramètres → Planificateur → Déplaceur). Le suivi des fichiers fonctionne pour les exécutions lancées depuis Aurora.",
+  "File lists are captured for runs started from Aurora.":
+    "Les listes de fichiers sont capturées pour les exécutions lancées depuis Aurora.",
   // Page header and tabs
   "Infrastructure": "Infrastructure",
   "Storage": "Stockage",
@@ -273,8 +280,6 @@ const storage: Record<string, string> = {
   "{count} file": "{count} fichier",
   "{count} files": "{count} fichiers",
   "Current item": "Élément en cours",
-  "Progress reporting is disabled in Unraid (Settings → Scheduler → Mover). The job still runs.":
-    "Le suivi de progression est désactivé dans Unraid (Paramètres → Planificateur → Déplaceur). La tâche continue de s'exécuter.",
   "The mover honours each share's cache mode:":
     "Le déplaceur respecte le mode de cache de chaque partage :",
   "moves to the array,": "déplace vers la grappe,",

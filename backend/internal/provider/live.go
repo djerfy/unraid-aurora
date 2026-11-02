@@ -73,6 +73,7 @@ type Live struct {
 	moverHistory   []model.MoverRun
 	moverFiles     []string
 	moverSeen      map[string]bool
+	moverOutput    string
 	moverStop      chan struct{}
 	moverCloseOnce sync.Once
 }

@@ -1539,10 +1539,18 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
           </div>
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate text-[11.5px] text-soft">
-              {status?.action || t("Calculating totals…")}
+              {status?.action || (status?.files?.length ? t("Moving files") : t("Calculating totals…"))}
               {status?.file ? <span className="ml-2 font-mono text-[10px] text-subtle">{status.file}</span> : null}
             </p>
-            <span className="num shrink-0 text-[12px] text-ink">{status?.progress.toFixed(1)}%</span>
+            <span className="num shrink-0 text-[12px] text-ink">
+              {status?.total
+                ? `${status?.progress.toFixed(1)}%`
+                : status?.files?.length
+                  ? status.files.length === 1
+                    ? t("1 file moved")
+                    : t("{count} files moved", { count: status.files.length })
+                  : `${status?.progress.toFixed(1)}%`}
+            </span>
           </div>
           <Progress value={status?.progress ?? 0} height={7} />
           <div className="grid grid-cols-2 gap-3 text-[10px] sm:grid-cols-4">
@@ -1573,7 +1581,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
           ) : null}
           {!status?.total ? (
             <p className="text-[10px] text-subtle">
-              {t("Progress reporting is disabled in Unraid (Settings → Scheduler → Mover). The job still runs.")}
+              {t("Byte progress is disabled in Unraid (Settings → Scheduler → Mover). File tracking still works for runs started from Aurora.")}
             </p>
           ) : null}
         </div>
@@ -1630,6 +1638,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
                   </Badge>
                 </div>
               ))}
+              <p className="pt-1 text-[9px] text-subtle">{t("File lists are captured for runs started from Aurora.")}</p>
             </div>
           ) : null}
         </div>

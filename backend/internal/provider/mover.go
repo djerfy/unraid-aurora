@@ -24,8 +24,12 @@ func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	status.Phase = moverPhase(status.Running, status.Action, status.Total, status.Remain)
 	l.moverMu.Lock()
 	if status.Running {
+		l.tailMoverOutputLocked()
 		l.moverLast = status
 		status.Files = append([]string(nil), l.moverFiles...)
+		if status.File == "" && len(l.moverFiles) > 0 {
+			status.File = l.moverFiles[len(l.moverFiles)-1]
+		}
 	}
 	status.History = append([]model.MoverRun(nil), l.moverHistory...)
 	if status.History == nil {
@@ -90,13 +94,18 @@ func moverPhase(running bool, action string, total, remain uint64) string {
 }
 
 func (l *Live) watchMover() {
-	ticker := time.NewTicker(time.Second)
+	// A short run can complete between two polls; half a second keeps the
+	// mover card responsive without spawning a status process each tick.
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-l.moverStop:
 			return
 		case <-ticker.C:
+			l.moverMu.Lock()
+			l.tailMoverOutputLocked()
+			l.moverMu.Unlock()
 			status, _ := l.readMoverStatus(context.Background())
 			l.moverMu.Lock()
 			if status.Running {
@@ -126,6 +135,7 @@ func (l *Live) watchMover() {
 				} else {
 					run.Status = "completed"
 				}
+				run.Files = append([]string{}, l.moverFiles...)
 				l.moverHistory = append([]model.MoverRun{run}, l.moverHistory...)
 				if len(l.moverHistory) > moverHistoryLimit {
 					l.moverHistory = l.moverHistory[:moverHistoryLimit]
@@ -135,6 +145,7 @@ func (l *Live) watchMover() {
 				l.moverLast = model.MoverStatus{}
 				l.moverFiles = nil
 				l.moverSeen = map[string]bool{}
+				l.moverOutput = ""
 				_ = l.saveMoverHistory()
 			}
 			l.moverMu.Unlock()
@@ -158,6 +169,53 @@ func (l *Live) trackMoverFile(status model.MoverStatus) {
 	if len(l.moverFiles) < 1000 {
 		l.moverFiles = append(l.moverFiles, file)
 	}
+}
+
+func (l *Live) moverOutputPath() string {
+	if l.dataDir == "" {
+		return ""
+	}
+	return filepath.Join(l.dataDir, "mover-output.log")
+}
+
+// tailMoverOutputLocked parses the mover's own stdout so file-level progress
+// works even when Unraid's optional mover progress (shareMoverProgress) is off.
+func (l *Live) tailMoverOutputLocked() {
+	if l.moverOutput == "" {
+		return
+	}
+	raw, err := os.ReadFile(l.moverOutput)
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		file, ok := moverFileFromLine(line)
+		if !ok || l.moverSeen[file] {
+			continue
+		}
+		l.moverSeen[file] = true
+		if len(l.moverFiles) < 1000 {
+			l.moverFiles = append(l.moverFiles, file)
+		}
+	}
+}
+
+func moverFileFromLine(line string) (string, bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "move: ") {
+		return "", false
+	}
+	file := strings.TrimSpace(strings.TrimPrefix(line, "move: "))
+	for _, suffix := range []string{" Success", " File exists", " Not moved", " Failed", " failed"} {
+		if strings.HasSuffix(file, suffix) {
+			file = strings.TrimSpace(strings.TrimSuffix(file, suffix))
+			break
+		}
+	}
+	if file == "" || !strings.HasPrefix(file, "/mnt/") {
+		return "", false
+	}
+	return file, true
 }
 
 func (l *Live) loadMoverHistory() {
@@ -200,10 +258,23 @@ func (l *Live) StartMover(ctx context.Context) error {
 	// Use a detached command: the request context is cancelled as soon as the
 	// response is sent, but the mover must keep running.
 	cmd := exec.Command(script, "start")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	outputPath := l.moverOutputPath()
+	var output *os.File
+	if outputPath != "" {
+		if file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600); err == nil {
+			output = file
+			cmd.Stdout = output
+			cmd.Stderr = output
+		}
+	}
 	if err := cmd.Start(); err != nil {
+		if output != nil {
+			_ = output.Close()
+		}
 		return fmt.Errorf("start mover: %w", err)
+	}
+	if output != nil {
+		_ = output.Close()
 	}
 	l.moverMu.Lock()
 	l.moverActive = true
@@ -212,6 +283,7 @@ func (l *Live) StartMover(ctx context.Context) error {
 	l.moverLast = model.MoverStatus{}
 	l.moverFiles = nil
 	l.moverSeen = map[string]bool{}
+	l.moverOutput = outputPath
 	l.moverMu.Unlock()
 	// Do not Wait: the mover runs for minutes or hours and must survive the
 	// HTTP request. The status endpoint follows it through mover.ini.
@@ -241,6 +313,11 @@ func (l *Live) StopMover(ctx context.Context) error {
 }
 
 func moverRunning(ctx context.Context) bool {
+	if pid := readMoverPID(); pid > 0 {
+		if raw, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid)); err == nil {
+			return strings.Contains(strings.ReplaceAll(string(raw), "\x00", " "), "mover")
+		}
+	}
 	script := moverScript()
 	if script == "" {
 		return false
@@ -248,6 +325,18 @@ func moverRunning(ctx context.Context) bool {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	return exec.CommandContext(checkCtx, script, "status").Run() == nil
+}
+
+func readMoverPID() int {
+	raw, err := os.ReadFile("/var/run/mover.pid")
+	if err != nil {
+		return 0
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil {
+		return 0
+	}
+	return pid
 }
 
 func moverScript() string {

@@ -192,6 +192,8 @@ reviewed or rolled back.
 - Current share/action and file, global and per-share progress, throughput and ETA.
 - Files observed during the run (best effort, sampled from `mover.ini`).
 - A collapsible **Recent runs** list keeps the last **10** mover runs, with duration, moved bytes and the file list.
+- Runs started from Aurora capture the mover's own output, so the file list works even when Unraid's
+  optional byte-progress setting is disabled; byte progress still follows `mover.ini`.
 
 ### 5.7 Rebalancing
 
