@@ -130,6 +130,9 @@ disk assignments.
 - **Add tower**, **Add server** or **Add NAS** creates a 3D-style chassis panel.
 - Panels snap to a **12-column grid**, cannot overlap, and can be dragged anywhere on the board.
 - Each panel has **S / M / L** presets, a rename field, a delete action and **Auto-arrange** support.
+- Hover a panel to reveal its **edge and corner handles**, then drag to resize it freely on the grid.
+  A manual resize switches the panel to **custom** dimensions; picking S / M / L restores a preset.
+- Resizing never overlaps another panel: the drag stops at the first occupied cell.
 - On narrow screens the board becomes a stacked list while keeping saved positions.
 - Inside each chassis, add and reorder **horizontal sections** (Data, Cache, Parity, custom).
 - A section has a name, colour, media type (**Any / HDD / SSD / NVMe**), rows and columns.

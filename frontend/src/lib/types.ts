@@ -572,7 +572,7 @@ export type StorageView = {
   id: string;
   name: string;
   kind: "tower" | "server" | "nas";
-  size: "s" | "m" | "l";
+  size: "s" | "m" | "l" | "custom";
   x: number;
   y: number;
   w: number;

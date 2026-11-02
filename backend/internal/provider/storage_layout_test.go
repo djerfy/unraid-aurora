@@ -136,3 +136,42 @@ func TestStorageLayoutValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestStorageLayoutKeepsCustomSize(t *testing.T) {
+	live := &Live{dataDir: t.TempDir()}
+	layout := model.StorageLayout{Version: 2, Views: []model.StorageView{{
+		ID: "tower", Name: "Tower", Kind: "tower", Size: "custom", X: 1, Y: 2, W: 7, H: 23,
+		Sections: []model.StorageSection{{
+			ID: "data", Name: "Data", Color: "#fff", Media: "any", Rows: 2, Cols: 2,
+			Assignments: map[string]int{"disk1": 0},
+		}},
+	}}}
+	if err := live.SaveStorageLayout(context.Background(), layout); err != nil {
+		t.Fatal(err)
+	}
+	got, err := live.StorageLayout(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := got.Views[0]
+	if view.Size != "custom" || view.X != 1 || view.Y != 2 || view.W != 7 || view.H != 23 {
+		t.Fatalf("custom geometry was not preserved: %+v", view)
+	}
+}
+
+func TestStorageLayoutRepairsInvalidGeometry(t *testing.T) {
+	dir := t.TempDir()
+	raw := []byte(`{"version":2,"views":[{"id":"tower","name":"Tower","kind":"tower","size":"custom","x":0,"y":0,"w":0,"h":0,"sections":[{"id":"data","name":"Data","color":"#fff","media":"any","rows":2,"cols":2,"assignments":{}}]}]}`)
+	if err := os.WriteFile(filepath.Join(dir, "storage-layout.json"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{dataDir: dir}
+	got, err := live.StorageLayout(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := got.Views[0]
+	if view.W != 6 || view.H != 20 {
+		t.Fatalf("invalid geometry was not repaired: %+v", view)
+	}
+}

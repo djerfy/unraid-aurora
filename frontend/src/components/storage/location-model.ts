@@ -5,15 +5,16 @@ export const ROW_HEIGHT = 24;
 export const GRID_GAP = 12;
 
 export type PanelKind = StorageView["kind"];
+export type PresetSize = "s" | "m" | "l";
 export type PanelSize = StorageView["size"];
 
-export const SIZE_PRESETS: Record<PanelKind, Record<PanelSize, { w: number; h: number }>> = {
+export const SIZE_PRESETS: Record<PanelKind, Record<PresetSize, { w: number; h: number }>> = {
   tower: { s: { w: 4, h: 14 }, m: { w: 6, h: 20 }, l: { w: 9, h: 26 } },
   server: { s: { w: 6, h: 10 }, m: { w: 9, h: 14 }, l: { w: 12, h: 18 } },
   nas: { s: { w: 4, h: 10 }, m: { w: 6, h: 14 }, l: { w: 9, h: 18 } },
 };
 
-export function panelDimensions(kind: PanelKind, size: PanelSize) {
+export function panelDimensions(kind: PanelKind, size: PresetSize) {
   return SIZE_PRESETS[kind][size];
 }
 
@@ -86,7 +87,7 @@ export function defaultSection(kind: PanelKind, index = 1): StorageSection {
   };
 }
 
-export function defaultView(kind: PanelKind, index: number, size: PanelSize = "m"): StorageView {
+export function defaultView(kind: PanelKind, index: number, size: PresetSize = "m"): StorageView {
   const dims = panelDimensions(kind, size);
   const label = kind === "tower" ? "Tower" : kind === "server" ? "Server" : "NAS";
   return {

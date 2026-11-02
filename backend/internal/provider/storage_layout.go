@@ -120,10 +120,19 @@ func normalizeStorageViews(views []model.StorageView) []model.StorageView {
 		if view.Kind != "tower" && view.Kind != "server" && view.Kind != "nas" {
 			view.Kind = "tower"
 		}
-		if view.Size != "s" && view.Size != "m" && view.Size != "l" {
+		if view.Size != "s" && view.Size != "m" && view.Size != "l" && view.Size != "custom" {
 			view.Size = "m"
 		}
-		view.W, view.H = panelDimensions(view.Kind, view.Size)
+		fallbackW, fallbackH := panelDimensions(view.Kind, "m")
+		if view.Size == "s" || view.Size == "l" {
+			fallbackW, fallbackH = panelDimensions(view.Kind, view.Size)
+		}
+		if view.W < 1 || view.W > storageBoardColumns {
+			view.W = fallbackW
+		}
+		if view.H < 1 || view.H > 60 {
+			view.H = fallbackH
+		}
 		if view.X < 0 {
 			view.X = 0
 		}
@@ -251,8 +260,8 @@ func validateStorageLayout(layout model.StorageLayout) ([]model.StorageView, err
 		if view.Kind != "tower" && view.Kind != "server" && view.Kind != "nas" {
 			return nil, fmt.Errorf("view kind must be tower, server or nas")
 		}
-		if view.Size != "s" && view.Size != "m" && view.Size != "l" {
-			return nil, fmt.Errorf("view size must be s, m or l")
+		if view.Size != "s" && view.Size != "m" && view.Size != "l" && view.Size != "custom" {
+			return nil, fmt.Errorf("view size must be s, m, l or custom")
 		}
 		if view.W < 1 || view.H < 1 || view.W > storageBoardColumns || view.H > 60 {
 			return nil, fmt.Errorf("invalid panel size")

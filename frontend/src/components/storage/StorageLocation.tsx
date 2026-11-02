@@ -37,6 +37,7 @@ import {
   rectsOverlap,
   type PanelKind,
   type PanelSize,
+  type PresetSize,
 } from "./location-model";
 
 const DISK_MIME = "application/x-aurora-disk";
@@ -47,6 +48,7 @@ type DropTarget = { viewId: string; sectionId: string; slot: number } | null;
 type SectionDrag = { viewId: string; sectionId: string } | null;
 type SectionDrop = { viewId: string; beforeId?: string } | null;
 type SectionEditorState = { viewId: string; section: StorageSection; isNew: boolean } | null;
+type ResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 function newId(prefix: string): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}-${crypto.randomUUID()}`;
@@ -100,8 +102,10 @@ export function StorageLocation({
     const names = new Set(physical.map((disk) => disk.name));
     const next = layoutQuery.data.views.map((view) => {
       const kind: PanelKind = view.kind === "server" || view.kind === "nas" ? view.kind : "tower";
-      const size: PanelSize = view.size === "s" || view.size === "l" ? view.size : "m";
-      const dims = panelDimensions(kind, size);
+      const size: PanelSize = view.size === "s" || view.size === "m" || view.size === "l" ? view.size : "custom";
+      const dims = panelDimensions(kind, size === "custom" ? "m" : size);
+      const width = view.w >= 1 && view.w <= BOARD_COLUMNS ? view.w : dims.w;
+      const height = view.h >= 1 && view.h <= 60 ? view.h : dims.h;
       const sections = (view.sections ?? []).map((section) => {
         const assignments: Assignments = {};
         for (const [name, slot] of Object.entries(section.assignments ?? {})) {
@@ -113,9 +117,9 @@ export function StorageLocation({
         ...view,
         kind,
         size,
-        w: dims.w,
-        h: dims.h,
-        x: Math.max(0, Math.min(BOARD_COLUMNS - dims.w, view.x)),
+        w: width,
+        h: height,
+        x: Math.max(0, Math.min(BOARD_COLUMNS - width, view.x)),
         y: Math.max(0, view.y),
         sections: sections.length > 0 ? sections : [defaultSection(kind)],
       };
@@ -247,7 +251,7 @@ export function StorageLocation({
     persist(next);
   };
 
-  const changeSize = (viewId: string, size: PanelSize) => {
+  const changeSize = (viewId: string, size: PresetSize) => {
     const view = views.find((candidate) => candidate.id === viewId);
     if (!view || view.size === size) return;
     const dims = panelDimensions(view.kind, size);
@@ -425,6 +429,84 @@ export function StorageLocation({
     window.addEventListener("pointercancel", stop);
   };
 
+  const startResize = (event: ReactPointerEvent<HTMLSpanElement>, view: StorageView, edge: ResizeEdge) => {
+    if (stacked || event.button !== 0 || boardWidth <= 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const initialLeft = view.x * (unitX + GRID_GAP);
+    const initialTop = view.y * (ROW_HEIGHT + GRID_GAP);
+    const initialWidth = view.w * (unitX + GRID_GAP) - GRID_GAP;
+    const initialHeight = view.h * (ROW_HEIGHT + GRID_GAP) - GRID_GAP;
+    const rightEdge = view.x + view.w;
+    const bottomEdge = view.y + view.h;
+    const minW = 4;
+    const minH = 6;
+    let current = views;
+    let moved = false;
+    document.body.style.userSelect = "none";
+
+    const move = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      let x = view.x;
+      let y = view.y;
+      let w = view.w;
+      let h = view.h;
+      if (edge.includes("e")) w = Math.round((initialWidth + dx + GRID_GAP) / (unitX + GRID_GAP));
+      if (edge.includes("w")) {
+        x = Math.round((initialLeft + dx) / (unitX + GRID_GAP));
+        w = rightEdge - x;
+      }
+      if (edge.includes("s")) h = Math.round((initialHeight + dy + GRID_GAP) / (ROW_HEIGHT + GRID_GAP));
+      if (edge.includes("n")) {
+        y = Math.round((initialTop + dy) / (ROW_HEIGHT + GRID_GAP));
+        h = bottomEdge - y;
+      }
+      if (x < 0) {
+        x = 0;
+        w = rightEdge;
+      }
+      if (y < 0) {
+        y = 0;
+        h = bottomEdge;
+      }
+      if (w < minW) {
+        if (edge.includes("w")) x = rightEdge - minW;
+        w = minW;
+      }
+      if (h < minH) {
+        if (edge.includes("n")) y = bottomEdge - minH;
+        h = minH;
+      }
+      if (w > BOARD_COLUMNS) w = BOARD_COLUMNS;
+      if (x + w > BOARD_COLUMNS) w = BOARD_COLUMNS - x;
+      if (h > 60) h = 60;
+      if (w < minW || h < minH) return;
+      const currentView = current.find((candidate) => candidate.id === view.id);
+      if (!currentView) return;
+      if (currentView.x === x && currentView.y === y && currentView.w === w && currentView.h === h) return;
+      if (current.some((candidate) => candidate.id !== view.id && rectsOverlap({ x, y, w, h }, candidate))) return;
+      current = current.map((candidate) => (
+        candidate.id === view.id ? { ...candidate, x, y, w, h, size: "custom" } : candidate
+      ));
+      moved = true;
+      setViews(current);
+    };
+
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      document.body.style.userSelect = "";
+      if (moved) persist(current);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
+
   if (physical.length === 0) {
     return (
       <Card>
@@ -537,7 +619,7 @@ export function StorageLocation({
             views.map((view) => (
               <div
                 key={view.id}
-                className="absolute"
+                className="group absolute"
                 style={{
                   left: view.x * (unitX + GRID_GAP),
                   top: view.y * (ROW_HEIGHT + GRID_GAP),
@@ -547,6 +629,24 @@ export function StorageLocation({
                 }}
               >
                 {renderPanel(view)}
+                <div className="pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity group-hover:opacity-100">
+                  {([
+                    ["n", "left-3 right-3 -top-1 h-2 cursor-row-resize"],
+                    ["s", "left-3 right-3 -bottom-1 h-2 cursor-row-resize"],
+                    ["w", "top-3 bottom-3 -left-1 w-2 cursor-col-resize"],
+                    ["e", "top-3 bottom-3 -right-1 w-2 cursor-col-resize"],
+                    ["nw", "-left-1 -top-1 size-3 cursor-nwse-resize"],
+                    ["ne", "-right-1 -top-1 size-3 cursor-nesw-resize"],
+                    ["sw", "-left-1 -bottom-1 size-3 cursor-nesw-resize"],
+                    ["se", "-right-1 -bottom-1 size-3 cursor-nwse-resize"],
+                  ] as [ResizeEdge, string][]).map(([edge, className]) => (
+                    <span
+                      key={edge}
+                      onPointerDown={(event) => startResize(event, view, edge)}
+                      className={cn("pointer-events-auto absolute rounded-sm hover:bg-[var(--accent)]/40", className)}
+                    />
+                  ))}
+                </div>
               </div>
             ))
           )}
@@ -593,7 +693,8 @@ export function StorageLocation({
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-[var(--surface-2)]/35 px-3 py-2 text-[9.5px] text-subtle">
         <span>{t("{placed} placed · {empty} empty", { placed, empty })}</span>
         <span>{t("{count} panels", { count: views.length })}</span>
-        <span className="ml-auto">{t("Snap grid · 12 columns")}</span>
+        <span className="ml-auto">{t("Drag an edge or corner to resize")}</span>
+        <span>{t("Snap grid · 12 columns")}</span>
       </div>
 
       <SectionEditorModal
@@ -651,7 +752,7 @@ function ChassisPanel({
   stacked: boolean;
   onDragView: (event: ReactPointerEvent<HTMLSpanElement>) => void;
   onRename: (name: string) => void;
-  onChangeSize: (size: PanelSize) => void;
+  onChangeSize: (size: PresetSize) => void;
   onRemove: () => void;
   onAddSection: () => void;
   onEditSection: (section: StorageSection) => void;
@@ -727,7 +828,7 @@ function ChassisPanel({
             {t(view.kind === "tower" ? "Tower" : view.kind === "server" ? "Server" : "NAS")}
           </Badge>
           <div className="flex items-center rounded-md border border-line bg-[var(--surface-2)] p-0.5">
-            {(["s", "m", "l"] as PanelSize[]).map((size) => (
+            {(["s", "m", "l"] as PresetSize[]).map((size) => (
               <button
                 key={size}
                 type="button"

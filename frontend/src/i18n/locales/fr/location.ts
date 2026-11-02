@@ -4,6 +4,7 @@ const location: Record<string, string> = {
   "Any": "Tous",
   "Auto-arrange": "Ranger automatiquement",
   "Color": "Couleur",
+  "Drag an edge or corner to resize": "Glissez un bord ou un coin pour redimensionner",
   "Drag section": "Déplacer la section",
   "Drop section here": "Déposer la section ici",
   "Edit section": "Modifier la section",
