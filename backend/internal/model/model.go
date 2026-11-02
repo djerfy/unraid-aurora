@@ -233,31 +233,39 @@ type Port struct {
 }
 
 type Container struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Image           string    `json:"image"`
-	Repository      string    `json:"repository"`
-	Tag             string    `json:"tag"`
-	Version         string    `json:"version"`
-	State           string    `json:"state"`
-	Status          string    `json:"status"`
-	Uptime          int64     `json:"uptime"`
-	Autostart       bool      `json:"autostart"`
-	Network         string    `json:"network"`
-	IP              string    `json:"ip"`
-	Ports           []Port    `json:"ports"`
-	CPU             float64   `json:"cpu"`
-	Memory          uint64    `json:"memory"`
-	MemoryLimit     uint64    `json:"memoryLimit"`
-	NetworkRx       uint64    `json:"networkRx"`
-	NetworkTx       uint64    `json:"networkTx"`
-	Color           string    `json:"color"`
-	Category        string    `json:"category"`
-	UpdateAvailable bool      `json:"updateAvailable"`
-	Created         time.Time `json:"created"`
-	Icon            string    `json:"icon"`
-	WebUI           string    `json:"webUi"`
-	RestartPolicy   string    `json:"restartPolicy"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Image           string           `json:"image"`
+	Repository      string           `json:"repository"`
+	Tag             string           `json:"tag"`
+	Version         string           `json:"version"`
+	State           string           `json:"state"`
+	Status          string           `json:"status"`
+	Uptime          int64            `json:"uptime"`
+	Autostart       bool             `json:"autostart"`
+	Network         string           `json:"network"`
+	IP              string           `json:"ip"`
+	Ports           []Port           `json:"ports"`
+	Mounts          []ContainerMount `json:"mounts"`
+	CPU             float64          `json:"cpu"`
+	Memory          uint64           `json:"memory"`
+	MemoryLimit     uint64           `json:"memoryLimit"`
+	NetworkRx       uint64           `json:"networkRx"`
+	NetworkTx       uint64           `json:"networkTx"`
+	Color           string           `json:"color"`
+	Category        string           `json:"category"`
+	UpdateAvailable bool             `json:"updateAvailable"`
+	Created         time.Time        `json:"created"`
+	Icon            string           `json:"icon"`
+	WebUI           string           `json:"webUi"`
+	RestartPolicy   string           `json:"restartPolicy"`
+}
+
+type ContainerMount struct {
+	Type        string `json:"type"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+	ReadOnly    bool   `json:"readOnly"`
 }
 
 type ContainerEnv struct {

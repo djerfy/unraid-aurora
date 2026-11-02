@@ -368,12 +368,15 @@ export function DockerPage() {
       ) : (
         <Card>
           <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
-            <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-56 lg:flex-none">
+            <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-52 lg:flex-none">
               {t("Container")}
             </span>
             <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Image")}</span>
             <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">{t("Network")}</span>
             <span className="hidden w-28 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">IP</span>
+            <span className="hidden w-[124px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1600px]:block min-[1800px]:w-64">
+              {t("Mounts")}
+            </span>
             <span className="hidden flex-1 lg:block" aria-hidden="true" />
             <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
             <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
@@ -672,9 +675,10 @@ function ContainerRow({
   const action = useAction();
   const { t } = useI18n();
   const running = container.state === "running";
+  const mounts = container.mounts ?? [];
   return (
     <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left lg:w-56 lg:flex-none">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left lg:w-52 lg:flex-none">
         <EntityIcon
           src={containerIconURL(container.id)}
           name={container.name}
@@ -694,6 +698,34 @@ function ContainerRow({
       </span>
       <span className="hidden w-28 shrink-0 truncate font-mono text-[9.5px] text-subtle lg:block" title={container.ip || "—"}>
         {container.ip || "—"}
+      </span>
+      <span className="hidden w-[124px] shrink-0 flex-col gap-0.5 min-[1600px]:flex min-[1800px]:w-64">
+        {mounts.length === 0 ? (
+          <span className="text-[9px] text-subtle">—</span>
+        ) : (
+          mounts.map((mount) => (
+            <span
+              key={`${mount.source}-${mount.destination}`}
+              className="flex min-w-0 items-center gap-1"
+              title={`${mount.source} → ${mount.destination} (${mount.readOnly ? "ro" : "rw"})`}
+            >
+              <span className="truncate font-mono text-[9px] text-subtle">
+                <span className="hidden min-[1800px]:inline">{mount.source} → </span>
+                {mount.destination}
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded border px-1 py-px font-mono text-[7.5px] uppercase tracking-wide",
+                  mount.readOnly
+                    ? "border-[color-mix(in_srgb,var(--warning)_28%,transparent)] bg-[var(--warning-soft)] text-[var(--warning)]"
+                    : "border-[color-mix(in_srgb,var(--success)_28%,transparent)] bg-[var(--success-soft)] text-[var(--success)]",
+                )}
+              >
+                {mount.readOnly ? "ro" : "rw"}
+              </span>
+            </span>
+          ))
+        )}
       </span>
       <span className="hidden flex-1 lg:block" aria-hidden="true" />
       <span className="w-20 shrink-0">

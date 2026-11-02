@@ -495,6 +495,7 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		Status          string            `json:"Status"`
 		Created         int64             `json:"Created"`
 		Labels          map[string]string `json:"Labels"`
+		Mounts          []dockerMount     `json:"Mounts"`
 		NetworkSettings struct {
 			Networks map[string]containerNetwork `json:"Networks"`
 		} `json:"NetworkSettings"`
@@ -533,7 +534,7 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		network, ip := pickContainerNetwork(c.NetworkSettings.Networks)
 		out = append(out, model.Container{
 			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
-			Network: network, IP: ip,
+			Network: network, IP: ip, Mounts: containerMounts(c.Mounts),
 			State: c.State, Status: c.Status, Autostart: autostart[name],
 			Uptime: dockerStatusUptime(c.Status),
 			Ports:  ports, Color: color, Created: time.Unix(c.Created, 0),

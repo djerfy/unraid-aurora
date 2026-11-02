@@ -216,6 +216,13 @@ export type ContainerVolume = {
   readOnly: boolean;
 };
 
+export type ContainerMount = {
+  type: string;
+  source: string;
+  destination: string;
+  readOnly: boolean;
+};
+
 export type ContainerTemplate = {
   id: string;
   name: string;
@@ -285,6 +292,7 @@ export type Container = {
   network: string;
   ip: string;
   ports: Port[];
+  mounts: ContainerMount[];
   cpu: number;
   memory: number;
   memoryLimit: number;

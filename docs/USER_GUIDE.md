@@ -223,7 +223,9 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
 ### Views and columns
 
 - Grid or list view; the choice persists across refreshes.
-- List columns: name, image, network, IP, state, CPU, memory, uptime and actions.
+- List columns: name, image, network, IP, mounts, state, CPU, memory, uptime and actions.
+- The **Mounts** column lists every bind mount with its container path and `ro`/`rw` access;
+  hover a row to see the full host → container mapping.
 - Filters: **All**, **Running**, **Stopped**, **Updates**.
 - Search covers name, image, network, IP and category.
 - Cards show a coloured halo, live CPU/RAM, ports, network/IP and uptime.
