@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/coder/websocket"
 	"github.com/creack/pty"
@@ -39,9 +41,14 @@ func (s *Server) terminal(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "terminal closed")
 
-	shell := "/bin/bash"
-	cmd := exec.Command(shell, "-l")
+	username := "root"
+	if sess, ok := s.sessionUser(r); ok {
+		username = sess.User
+	}
+	shell := loginShell(username)
+	cmd := exec.Command(shell, loginShellArgs(shell)...)
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8")
+	cmd.Env = withEnvValue(cmd.Env, "SHELL", shell)
 	terminal, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 32, Cols: 120})
 	if err != nil {
 		_ = conn.Write(r.Context(), websocket.MessageText, []byte("Unable to start shell: "+err.Error()+"\r\n"))
@@ -91,5 +98,73 @@ func (s *Server) terminal(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+}
+
+// withEnvValue replaces an existing variable so the PTY does not inherit a
+// stale SHELL from the Aurora service.
+func withEnvValue(env []string, key, value string) []string {
+	prefix := key + "="
+	out := make([]string, 0, len(env)+1)
+	for _, entry := range env {
+		if !strings.HasPrefix(entry, prefix) {
+			out = append(out, entry)
+		}
+	}
+	return append(out, prefix+value)
+}
+
+// loginShell returns the account's shell from /etc/passwd, then $SHELL and
+// /bin/sh as fallbacks. Aurora authenticates against the host, so the terminal
+// should match what the same user gets over SSH.
+func loginShell(username string) string {
+	if data, err := os.ReadFile("/etc/passwd"); err == nil {
+		if shell := shellFromPasswd(string(data), username); shell != "" {
+			return shell
+		}
+	}
+	if shell := os.Getenv("SHELL"); usableShell(shell) {
+		return shell
+	}
+	return "/bin/sh"
+}
+
+func shellFromPasswd(content, username string) string {
+	for _, line := range strings.Split(content, "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) < 7 || fields[0] != username {
+			continue
+		}
+		shell := fields[6]
+		if usableShell(shell) {
+			return shell
+		}
+	}
+	return ""
+}
+
+func usableShell(path string) bool {
+	if path == "" || !filepath.IsAbs(path) {
+		return false
+	}
+	switch filepath.Base(path) {
+	case "nologin", "false", "sync", "shutdown", "halt":
+		return false
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+		return false
+	}
+	return true
+}
+
+// Not every shell understands -l; known POSIX shells use it to load the same
+// login profile as an SSH session.
+func loginShellArgs(shell string) []string {
+	switch filepath.Base(shell) {
+	case "bash", "zsh", "sh", "dash", "ksh", "mksh", "ash", "fish", "tcsh", "csh":
+		return []string{"-l"}
+	default:
+		return nil
 	}
 }

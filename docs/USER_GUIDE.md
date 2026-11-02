@@ -389,6 +389,7 @@ Missing logs show an explicit message with a retry button instead of a generic e
 ![Terminal](screenshots/terminal.png)
 
 - Interactive **root shell** over an authenticated WebSocket + PTY.
+- Opens the authenticated account's default shell from `/etc/passwd` (login profile), with `/bin/sh` as fallback.
 - Full-page layout, dark theme, no fake window chrome.
 - **New window** opens the standalone terminal page.
 - Keyboard shortcuts are not intercepted by Aurora while the terminal is focused.
