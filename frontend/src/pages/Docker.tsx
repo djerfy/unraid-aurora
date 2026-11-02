@@ -5,7 +5,6 @@ import {
   ArrowDownToLine,
   Boxes,
   Check,
-  Clock3,
   CloudDownload,
   Copy,
   Cpu,
@@ -482,6 +481,7 @@ function ContainerCard({
   const { t } = useI18n();
   const running = container.state === "running";
   const ports = (container.ports ?? []).filter((port) => port.host > 0);
+  const mounts = container.mounts ?? [];
   const memoryUsage = container.memoryLimit ? (container.memory / container.memoryLimit) * 100 : 0;
 
   return (
@@ -598,11 +598,35 @@ function ContainerCard({
         <span className="font-mono">{container.ip || t("No address")}</span>
       </div>
 
-      <div className="relative mt-4 flex items-center gap-2 border-t border-line pt-3">
-        <span className="flex items-center gap-1 text-[9.5px] text-subtle">
-          <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : t("stopped")}
-        </span>
-        <div className="ml-auto flex items-center gap-1">
+      {mounts.length > 0 ? (
+        <div className="relative mt-3 space-y-1 border-t border-line pt-3">
+          <p className="text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Mounts")}</p>
+          {mounts.map((mount) => (
+            <div
+              key={`${mount.source}-${mount.destination}`}
+              className="flex min-w-0 items-center gap-1.5"
+              title={`${mount.source} → ${mount.destination} (${mount.readOnly ? "ro" : "rw"})`}
+            >
+              <span className="min-w-0 flex-1 truncate font-mono text-[9px] text-subtle">{mount.source}</span>
+              <span className="shrink-0 text-[9px] text-subtle">→</span>
+              <span className="shrink-0 font-mono text-[9px] text-muted">{mount.destination}</span>
+              <span
+                className={cn(
+                  "shrink-0 rounded border px-1 py-px font-mono text-[7.5px] uppercase tracking-wide",
+                  mount.readOnly
+                    ? "border-[color-mix(in_srgb,var(--warning)_28%,transparent)] bg-[var(--warning-soft)] text-[var(--warning)]"
+                    : "border-[color-mix(in_srgb,var(--success)_28%,transparent)] bg-[var(--success-soft)] text-[var(--success)]",
+                )}
+              >
+                {mount.readOnly ? "ro" : "rw"}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="relative mt-4 flex items-center justify-end gap-2 border-t border-line pt-3">
+        <div className="flex items-center gap-1">
           {container.updateAvailable ? (
             <IconButton
               label={t("Update image and restart")}
