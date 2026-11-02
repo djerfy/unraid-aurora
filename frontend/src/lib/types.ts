@@ -612,6 +612,7 @@ export type Metrics = {
   diskWrite: number;
   temp: number;
   load: number;
+  power: number;
   cores: number[];
 };
 
@@ -624,6 +625,7 @@ export type MetricPoint = {
   diskRead: number;
   diskWrite: number;
   temp: number;
+  cores: number[];
 };
 
 export type Snapshot = {

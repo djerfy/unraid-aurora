@@ -31,7 +31,7 @@ func NewHub(p provider.Provider) *Hub {
 			h.latest = model.Metrics{
 				T: last.T, CPU: last.CPU, Memory: last.Memory, NetRx: last.NetRx,
 				NetTx: last.NetTx, DiskRead: last.DiskRead, DiskWrite: last.DiskWrite,
-				Temp: last.Temp,
+				Temp: last.Temp, Cores: last.Cores,
 			}
 		}
 	}
@@ -67,6 +67,7 @@ func (h *Hub) sample(ctx context.Context) {
 	h.history = append(h.history, model.MetricPoint{
 		T: m.T, CPU: m.CPU, Memory: m.Memory, NetRx: m.NetRx,
 		NetTx: m.NetTx, DiskRead: m.DiskRead, DiskWrite: m.DiskWrite, Temp: m.Temp,
+		Cores: append([]float64(nil), m.Cores...),
 	})
 	if len(h.history) > 1800 {
 		h.history = h.history[len(h.history)-1800:]

@@ -76,12 +76,14 @@ files and commands as the official webGUI.
 The dashboard is the operational summary of the host:
 
 - **Health score** and detected issues.
-- **CPU** usage, temperature and per-core load.
+- **CPU** usage, temperature, package power and a live graph with one line per core/thread.
+- **GPU** utilisation, VRAM, temperature, power, fan and clocks (first GPU, with a link to the GPU page).
 - **Memory** used/available.
 - **Array** state, capacity and protection.
 - **Network** throughput and interface state.
 - **Workloads**: running containers and VMs.
-- **UPS** state when the built-in `apcupsd` service or the NUT plugin is running.
+- **UPS** state when the built-in `apcupsd` service or the NUT plugin is running. The battery ring
+  shifts from green at 100% to red at 20%, so a low charge is visible at a glance.
 - **Recent notifications** and quick links to the relevant pages.
 
 All widgets refresh automatically (default 5 seconds, configurable in Settings) and are driven by

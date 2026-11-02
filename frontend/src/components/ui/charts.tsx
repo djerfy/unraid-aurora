@@ -18,6 +18,8 @@ export function Ring({
   stroke = 9,
   children,
   trackWidth = 1,
+  color = "var(--accent)",
+  color2 = "var(--accent-2)",
   className,
 }: {
   value: number;
@@ -25,6 +27,8 @@ export function Ring({
   stroke?: number;
   children?: ReactNode;
   trackWidth?: number;
+  color?: string;
+  color2?: string;
   className?: string;
 }) {
   const id = useId().replace(/:/g, "");
@@ -50,8 +54,8 @@ export function Ring({
       >
         <defs>
           <linearGradient id={`ring-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent)" />
-            <stop offset="100%" stopColor="var(--accent-2)" />
+            <stop offset="0%" stopColor={color} />
+            <stop offset="100%" stopColor={color2} />
           </linearGradient>
           <filter id={`glow-${id}`} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="blur" />

@@ -77,6 +77,9 @@ type Live struct {
 	moverOutput    string
 	moverStop      chan struct{}
 	moverCloseOnce sync.Once
+
+	raplLast map[string]raplReading
+	raplAt   time.Time
 }
 
 type cpuSample struct {
@@ -262,6 +265,7 @@ func (l *Live) System(ctx context.Context) (model.System, error) {
 			FreqGHz: cpuInfo.freqGHz,
 			Usage:   metrics.CPU,
 			Temp:    temp,
+			Power:   metrics.Power,
 			PerCore: metrics.Cores,
 			Socket:  cpuInfo.socket,
 			Cache:   cpuInfo.cache,
@@ -821,11 +825,12 @@ func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 	metrics := model.Metrics{
 		T: now.Unix(), CPU: cpuPct, Memory: mem.Usage,
 		NetRx: netRx, NetTx: netTx, DiskRead: diskRead, DiskWrite: diskWrite,
-		Temp: readCPUTemp(), Load: readLoad()[0], Cores: cores,
+		Temp: readCPUTemp(), Load: readLoad()[0], Power: l.cpuPower(now), Cores: cores,
 	}
 	l.history = append(l.history, model.MetricPoint{
 		T: metrics.T, CPU: metrics.CPU, Memory: metrics.Memory, NetRx: netRx,
 		NetTx: netTx, DiskRead: diskRead, DiskWrite: diskWrite, Temp: metrics.Temp,
+		Cores: append([]float64(nil), cores...),
 	})
 	if len(l.history) > historyLength {
 		l.history = l.history[len(l.history)-historyLength:]

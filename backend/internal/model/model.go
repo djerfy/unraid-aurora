@@ -681,18 +681,20 @@ type Metrics struct {
 	DiskWrite float64   `json:"diskWrite"`
 	Temp      float64   `json:"temp"`
 	Load      float64   `json:"load"`
+	Power     float64   `json:"power"`
 	Cores     []float64 `json:"cores"`
 }
 
 type MetricPoint struct {
-	T         int64   `json:"t"`
-	CPU       float64 `json:"cpu"`
-	Memory    float64 `json:"memory"`
-	NetRx     float64 `json:"netRx"`
-	NetTx     float64 `json:"netTx"`
-	DiskRead  float64 `json:"diskRead"`
-	DiskWrite float64 `json:"diskWrite"`
-	Temp      float64 `json:"temp"`
+	T         int64     `json:"t"`
+	CPU       float64   `json:"cpu"`
+	Memory    float64   `json:"memory"`
+	NetRx     float64   `json:"netRx"`
+	NetTx     float64   `json:"netTx"`
+	DiskRead  float64   `json:"diskRead"`
+	DiskWrite float64   `json:"diskWrite"`
+	Temp      float64   `json:"temp"`
+	Cores     []float64 `json:"cores"`
 }
 
 type Snapshot struct {

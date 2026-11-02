@@ -12,8 +12,10 @@ import {
   Clock3,
   Cpu,
   FolderTree,
+  Fan,
   HardDrive,
   MemoryStick,
+  Microchip,
   Network as NetworkIcon,
   RefreshCw,
   ShieldCheck,
@@ -50,7 +52,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
 
   if (!snapshot) return null;
-  const { system, array, disks, containers, shares, network, ups, notifications, pools } = snapshot;
+  const { system, array, disks, containers, shares, network, ups, notifications, pools, gpus } = snapshot;
 
   const runningContainers = containers.filter((c) => c.state === "running");
   const updates = containers.filter((c) => c.updateAvailable).length;
@@ -63,6 +65,20 @@ export function DashboardPage() {
 
   const cpu = metrics?.cpu ?? system.cpu.usage;
   const memory = metrics?.memory ?? system.memory.usage;
+  const packagePower = metrics?.power || system.cpu.power;
+  const gpu = gpus[0] ?? null;
+  const gpuCount = gpus.length;
+  const gpuVram = gpu && gpu.memoryTotal > 0 ? (gpu.memoryUsed / gpu.memoryTotal) * 100 : 0;
+  const coreCount = Math.max(metrics?.cores.length ?? 0, system.cpu.perCore.length, system.cpu.threads);
+  const coreSeries = Array.from({ length: coreCount }, (_, index) => ({
+    values: points.map((point) => point.cores?.[index] ?? 0),
+    color: coreColor(index, coreCount),
+    label: `Core ${index}`,
+  }));
+  const hasCoreHistory = points.some((point) => (point.cores?.length ?? 0) > 0);
+  const cpuSeries = hasCoreHistory
+    ? coreSeries
+    : [{ values: cpuHistory, color: "var(--accent)", label: "CPU" }];
   const primaryShare = [...shares].sort((a, b) => b.used - a.used).slice(0, 4);
   const issueCount = system.health.issues.length;
   const arrayDisks = disks
@@ -144,7 +160,7 @@ export function DashboardPage() {
 
       <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
         {/* Health ---------------------------------------------------------- */}
-        <Card className="card-pad md:col-span-2 xl:col-span-4">
+        <Card className="card-pad md:col-span-2 xl:col-span-3">
           <CardHeader
             title={t("System health")}
             icon={<ShieldCheck className="size-4" />}
@@ -187,7 +203,7 @@ export function DashboardPage() {
         </Card>
 
         {/* CPU ------------------------------------------------------------- */}
-        <Card className="card-pad md:col-span-2 xl:col-span-5">
+        <Card className="card-pad md:col-span-2 xl:col-span-4">
           <CardHeader
             title={t("Processor")}
             icon={<Cpu className="size-4" />}
@@ -212,32 +228,39 @@ export function DashboardPage() {
           </div>
           <div className="-mx-1 mt-2">
             <AreaChart
-              series={[{ values: cpuHistory, color: "var(--accent)", label: "CPU" }]}
+              series={cpuSeries}
               timestamps={timestamps}
-              height={78}
+              height={88}
               domain={[0, 100]}
+              fill={false}
+              showCursor={false}
+              strokeWidth={1.3}
               formatValue={(value) => `${value.toFixed(1)}%`}
             />
           </div>
-          <div className="mt-2">
+          <div className="mt-1 flex items-center justify-between text-[8.5px] text-subtle">
+            <span>{hasCoreHistory ? t("One line per core") : t("CPU load")}</span>
+            <span className="num">{coreCount} {t("threads")}</span>
+          </div>
+          <div className="mt-1.5">
             <CoreMatrix values={metrics?.cores ?? system.cpu.perCore} />
           </div>
           <div className="mt-3 grid grid-cols-3 divide-x divide-line border-t border-line pt-3">
             <MiniStat label={t("Temperature")} value={`${Math.round(system.cpu.temp)}°C`} icon={<Thermometer className="size-3" />} />
-            <MiniStat label={t("Package power")} value={`${Math.round(system.cpu.power)} W`} icon={<Zap className="size-3" />} />
+            <MiniStat label={t("CPU power")} value={`${Math.round(packagePower)} W`} icon={<Zap className="size-3" />} />
             <MiniStat label={t("Load 1m")} value={(system.load[0] ?? 0).toFixed(2)} />
           </div>
         </Card>
 
         {/* Memory ---------------------------------------------------------- */}
-        <Card className="card-pad md:col-span-1 xl:col-span-3">
+        <Card className="card-pad md:col-span-1 xl:col-span-2">
           <CardHeader
             title={t("Memory")}
             icon={<MemoryStick className="size-4" />}
             trailing={<span className="chip">{formatMemory(system.memory.total)}</span>}
           />
           <div className="mt-4 flex justify-center">
-            <Ring value={memory} size={108} stroke={7}>
+            <Ring value={memory} size={88} stroke={6}>
               <div className="text-center">
                 <p className="num text-[23px] font-semibold leading-none text-ink">{Math.round(memory)}%</p>
                 <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">{t("used")}</p>
@@ -252,6 +275,64 @@ export function DashboardPage() {
           <p className="mt-3 border-t border-line pt-2.5 text-[9.5px] text-subtle">
             {system.memory.type} · {system.memory.speed}
           </p>
+        </Card>
+
+        {/* GPU -------------------------------------------------------------- */}
+        <Card className="card-pad md:col-span-1 xl:col-span-3">
+          <CardHeader
+            title={t("GPU")}
+            icon={<Microchip className="size-4" />}
+            action={
+              <button type="button" onClick={() => navigate("/gpus")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
+                {t("Details")}
+              </button>
+            }
+          />
+          {gpu ? (
+            <>
+              <div className="mt-4 flex items-center gap-3">
+                <Ring value={gpu.utilization} size={78} stroke={6}>
+                  <div className="text-center">
+                    <p className="num text-[18px] font-semibold leading-none text-ink">{Math.round(gpu.utilization)}%</p>
+                    <p className="mt-1 text-[8px] uppercase tracking-[0.1em] text-subtle">{t("utilisation")}</p>
+                  </div>
+                </Ring>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="truncate text-[11px] font-semibold text-ink" title={gpu.name}>{gpu.name}</p>
+                  <div className="flex items-center justify-between gap-1 text-[9px]">
+                    <span className="text-muted">{t("VRAM")}</span>
+                    <span className="num text-soft">{formatBytes(gpu.memoryUsed)} / {formatBytes(gpu.memoryTotal)}</span>
+                  </div>
+                  <Progress value={gpuVram} height={4} tone="var(--violet)" />
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px] text-subtle">
+                    <span className="flex items-center gap-1">
+                      <Thermometer className="size-2.5" /> {gpu.temperature ? `${Math.round(gpu.temperature)}°C` : "—"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Zap className="size-2.5" /> {gpu.power.toFixed(0)} W
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Fan className="size-2.5" /> {gpu.fan ? `${Math.round(gpu.fan)}%` : "—"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Cpu className="size-2.5" /> {gpu.clockMhz ? `${gpu.clockMhz} MHz` : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-2 truncate border-t border-line pt-2 text-[9px] text-subtle">
+                {t("Power limit {limit} · memory clock {clock}", {
+                  limit: gpu.powerLimit ? `${gpu.powerLimit.toFixed(0)} W` : "—",
+                  clock: gpu.memoryClockMhz ? `${gpu.memoryClockMhz} MHz` : "—",
+                })}
+              </p>
+              {gpuCount > 1 ? (
+                <p className="mt-1 text-[9px] text-subtle">{t("+{count} more GPU", { count: gpuCount - 1 })}</p>
+              ) : null}
+            </>
+          ) : (
+            <p className="py-10 text-center text-[10px] text-muted">{t("No GPU detected")}</p>
+          )}
         </Card>
 
         {/* Array ------------------------------------------------------------ */}
@@ -392,7 +473,13 @@ export function DashboardPage() {
           {ups.present ? (
             <>
               <div className="mt-4 flex items-center gap-4">
-                <Ring value={ups.battery} size={92} stroke={7}>
+                <Ring
+                  value={ups.battery}
+                  size={92}
+                  stroke={7}
+                  color={batteryColor(ups.battery, 55)}
+                  color2={batteryColor(ups.battery, 42)}
+                >
                   <div className="text-center">
                     <p className="num text-[20px] font-semibold leading-none text-ink">{Math.round(ups.battery)}%</p>
                     <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-subtle">{t("battery")}</p>
@@ -658,6 +745,22 @@ function DiskBay({ disk, cache = false }: { disk: Disk; cache?: boolean }) {
 
 function metric(value: number) {
   return value.toFixed(1);
+}
+
+// 100% is green, 20% is red; below 20% stays red.
+function batteryColor(percent: number, lightness: number) {
+  const ratio = (Math.min(100, Math.max(20, percent)) - 20) / 80;
+  return `hsl(${Math.round(ratio * 140)} 72% ${lightness}%)`;
+}
+
+// Golden-angle hues keep adjacent cores visually distinct, even on 32-thread CPUs.
+function coreColor(index: number, total: number) {
+  if (total <= 10) {
+    return ["#5AA9FF", "#3DDC97", "#FACC15", "#FB923C", "#F472B6", "#C084FC", "#38BDF8", "#2DD4BF", "#A3E635", "#F87171"][index % 10];
+  }
+  const hue = 192 + ((index * 137.508) % 148);
+  const lightness = 56 + (index % 3) * 6;
+  return `hsl(${hue.toFixed(0)} 74% ${lightness}%)`;
 }
 
 function formatRuntime(minutes: number) {
