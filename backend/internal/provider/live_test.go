@@ -32,6 +32,7 @@ flashGUID="0781-5583"
 `)
 	writeFixture(t, stateDir, "disks.ini", `["parity"]
 device="sda"
+id="ST18000NM000J-2TV103_ZR585CPY"
 type="Parity"
 fsType="xfs"
 fsSize="19531250000"
@@ -51,11 +52,11 @@ temp="35"
 smart="passed"
 color="green-on"
 rotational="1"
-deviceSb="WDC WD180EDGZ-11"
-serial="2LG7K8PZ"
+id="WDC_WD180EDGZ-11_2LG7K8PZ"
 
 ["disk2"]
 device="sdd"
+id="WDC_WD140EDGZ-11_ABC123"
 type="Data"
 fsType="xfs"
 fsSize="7812500000"
@@ -134,6 +135,13 @@ func TestLiveReadsUnraidState(t *testing.T) {
 	}
 	if disks[0].Name != "disk1" && disks[0].Name != "parity" {
 		t.Fatalf("unexpected disk order: %+v", disks)
+	}
+	for _, disk := range disks {
+		if disk.Name == "disk1" {
+			if disk.Brand != "WDC" || disk.Model != "WD180EDGZ-11" || disk.Serial != "2LG7K8PZ" {
+				t.Fatalf("unexpected disk identity: %+v", disk)
+			}
+		}
 	}
 	var foundWarning bool
 	for _, disk := range disks {

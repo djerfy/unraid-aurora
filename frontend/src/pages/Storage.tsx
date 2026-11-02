@@ -71,6 +71,10 @@ const MOVER_PHASES = [
   { key: "finishing", label: "Finishing" },
 ];
 
+function diskHardware(disk: Disk): string {
+  return [disk.brand, disk.model].filter(Boolean).join(" ") || disk.device;
+}
+
 const CACHE_MODES: Record<string, string> = {
   no: "No",
   yes: "Yes",
@@ -433,7 +437,7 @@ export function StoragePage() {
                           <HardDrive className="size-4 text-subtle" />
                           <div className="min-w-0 flex-1">
                             <p className="text-[11.5px] font-medium text-soft">{disk.name}</p>
-                            <p className="truncate text-[9.5px] text-subtle">{disk.model}</p>
+                            <p className="truncate text-[9.5px] text-subtle">{diskHardware(disk)}</p>
                           </div>
                           <span className="num text-[10px] text-muted">{disk.temp}°C</span>
                           <Badge tone={disk.smart === "passed" ? "success" : "warning"}>
@@ -651,7 +655,7 @@ export function StoragePage() {
         open={Boolean(selectedDisk)}
         onClose={() => setSelectedDisk(null)}
         title={selectedDisk ? `${selectedDisk.name} · ${selectedDisk.device}` : ""}
-        subtitle={selectedDisk?.model}
+        subtitle={selectedDisk ? diskHardware(selectedDisk) : ""}
         footer={
           selectedDisk && selectedDisk.type !== "Parity" ? (
             <Button
@@ -862,7 +866,7 @@ function DiskGroup({
                     <span className="text-[12px] font-medium text-ink">{disk.name}</span>
                     <span className="font-mono text-[9px] text-subtle">/dev/{disk.device}</span>
                   </span>
-                  <span className="block max-w-[230px] truncate text-[9.5px] text-subtle">{disk.model}</span>
+                  <span className="block max-w-[230px] truncate text-[9.5px] text-subtle">{diskHardware(disk)}</span>
                 </span>
               </button>
 

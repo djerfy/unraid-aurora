@@ -15,7 +15,7 @@ func diskBrand(model string) string {
 	upper := strings.ToUpper(value)
 	for _, brand := range diskBrands {
 		prefix := strings.ToUpper(brand)
-		if upper == prefix || strings.HasPrefix(upper, prefix+" ") {
+		if upper == prefix || strings.HasPrefix(upper, prefix+" ") || strings.HasPrefix(upper, prefix+"_") {
 			return brand
 		}
 	}
