@@ -556,9 +556,16 @@ export type UPS = {
   onBattery: boolean;
 };
 
-export type StorageLayout = {
+export type StorageView = {
+  id: string;
+  name: string;
+  orientation: "vertical" | "horizontal";
   bays: number;
   assignments: Record<string, number>;
+};
+
+export type StorageLayout = {
+  views: StorageView[];
   updated: string;
 };
 

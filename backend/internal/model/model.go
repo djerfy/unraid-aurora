@@ -620,10 +620,17 @@ type UPS struct {
 	OnBattery     bool    `json:"onBattery"`
 }
 
-type StorageLayout struct {
+type StorageView struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Orientation string         `json:"orientation"`
 	Bays        int            `json:"bays"`
 	Assignments map[string]int `json:"assignments"`
-	Updated     time.Time      `json:"updated"`
+}
+
+type StorageLayout struct {
+	Views   []StorageView `json:"views"`
+	Updated time.Time     `json:"updated"`
 }
 
 type Settings struct {

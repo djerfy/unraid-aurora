@@ -15,12 +15,52 @@ import (
 const (
 	defaultStorageBays = 12
 	maxStorageBays     = 48
+	maxStorageViews    = 8
 )
+
+// storageLayoutFile also decodes the single-view format used before multiple
+// chassis views existed.
+type storageLayoutFile struct {
+	Views       []model.StorageView `json:"views"`
+	Bays        int                 `json:"bays"`
+	Assignments map[string]int      `json:"assignments"`
+	Updated     time.Time           `json:"updated"`
+}
+
+func defaultStorageView() model.StorageView {
+	return model.StorageView{
+		ID:          "view-tower",
+		Name:        "Tower 1",
+		Orientation: "vertical",
+		Bays:        defaultStorageBays,
+		Assignments: map[string]int{},
+	}
+}
+
+func normalizeStorageViews(views []model.StorageView) []model.StorageView {
+	out := make([]model.StorageView, 0, len(views))
+	for _, view := range views {
+		view.ID = strings.TrimSpace(view.ID)
+		view.Name = strings.TrimSpace(view.Name)
+		view.Orientation = strings.ToLower(strings.TrimSpace(view.Orientation))
+		if view.Orientation != "horizontal" && view.Orientation != "vertical" {
+			view.Orientation = "vertical"
+		}
+		if view.Bays < 4 || view.Bays > maxStorageBays {
+			view.Bays = defaultStorageBays
+		}
+		if view.Assignments == nil {
+			view.Assignments = map[string]int{}
+		}
+		out = append(out, view)
+	}
+	return out
+}
 
 // StorageLayout is a visual-only map from disk names to chassis bays. It never
 // changes Unraid's array configuration.
 func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
-	layout := model.StorageLayout{Bays: defaultStorageBays, Assignments: map[string]int{}}
+	layout := model.StorageLayout{Views: []model.StorageView{defaultStorageView()}}
 	if l.dataDir == "" {
 		return layout, nil
 	}
@@ -31,39 +71,79 @@ func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
 		}
 		return layout, fmt.Errorf("read storage layout: %w", err)
 	}
-	if err := json.Unmarshal(raw, &layout); err != nil {
+	var file storageLayoutFile
+	if err := json.Unmarshal(raw, &file); err != nil {
 		return layout, fmt.Errorf("decode storage layout: %w", err)
 	}
-	if layout.Bays < 4 || layout.Bays > maxStorageBays {
-		layout.Bays = defaultStorageBays
-	}
-	if layout.Assignments == nil {
-		layout.Assignments = map[string]int{}
+	layout.Updated = file.Updated
+	layout.Views = normalizeStorageViews(file.Views)
+	if len(layout.Views) == 0 {
+		if file.Bays > 0 {
+			// Migrate the original single-view layout.
+			layout.Views = []model.StorageView{{
+				ID:          "view-main",
+				Name:        "Main case",
+				Orientation: "horizontal",
+				Bays:        file.Bays,
+				Assignments: file.Assignments,
+			}}
+			if layout.Views[0].Assignments == nil {
+				layout.Views[0].Assignments = map[string]int{}
+			}
+		} else {
+			layout.Views = []model.StorageView{defaultStorageView()}
+		}
 	}
 	return layout, nil
 }
 
 func (l *Live) SaveStorageLayout(ctx context.Context, layout model.StorageLayout) error {
-	if layout.Bays < 4 || layout.Bays > maxStorageBays {
-		return fmt.Errorf("bay count must be between 4 and %d", maxStorageBays)
+	if len(layout.Views) < 1 || len(layout.Views) > maxStorageViews {
+		return fmt.Errorf("views must be between 1 and %d", maxStorageViews)
 	}
-	seen := make(map[int]string, len(layout.Assignments))
-	clean := make(map[string]int, len(layout.Assignments))
-	for name, bay := range layout.Assignments {
-		name = strings.TrimSpace(name)
-		if name == "" || len(name) > 128 {
-			return fmt.Errorf("invalid disk name")
+	seenIDs := map[string]bool{}
+	seenDisks := map[string]bool{}
+	views := make([]model.StorageView, 0, len(layout.Views))
+	for _, view := range layout.Views {
+		view.ID = strings.TrimSpace(view.ID)
+		view.Name = strings.TrimSpace(view.Name)
+		if view.ID == "" || len(view.ID) > 64 || seenIDs[view.ID] {
+			return fmt.Errorf("each view needs a unique id")
 		}
-		if bay < 0 || bay >= layout.Bays {
-			return fmt.Errorf("bay %d is outside the chassis", bay)
+		seenIDs[view.ID] = true
+		if view.Name == "" || len(view.Name) > 64 {
+			return fmt.Errorf("each view needs a name")
 		}
-		if previous, ok := seen[bay]; ok {
-			return fmt.Errorf("disk %s and %s share bay %d", previous, name, bay)
+		if view.Orientation != "vertical" && view.Orientation != "horizontal" {
+			return fmt.Errorf("orientation must be vertical or horizontal")
 		}
-		seen[bay] = name
-		clean[name] = bay
+		if view.Bays < 4 || view.Bays > maxStorageBays {
+			return fmt.Errorf("bay count must be between 4 and %d", maxStorageBays)
+		}
+		usedBays := make(map[int]string, len(view.Assignments))
+		clean := make(map[string]int, len(view.Assignments))
+		for name, bay := range view.Assignments {
+			name = strings.TrimSpace(name)
+			if name == "" || len(name) > 128 {
+				return fmt.Errorf("invalid disk name")
+			}
+			if seenDisks[name] {
+				return fmt.Errorf("disk %s is assigned to more than one view", name)
+			}
+			if bay < 0 || bay >= view.Bays {
+				return fmt.Errorf("bay %d is outside view %s", bay, view.Name)
+			}
+			if previous, ok := usedBays[bay]; ok {
+				return fmt.Errorf("disk %s and %s share bay %d", previous, name, bay)
+			}
+			usedBays[bay] = name
+			seenDisks[name] = true
+			clean[name] = bay
+		}
+		view.Assignments = clean
+		views = append(views, view)
 	}
-	layout.Assignments = clean
+	layout.Views = views
 	layout.Updated = time.Now().UTC()
 
 	if l.dataDir == "" {

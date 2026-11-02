@@ -1,4 +1,13 @@
 const location: Record<string, string> = {
+  "Add tower": "Ajouter une tour",
+  "Add server": "Ajouter un serveur",
+  "Tower": "Tour",
+  "Server": "Serveur",
+  "Switch orientation": "Changer l'orientation",
+  "View name": "Nom de la vue",
+  "Remove view": "Supprimer la vue",
+  "Remove {name}? Its disks become unplaced.": "Supprimer {name} ? Ses disques redeviendront non placés.",
+  "{count} views": "{count} vues",
   "Location": "Emplacement",
   "Drag a disk into a bay, or select a disk then click a bay.":
     "Faites glisser un disque dans une baie, ou sélectionnez un disque puis cliquez sur une baie.",
