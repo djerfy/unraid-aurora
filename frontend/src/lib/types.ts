@@ -625,7 +625,6 @@ export type MetricPoint = {
   diskRead: number;
   diskWrite: number;
   temp: number;
-  cores: number[];
 };
 
 export type Snapshot = {

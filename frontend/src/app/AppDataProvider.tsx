@@ -88,7 +88,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               diskRead: next.diskRead,
               diskWrite: next.diskWrite,
               temp: next.temp,
-              cores: next.cores,
             },
           ]),
         );

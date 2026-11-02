@@ -686,15 +686,14 @@ type Metrics struct {
 }
 
 type MetricPoint struct {
-	T         int64     `json:"t"`
-	CPU       float64   `json:"cpu"`
-	Memory    float64   `json:"memory"`
-	NetRx     float64   `json:"netRx"`
-	NetTx     float64   `json:"netTx"`
-	DiskRead  float64   `json:"diskRead"`
-	DiskWrite float64   `json:"diskWrite"`
-	Temp      float64   `json:"temp"`
-	Cores     []float64 `json:"cores"`
+	T         int64   `json:"t"`
+	CPU       float64 `json:"cpu"`
+	Memory    float64 `json:"memory"`
+	NetRx     float64 `json:"netRx"`
+	NetTx     float64 `json:"netTx"`
+	DiskRead  float64 `json:"diskRead"`
+	DiskWrite float64 `json:"diskWrite"`
+	Temp      float64 `json:"temp"`
 }
 
 type Snapshot struct {

@@ -69,16 +69,7 @@ export function DashboardPage() {
   const gpu = gpus[0] ?? null;
   const gpuCount = gpus.length;
   const gpuVram = gpu && gpu.memoryTotal > 0 ? (gpu.memoryUsed / gpu.memoryTotal) * 100 : 0;
-  const coreCount = Math.max(metrics?.cores.length ?? 0, system.cpu.perCore.length, system.cpu.threads);
-  const coreSeries = Array.from({ length: coreCount }, (_, index) => ({
-    values: points.map((point) => point.cores?.[index] ?? 0),
-    color: coreColor(index, coreCount),
-    label: `Core ${index}`,
-  }));
-  const hasCoreHistory = points.some((point) => (point.cores?.length ?? 0) > 0);
-  const cpuSeries = hasCoreHistory
-    ? coreSeries
-    : [{ values: cpuHistory, color: "var(--accent)", label: "CPU" }];
+
   const primaryShare = [...shares].sort((a, b) => b.used - a.used).slice(0, 4);
   const issueCount = system.health.issues.length;
   const arrayDisks = disks
@@ -228,21 +219,14 @@ export function DashboardPage() {
           </div>
           <div className="-mx-1 mt-2">
             <AreaChart
-              series={cpuSeries}
+              series={[{ values: cpuHistory, color: "var(--accent)", label: "CPU" }]}
               timestamps={timestamps}
-              height={88}
+              height={78}
               domain={[0, 100]}
-              fill={false}
-              showCursor={false}
-              strokeWidth={1.3}
               formatValue={(value) => `${value.toFixed(1)}%`}
             />
           </div>
-          <div className="mt-1 flex items-center justify-between text-[8.5px] text-subtle">
-            <span>{hasCoreHistory ? t("One line per core") : t("CPU load")}</span>
-            <span className="num">{coreCount} {t("threads")}</span>
-          </div>
-          <div className="mt-1.5">
+          <div className="mt-2">
             <CoreMatrix values={metrics?.cores ?? system.cpu.perCore} />
           </div>
           <div className="mt-3 grid grid-cols-3 divide-x divide-line border-t border-line pt-3">
@@ -751,16 +735,6 @@ function metric(value: number) {
 function batteryColor(percent: number, lightness: number) {
   const ratio = (Math.min(100, Math.max(20, percent)) - 20) / 80;
   return `hsl(${Math.round(ratio * 140)} 72% ${lightness}%)`;
-}
-
-// Golden-angle hues keep adjacent cores visually distinct, even on 32-thread CPUs.
-function coreColor(index: number, total: number) {
-  if (total <= 10) {
-    return ["#5AA9FF", "#3DDC97", "#FACC15", "#FB923C", "#F472B6", "#C084FC", "#38BDF8", "#2DD4BF", "#A3E635", "#F87171"][index % 10];
-  }
-  const hue = 192 + ((index * 137.508) % 148);
-  const lightness = 56 + (index % 3) * 6;
-  return `hsl(${hue.toFixed(0)} 74% ${lightness}%)`;
 }
 
 function formatRuntime(minutes: number) {

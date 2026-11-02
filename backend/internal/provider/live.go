@@ -830,7 +830,6 @@ func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 	l.history = append(l.history, model.MetricPoint{
 		T: metrics.T, CPU: metrics.CPU, Memory: metrics.Memory, NetRx: netRx,
 		NetTx: netTx, DiskRead: diskRead, DiskWrite: diskWrite, Temp: metrics.Temp,
-		Cores: append([]float64(nil), cores...),
 	})
 	if len(l.history) > historyLength {
 		l.history = l.history[len(l.history)-historyLength:]

@@ -262,7 +262,7 @@ Deep dives:
 
 | Area | Aurora |
 |---|---|
-| Dashboard | Health score, per-core CPU graph and package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
+| Dashboard | Health score, CPU load graph and per-core matrix, package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
 | Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, autostart toggle, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, autostart toggle, read-only libvirt XML view, lifecycle actions and a VNC/SPICE console |
