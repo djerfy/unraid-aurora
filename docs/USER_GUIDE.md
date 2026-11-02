@@ -286,11 +286,11 @@ new container starts at zero and fills in on the next refresh.
 
 ### Network calls
 
-The **Network calls** tab lists the external sockets of a selected running container:
+The **Network calls** tab lists the network sockets of a selected running container:
 
 - Choose a container in the selector; the view stays empty until one is selected.
 - Aurora enters the container network namespace with `nsenter` and reads `ss -tunap`.
-- Only public remote addresses are shown; loopback, private, link-local and listening sockets are hidden.
+- All remote addresses are shown, including private ranges and loopback; link-local, multicast and listening sockets are hidden.
 - Each row shows the remote IP/port, optional country/city, process, protocol, state and local endpoint.
 - The same table is available in the container drawer opened from the list or the resource map.
 - The query refreshes every five seconds and is cached locally for the selected container.
@@ -303,7 +303,7 @@ sends addresses to an external geolocation API.
 ![Container details](screenshots/docker-drawer.png)
 
 The drawer shows the real icon, state, image, repository/tag, category, restart policy, network, IP,
-uptime, memory, published ports, external network calls and live container logs with reload/copy.
+uptime, memory, published ports, network calls and live container logs with reload/copy.
 
 Actions: start, restart, stop, open WebUI, update image, edit settings, remove.
 

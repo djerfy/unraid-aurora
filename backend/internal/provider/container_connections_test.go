@@ -14,8 +14,8 @@ udp   ESTAB  0      0      172.17.0.2:50000  1.1.1.1:53 users:(("app",pid=77,fd=
 tcp6  ESTAB  0      0      [::ffff:172.17.0.2]:54546 [2606:4700:4700::1111]:443 users:(("app",pid=88,fd=5))
 tcp   ESTAB  0      0      172.17.0.2:54547  8.8.8.8:53 users:(("app",pid=66,fd=6))`
 	connections := parseSSOutput(raw, nil)
-	if len(connections) != 4 {
-		t.Fatalf("connections = %+v, want 4 external connections", connections)
+	if len(connections) != 5 {
+		t.Fatalf("connections = %+v, want 5 remote connections", connections)
 	}
 	first := connections[0]
 	if first.RemoteAddress != "1.1.1.1" || first.RemotePort != 53 || first.Process != "app" || first.PID != 77 {
@@ -51,24 +51,37 @@ func TestParseSSAddress(t *testing.T) {
 	}
 }
 
-func TestIsExternalIP(t *testing.T) {
+func TestIsRemoteAddress(t *testing.T) {
 	cases := map[string]bool{
 		"8.8.8.8":         true,
 		"1.1.1.1":         true,
 		"2606:4700::1111": true,
-		"10.0.0.5":        false,
-		"172.16.4.2":      false,
-		"192.168.1.10":    false,
-		"127.0.0.1":       false,
+		"10.0.0.5":        true,
+		"172.16.4.2":      true,
+		"192.168.1.10":    true,
+		"127.0.0.1":       true,
+		"::1":             true,
 		"169.254.1.1":     false,
 		"0.0.0.0":         false,
-		"::1":             false,
 		"fe80::1":         false,
-		"fc00::1":         false,
+		"ff02::1":         false,
 	}
 	for value, want := range cases {
-		if got := isExternalIP(net.ParseIP(value)); got != want {
-			t.Errorf("isExternalIP(%s) = %v, want %v", value, got, want)
+		if got := isRemoteAddress(net.ParseIP(value)); got != want {
+			t.Errorf("isRemoteAddress(%s) = %v, want %v", value, got, want)
+		}
+	}
+}
+
+func TestIsPublicAddress(t *testing.T) {
+	for _, value := range []string{"8.8.8.8", "2606:4700::1111"} {
+		if !isPublicAddress(net.ParseIP(value)) {
+			t.Errorf("%s should be public", value)
+		}
+	}
+	for _, value := range []string{"10.0.0.5", "192.168.1.10", "127.0.0.1", "::1"} {
+		if isPublicAddress(net.ParseIP(value)) {
+			t.Errorf("%s should not be public", value)
 		}
 	}
 }

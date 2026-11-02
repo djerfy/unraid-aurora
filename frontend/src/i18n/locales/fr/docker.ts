@@ -128,21 +128,21 @@ const docker: Record<string, string> = {
   "Recreate container": "Recréer le conteneur",
   "Remove previous container": "Retirer le conteneur précédent",
   "Network calls": "Appels réseau",
-  "External network calls": "Appels réseau externes",
-  "Choose a running container to inspect its external network calls.":
-    "Choisissez un conteneur en cours d'exécution pour inspecter ses appels réseau externes.",
+  "Choose a running container to inspect its network calls.":
+    "Choisissez un conteneur en cours d'exécution pour inspecter ses appels réseau.",
   "Select a container": "Sélectionnez un conteneur",
   "Select a container…": "Sélectionnez un conteneur…",
   "Inspecting connections…": "Inspection des connexions…",
-  "No external connection detected": "Aucune connexion externe détectée",
-  "The container is running but has no public remote socket right now.":
-    "Le conteneur est en cours d'exécution mais n'a aucune socket distante publique pour le moment.",
+  "No network connection detected": "Aucune connexion réseau détectée",
+  "The container is running but has no remote socket right now.":
+    "Le conteneur est en cours d'exécution mais n'a aucune socket distante pour le moment.",
   "Observed with ss inside the container network namespace. Country and city are optional via GeoIP.":
     "Observé avec ss dans l'espace réseau du conteneur. Le pays et la ville sont optionnels via GeoIP.",
-  "Outbound connections observed with ss inside the selected container. Empty until a container is selected; refresh every 5 seconds.":
-    "Connexions sortantes observées avec ss dans le conteneur sélectionné. Vide tant qu'aucun conteneur n'est sélectionné ; rafraîchissement toutes les 5 secondes.",
-  "Only public remote addresses are shown. Country and city are optional via GeoIP.":
-    "Seules les adresses distantes publiques sont affichées. Le pays et la ville sont optionnels via GeoIP.",
+  "Network connections observed with ss inside the selected container. Empty until a container is selected; refresh every 5 seconds.":
+    "Connexions réseau observées avec ss dans le conteneur sélectionné. Vide tant qu'aucun conteneur n'est sélectionné ; rafraîchissement toutes les 5 secondes.",
+  "All remote addresses are shown, including private and loopback. Listening sockets are excluded; country and city are optional via GeoIP.":
+    "Toutes les adresses distantes sont affichées, y compris privées et loopback. Les sockets en écoute sont exclues ; le pays et la ville sont optionnels via GeoIP.",
+  "Private network": "Réseau privé",
   "Remote": "Distant",
   "Process": "Processus",
   "{count} connections": "{count} connexions",
@@ -153,8 +153,8 @@ const docker: Record<string, string> = {
   "the container is not running": "le conteneur n'est pas en cours d'exécution",
   "ss could not inspect the container network namespace": "ss n'a pas pu inspecter l'espace réseau du conteneur",
   "the container processes could not be mapped": "les processus du conteneur n'ont pas pu être associés",
-  "Click a bubble to open details and external network calls.":
-    "Cliquez sur une bulle pour ouvrir les détails et les appels réseau externes.",
+  "Click a bubble to open details and network calls.":
+    "Cliquez sur une bulle pour ouvrir les détails et les appels réseau.",
 };
 
 export default docker;

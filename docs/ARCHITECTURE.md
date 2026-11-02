@@ -134,7 +134,7 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/pools` | Cache/boot pools |
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |
-| `GET` | `/api/v1/docker/containers/{id}/connections` | External sockets observed with `ss` |
+| `GET` | `/api/v1/docker/containers/{id}/connections` | Network sockets observed with `ss` (public, private and loopback) |
 | `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
 | `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
 | `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |

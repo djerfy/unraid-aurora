@@ -126,7 +126,7 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 			continue
 		}
 		ip := net.ParseIP(remoteAddress)
-		if !isExternalIP(ip) {
+		if !isRemoteAddress(ip) {
 			continue
 		}
 		process, pid := parseSSProcess(strings.Join(fields[6:], " "))
@@ -188,12 +188,19 @@ func parseSSProcess(line string) (string, int) {
 	return match[1], pid
 }
 
-func isExternalIP(ip net.IP) bool {
-	if ip == nil || ip.IsUnspecified() || ip.IsLoopback() || ip.IsPrivate() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() {
+// isRemoteAddress keeps every real peer, including private ranges and
+// loopback. Only listening, unspecified, link-local, multicast and broadcast
+// addresses are not meaningful connections.
+func isRemoteAddress(ip net.IP) bool {
+	if ip == nil || ip.IsUnspecified() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() {
 		return false
 	}
 	return !ip.Equal(net.IPv4bcast)
+}
+
+func isPublicAddress(ip net.IP) bool {
+	return isRemoteAddress(ip) && !ip.IsLoopback() && !ip.IsPrivate()
 }
 
 func (l *Live) enrichConnectionsGeo(ctx context.Context, connections []model.ContainerConnection) {
@@ -206,7 +213,7 @@ func (l *Live) enrichConnectionsGeo(ctx context.Context, connections []model.Con
 	seen := map[string]bool{}
 	for i := range connections {
 		ip := connections[i].RemoteAddress
-		if seen[ip] {
+		if seen[ip] || !isPublicAddress(net.ParseIP(ip)) {
 			continue
 		}
 		if len(seen) >= 32 || geoCtx.Err() != nil {

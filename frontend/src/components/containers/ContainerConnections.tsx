@@ -24,9 +24,18 @@ function endpoint(address: string, port: number): string {
   return address.includes(":") ? `[${address}]:${port}` : `${address}:${port}`;
 }
 
-function locationLabel(connection: ContainerConnection): string {
+function isPrivateAddress(address: string): boolean {
+  return address.startsWith("10.") || address.startsWith("127.") || address.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(address) || address === "::1" ||
+    address.startsWith("fc") || address.startsWith("fd") || address.startsWith("fe80:");
+}
+
+function locationLabel(connection: ContainerConnection, privateLabel: string): string {
   if (connection.country && connection.city) return `${connection.country} · ${connection.city}`;
-  return connection.country || connection.city || "—";
+  if (connection.country) return connection.country;
+  if (connection.city) return connection.city;
+  if (isPrivateAddress(connection.remoteAddress)) return privateLabel;
+  return "—";
 }
 
 export function ContainerConnections({
@@ -56,7 +65,7 @@ export function ContainerConnections({
           <div>
             <Globe2 className="mx-auto size-5 text-subtle" />
             <p className="mt-2 text-[11px] font-medium text-soft">{t("Select a container")}</p>
-            <p className="mt-1 text-[10px] text-subtle">{t("Choose a running container to inspect its external network calls.")}</p>
+            <p className="mt-1 text-[10px] text-subtle">{t("Choose a running container to inspect its network calls.")}</p>
           </div>
         </div>
       );
@@ -87,8 +96,8 @@ export function ContainerConnections({
       return (
         <div className="grid min-h-[160px] place-items-center rounded-xl border border-line bg-[var(--surface-2)]/35 px-4 text-center">
           <div>
-            <p className="text-[11px] font-medium text-soft">{t("No external connection detected")}</p>
-            <p className="mt-1 text-[10px] text-subtle">{t("The container is running but has no public remote socket right now.")}</p>
+            <p className="text-[11px] font-medium text-soft">{t("No network connection detected")}</p>
+            <p className="mt-1 text-[10px] text-subtle">{t("The container is running but has no remote socket right now.")}</p>
           </div>
         </div>
       );
@@ -101,7 +110,7 @@ export function ContainerConnections({
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-            <Globe2 className="size-3.5" /> {t("External network calls")}
+            <Globe2 className="size-3.5" /> {t("Network calls")}
           </h3>
           <div className="flex items-center gap-1">
             {connections.length > 0 ? <Badge tone="neutral">{t("{count} connections", { count: connections.length })}</Badge> : null}
@@ -123,10 +132,10 @@ export function ContainerConnections({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
-            <Globe2 className="size-4 text-[var(--accent)]" /> {t("External network calls")}
+            <Globe2 className="size-4 text-[var(--accent)]" /> {t("Network calls")}
           </h2>
           <p className="mt-1 max-w-2xl text-[10.5px] leading-relaxed text-muted">
-            {t("Outbound connections observed with ss inside the selected container. Empty until a container is selected; refresh every 5 seconds.")}
+            {t("Network connections observed with ss inside the selected container. Empty until a container is selected; refresh every 5 seconds.")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -165,7 +174,7 @@ export function ContainerConnections({
 
       <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-2.5 text-[9px] text-subtle">
         <Globe2 className="size-3" />
-        {t("Only public remote addresses are shown. Country and city are optional via GeoIP.")}
+        {t("All remote addresses are shown, including private and loopback. Listening sockets are excluded; country and city are optional via GeoIP.")}
       </p>
     </Card>
   );
@@ -196,7 +205,7 @@ function ConnectionsTable({ connections }: { connections: ContainerConnection[] 
                   <span className="truncate font-mono text-[10.5px] text-ink">{endpoint(connection.remoteAddress, connection.remotePort)}</span>
                 </span>
               </span>
-              <span className="truncate text-[10px] text-muted" title={locationLabel(connection)}>{locationLabel(connection)}</span>
+              <span className="truncate text-[10px] text-muted" title={locationLabel(connection, t("Private network"))}>{locationLabel(connection, t("Private network"))}</span>
               <span className="min-w-0 truncate text-[10px] text-soft" title={connection.process ? `${connection.process} (${connection.pid})` : "—"}>
                 {connection.process || "—"}
                 {connection.pid ? <span className="ml-1 font-mono text-[9px] text-subtle">({connection.pid})</span> : null}
