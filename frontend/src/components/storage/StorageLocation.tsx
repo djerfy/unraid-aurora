@@ -811,14 +811,16 @@ function ChassisPanel({
             aria-label={t("View name")}
             className="min-w-0 max-w-[150px] flex-1 rounded border-0 bg-transparent text-[11.5px] font-semibold text-ink outline-none focus:bg-[var(--surface-2)] focus:px-1 focus:py-0.5"
           />
-          <IconButton label={t("Add section")} size="sm" onClick={onAddSection}>
-            <Plus className="size-3.5" />
-          </IconButton>
-          {canRemove ? (
-            <IconButton label={t("Remove view")} size="sm" onClick={onRemove}>
-              <Trash2 className="size-3.5" />
+          <div className="ml-auto flex items-center gap-0.5">
+            <IconButton label={t("Add section")} size="sm" onClick={onAddSection}>
+              <Plus className="size-3.5" />
             </IconButton>
-          ) : null}
+            {canRemove ? (
+              <IconButton label={t("Remove view")} size="sm" onClick={onRemove}>
+                <Trash2 className="size-3.5" />
+              </IconButton>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
