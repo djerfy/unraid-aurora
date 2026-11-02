@@ -127,16 +127,19 @@ Storage is organised in tabs: **Array**, **Shares**, **Pools**, **Parity** and *
 Location is a visual map of the physical chassis. It is server-specific and does not change Unraid's
 disk assignments.
 
-- **Add tower** creates a vertical PC-style case; **Add server** creates a horizontal rack-style case.
-- Each view can be renamed, switched between tower/server orientation, given 8–48 bays, or removed.
+- **Add tower** creates a vertical PC-style case; **Add server** creates a horizontal rack-style case;
+  **Add NAS** creates a compact desktop NAS.
+- Bay choices follow the form factor: tower 2–48 (including 2/4/6/10), server 8–48, NAS 1/2/4/6/8.
+- Each view can be renamed, switched between tower/server/NAS orientation, resized, or removed.
 - Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
 - Drag a placed disk to another bay or another view to move/swap disks; use the trash button to
   return one to the list.
 - **Auto-place** fills the views in creation order, in parity → data → cache order, following each
   disk's Unraid position.
 - **Reset layout** clears every slot while keeping the views.
-- Each bay shows the disk name, model, type, size and temperature; the info button opens the existing
-  disk drawer with SMART and I/O details.
+- Each bay shows the disk name, brand/model, type, size and temperature; the info button opens the
+  existing disk drawer with SMART and I/O details.
+- **Disks to place** shows the brand and model reported by Unraid for each drive.
 - The layout is stored server-side in `$AURORA_DATA_DIR/storage-layout.json` and reloads with the page.
   The original single-view format is migrated automatically.
 - The legend and LEDs use the same colours as the rest of Storage: parity, data, cache and disk health.

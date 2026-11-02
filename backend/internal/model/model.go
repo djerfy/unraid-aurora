@@ -161,6 +161,7 @@ type Disk struct {
 	WriteBps    float64  `json:"writeBps"`
 	Rotational  bool     `json:"rotational"`
 	Serial      string   `json:"serial"`
+	Brand       string   `json:"brand"`
 	Model       string   `json:"model"`
 	Firmware    string   `json:"firmware"`
 	SpinupGroup string   `json:"spinupGroup"`

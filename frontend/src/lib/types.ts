@@ -142,6 +142,7 @@ export type Disk = {
   writeBps: number;
   rotational: boolean;
   serial: string;
+  brand: string;
   model: string;
   firmware: string;
   spinupGroup: string;
@@ -559,7 +560,7 @@ export type UPS = {
 export type StorageView = {
   id: string;
   name: string;
-  orientation: "vertical" | "horizontal";
+  orientation: "vertical" | "horizontal" | "nas";
   bays: number;
   assignments: Record<string, number>;
 };

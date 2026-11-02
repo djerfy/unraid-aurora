@@ -46,8 +46,16 @@ func normalizeStorageViews(views []model.StorageView) []model.StorageView {
 		if view.Orientation != "horizontal" && view.Orientation != "vertical" {
 			view.Orientation = "vertical"
 		}
-		if view.Bays < 4 || view.Bays > maxStorageBays {
-			view.Bays = defaultStorageBays
+		maxBays := maxStorageBays
+		if view.Orientation == "nas" {
+			maxBays = 8
+		}
+		if view.Bays < 1 || view.Bays > maxBays {
+			if view.Orientation == "nas" {
+				view.Bays = 4
+			} else {
+				view.Bays = defaultStorageBays
+			}
 		}
 		if view.Assignments == nil {
 			view.Assignments = map[string]int{}
@@ -114,11 +122,15 @@ func (l *Live) SaveStorageLayout(ctx context.Context, layout model.StorageLayout
 		if view.Name == "" || len(view.Name) > 64 {
 			return fmt.Errorf("each view needs a name")
 		}
-		if view.Orientation != "vertical" && view.Orientation != "horizontal" {
-			return fmt.Errorf("orientation must be vertical or horizontal")
+		if view.Orientation != "vertical" && view.Orientation != "horizontal" && view.Orientation != "nas" {
+			return fmt.Errorf("orientation must be vertical, horizontal or nas")
 		}
-		if view.Bays < 4 || view.Bays > maxStorageBays {
-			return fmt.Errorf("bay count must be between 4 and %d", maxStorageBays)
+		maxBays := maxStorageBays
+		if view.Orientation == "nas" {
+			maxBays = 8
+		}
+		if view.Bays < 1 || view.Bays > maxBays {
+			return fmt.Errorf("bay count must be between 1 and %d for this view", maxBays)
 		}
 		usedBays := make(map[int]string, len(view.Assignments))
 		clean := make(map[string]int, len(view.Assignments))

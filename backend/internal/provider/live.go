@@ -397,7 +397,7 @@ func (l *Live) Disks(ctx context.Context) ([]model.Disk, error) {
 			ID: name, Name: name, Device: dev, Type: typ, Pool: d["pool"], FsType: d["fsType"],
 			Size: size, Used: used, Free: size - used, Temp: temp, Status: status, Smart: smart,
 			Errors: parseInt(d["numErrors"]), ReadBps: io[0], WriteBps: io[1],
-			Rotational: d["rotational"] != "0", Serial: d["serial"], Model: d["deviceSb"] + d["smDevice"],
+			Rotational: d["rotational"] != "0", Serial: d["serial"], Brand: diskBrand(d["deviceSb"] + d["smDevice"]), Model: d["deviceSb"] + d["smDevice"],
 			Firmware: d["firmware"], SpinupGroup: d["spinupGroup"], Luks: strings.HasPrefix(d["fsType"], "luks:"),
 			Color: diskColor(typ, smart), Position: i,
 		})

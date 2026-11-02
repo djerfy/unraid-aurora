@@ -1,6 +1,8 @@
 const location: Record<string, string> = {
   "Add tower": "Ajouter une tour",
   "Add server": "Ajouter un serveur",
+  "Add NAS": "Ajouter un NAS",
+  "NAS": "NAS",
   "Tower": "Tour",
   "Server": "Serveur",
   "Switch orientation": "Changer l'orientation",

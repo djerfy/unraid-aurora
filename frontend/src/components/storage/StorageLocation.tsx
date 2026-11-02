@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Box,
   CheckCircle2,
   GripVertical,
   HardDrive,
@@ -19,11 +20,25 @@ import { formatBytes, hexToRgba } from "../../lib/format";
 import { Badge, Button, Card, EmptyState, IconButton, InputBase, cn } from "../ui/primitives";
 import type { Disk, StorageLayout, StorageView } from "../../lib/types";
 
-const BAY_OPTIONS = [8, 12, 16, 20, 24, 32, 40, 48];
-
 type Assignments = Record<string, number>;
 type Orientation = StorageView["orientation"];
 type DropTarget = { viewId: string; bay: number } | null;
+
+const BAY_OPTIONS: Record<Orientation, number[]> = {
+  vertical: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48],
+  horizontal: [8, 12, 16, 20, 24, 32, 40, 48],
+  nas: [1, 2, 4, 6, 8],
+};
+
+const ORIENTATION_LABEL: Record<Orientation, string> = {
+  vertical: "Tower",
+  horizontal: "Server",
+  nas: "NAS",
+};
+
+function maxBays(orientation: Orientation): number {
+  return orientation === "nas" ? 8 : 48;
+}
 
 function createView(orientation: Orientation, index: number): StorageView {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -31,11 +46,24 @@ function createView(orientation: Orientation, index: number): StorageView {
     : `view-${Date.now()}-${index}`;
   return {
     id,
-    name: `${orientation === "vertical" ? "Tower" : "Rack"} ${index}`,
+    name: `${ORIENTATION_LABEL[orientation]} ${index}`,
     orientation,
-    bays: 12,
+    bays: orientation === "nas" ? 4 : 12,
     assignments: {},
   };
+}
+
+function diskModelLabel(disk: Disk): string {
+  const model = disk.model || disk.device;
+  if (!disk.brand) return model;
+  const prefix = `${disk.brand.toLowerCase()} `;
+  if (model.toLowerCase().startsWith(prefix)) return model.slice(disk.brand.length).trim();
+  return model;
+}
+
+function diskBrandModel(disk: Disk): string {
+  const model = diskModelLabel(disk);
+  return disk.brand ? `${disk.brand} · ${model}` : model;
 }
 
 export function StorageLocation({
@@ -174,11 +202,16 @@ export function StorageLocation({
   };
 
   const toggleOrientation = (viewId: string) => {
-    persist(views.map((view) => (
-      view.id === viewId
-        ? { ...view, orientation: view.orientation === "vertical" ? "horizontal" : "vertical" }
-        : view
-    )));
+    persist(views.map((view) => {
+      if (view.id !== viewId) return view;
+      const orientation: Orientation =
+        view.orientation === "vertical" ? "horizontal" : view.orientation === "horizontal" ? "nas" : "vertical";
+      const bays = Math.min(view.bays, maxBays(orientation));
+      const assignments = Object.fromEntries(
+        Object.entries(view.assignments).filter(([, bay]) => bay < bays),
+      );
+      return { ...view, orientation, bays, assignments };
+    }));
   };
 
   const rename = (viewId: string, name: string) => {
@@ -250,6 +283,9 @@ export function StorageLocation({
           </Button>
           <Button size="sm" variant="secondary" icon={<Server className="size-3" />} onClick={() => addView("horizontal")}>
             {t("Add server")}
+          </Button>
+          <Button size="sm" variant="secondary" icon={<Box className="size-3" />} onClick={() => addView("nas")}>
+            {t("Add NAS")}
           </Button>
           <Button size="sm" variant="secondary" icon={<Sparkles className="size-3" />} onClick={autoPlace}>
             {t("Auto-place")}
@@ -389,14 +425,18 @@ function ViewCard({
   const [name, setName] = useState(view.name);
   useEffect(() => setName(view.name), [view.name]);
   const vertical = view.orientation === "vertical";
-  const options = [...new Set([...BAY_OPTIONS, view.bays])].filter((value) => value >= 4 && value <= 48).sort((a, b) => a - b);
+  const nas = view.orientation === "nas";
+  const options = [...new Set([...BAY_OPTIONS[view.orientation], view.bays])]
+    .filter((value) => value >= 1 && value <= maxBays(view.orientation))
+    .sort((a, b) => a - b);
   const assigned = Object.keys(view.assignments).length;
+  const orientationIcon = vertical ? <Server className="size-3.5" /> : nas ? <PcCase className="size-3.5" /> : <Box className="size-3.5" />;
 
   return (
     <div
       className={cn(
         "relative overflow-hidden rounded-[26px] border border-line bg-[linear-gradient(145deg,var(--surface-2),var(--surface))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_80px_-50px_rgba(0,0,0,0.9)]",
-        vertical ? "mx-auto w-full max-w-[560px]" : "w-full",
+        vertical ? "mx-auto w-full max-w-[560px]" : nas ? "mx-auto w-full max-w-[820px]" : "w-full",
       )}
     >
       <div className="pointer-events-none absolute inset-y-5 left-2 w-1.5 rounded-full bg-[var(--surface-3)]" />
@@ -418,9 +458,9 @@ function ViewCard({
             aria-label={t("View name")}
             className="min-w-0 max-w-[190px] flex-1 rounded border-0 bg-transparent text-[12px] font-semibold text-ink outline-none focus:bg-[var(--surface-2)] focus:px-1.5 focus:py-1"
           />
-          <Badge tone={vertical ? "violet" : "info"}>{t(vertical ? "Tower" : "Server")}</Badge>
+          <Badge tone={vertical ? "violet" : nas ? "warning" : "info"}>{t(ORIENTATION_LABEL[view.orientation])}</Badge>
           <IconButton label={t("Switch orientation")} size="sm" onClick={onToggleOrientation}>
-            {vertical ? <Server className="size-3.5" /> : <PcCase className="size-3.5" />}
+            {orientationIcon}
           </IconButton>
           <label className="ml-auto flex items-center gap-1.5 text-[9.5px] text-subtle">
             {t("Bays")}
@@ -442,7 +482,7 @@ function ViewCard({
           ) : null}
         </div>
 
-        <div className={cn("mt-3", vertical ? "flex flex-col gap-1.5" : "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6")}>
+        <div className={cn("mt-3", vertical ? "flex flex-col gap-1.5" : nas ? "grid grid-cols-2 gap-2 sm:grid-cols-4" : "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6")}>
           {Array.from({ length: view.bays }, (_, bay) => {
             const disk = disks.get(bay);
             const activeDrop = overTarget?.viewId === view.id && overTarget.bay === bay;
@@ -614,7 +654,7 @@ function AssignedBay({
       </div>
       <div className="mt-1 min-w-0">
         <p className="truncate text-[11px] font-semibold text-ink">{disk.name}</p>
-        {!compact ? <p className="truncate text-[8.5px] text-subtle">{disk.model || disk.device}</p> : null}
+        {!compact ? <p className="truncate text-[8.5px] text-subtle">{diskBrandModel(disk)}</p> : null}
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-1.5">
         <Badge tone={tone}>{t(disk.type)}</Badge>
@@ -671,7 +711,7 @@ function DiskCard({
           </Badge>
         </div>
         <p className="truncate text-[8.5px] text-subtle">
-          {formatBytes(disk.size)} · {disk.model || disk.device} · {disk.temp ? `${disk.temp}°C` : "—"}
+          {formatBytes(disk.size)} · {diskBrandModel(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
         </p>
       </div>
       <button
