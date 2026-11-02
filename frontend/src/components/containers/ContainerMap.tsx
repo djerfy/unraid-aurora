@@ -40,7 +40,7 @@ function toPoint(container: Container, mode: MapMode): Point {
         x: container.networkRxRate,
         y: container.networkTxRate,
         value: container.networkRxRate + container.networkTxRate,
-        color: "var(--info)",
+        color: container.color,
       };
     case "io":
       return {
@@ -48,7 +48,7 @@ function toPoint(container: Container, mode: MapMode): Point {
         x: container.blockReadRate,
         y: container.blockWriteRate,
         value: container.blockReadRate + container.blockWriteRate,
-        color: "var(--violet)",
+        color: container.color,
       };
     default:
       return {

@@ -241,7 +241,7 @@ The **Resource map** tab turns the running containers into a live scatter map:
 - **Compute**: CPU on the X axis, memory on the Y axis, bubble size by memory.
 - **Network**: receive and transmit rates (bytes/s) on the axes.
 - **Disk I/O**: read and write rates (bytes/s) on the axes.
-- Bubble colour identifies the container (compute) or the metric family (network/disk).
+- Bubble colour identifies the container in every view.
 - **Top consumers** ranks the six busiest containers for the selected view.
 - The map fills the available width and can be resized vertically with the handle in its bottom-right
   corner; the chosen height is remembered in the browser.
