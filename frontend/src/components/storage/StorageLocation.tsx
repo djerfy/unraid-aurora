@@ -375,7 +375,14 @@ export function StorageLocation({
         </p>
       ) : null}
 
-      <div className={cn("grid gap-4", columns < 4 && "2xl:grid-cols-[minmax(0,1fr)_310px]")}>
+      <div
+        className={cn(
+          "grid gap-4",
+          columns === 4
+            ? "2xl:grid-cols-[minmax(0,1fr)_280px]"
+            : "2xl:grid-cols-[minmax(0,1fr)_310px]",
+        )}
+      >
         <div
           className={cn(
             "grid items-start gap-4",
@@ -656,7 +663,7 @@ function ViewCard({
 
         <div
           className={cn("mt-3", vertical ? "flex flex-col gap-1.5" : "grid gap-2")}
-          style={vertical ? undefined : { gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}
+          style={vertical ? undefined : { gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
         >
           {Array.from({ length: view.bays }, (_, bay) => {
             const disk = disks.get(bay);

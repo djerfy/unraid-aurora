@@ -134,6 +134,8 @@ disk assignments.
   columns, or removed.
 - The **Columns** selector (1–4) defines the board width. Drag a view by its grip into a column or
   above another view to place it exactly; the left/right arrows also move it between columns.
+- With four columns and enough width, the disk list stays beside a compact board; below that width
+  it moves under the board so the views keep their columns.
 - On narrow screens the board falls back to a single column, but the saved positions are retained.
   Views and column positions are stored in the layout file.
 - Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
