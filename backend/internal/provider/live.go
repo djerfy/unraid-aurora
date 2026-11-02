@@ -517,6 +517,12 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		}
 		ports := make([]model.Port, 0, len(c.Ports))
 		for _, p := range c.Ports {
+			// PublicPort is 0 for ports that are only exposed inside the
+			// container. They are not reachable from the host, so surfacing
+			// them as "0 → 8080/tcp" is just noise.
+			if p.PublicPort == 0 {
+				continue
+			}
 			ports = append(ports, model.Port{Host: p.PublicPort, Container: p.PrivatePort, Protocol: p.Type})
 		}
 		repo, tag := c.Image, "latest"

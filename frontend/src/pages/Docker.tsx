@@ -478,7 +478,7 @@ function ContainerCard({
   const action = useAction();
   const { t } = useI18n();
   const running = container.state === "running";
-  const ports = container.ports ?? [];
+  const ports = (container.ports ?? []).filter((port) => port.host > 0);
   const memoryUsage = container.memoryLimit ? (container.memory / container.memoryLimit) * 100 : 0;
 
   return (
@@ -765,6 +765,7 @@ function ContainerDrawer({
   const [copied, setCopied] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const running = container?.state === "running";
+  const publishedPorts = (container?.ports ?? []).filter((port) => port.host > 0);
   const autostart = useMutation({
     mutationFn: (enabled: boolean) => api.setContainerAutostart(container?.id ?? "", enabled),
     onSuccess: (_result, enabled) => {
@@ -913,11 +914,11 @@ function ContainerDrawer({
 
         <div>
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Published ports")}</h3>
-          {(container.ports ?? []).length === 0 ? (
+          {publishedPorts.length === 0 ? (
             <p className="mt-2 text-[11px] text-muted">{t("No ports are published for this container.")}</p>
           ) : (
             <div className="mt-2 overflow-hidden rounded-xl border border-line">
-              {(container.ports ?? []).map((port) => (
+              {publishedPorts.map((port) => (
                 <div key={`${port.host}-${port.container}-${port.protocol}`} className="flex items-center justify-between border-b border-line/60 px-3 py-2 text-[11px] last:border-0">
                   <span className="num text-soft">{port.host} → {port.container}</span>
                   <Badge tone="neutral">{port.protocol.toUpperCase()}</Badge>
