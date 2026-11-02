@@ -243,7 +243,10 @@ The **Resource map** tab turns the running containers into a live scatter map:
 - **Disk I/O**: read and write rates (bytes/s) on the axes.
 - Bubble colour identifies the container (compute) or the metric family (network/disk).
 - **Top consumers** ranks the six busiest containers for the selected view.
-- Hovering a bubble shows all four dimensions; clicking it opens the container drawer.
+- The map fills the available width and can be resized vertically with the handle in its bottom-right
+  corner; the chosen height is remembered in the browser.
+- Hovering a bubble shows the container, image, CPU, memory, network RX/TX and disk read/write rates;
+  clicking it opens the container drawer.
 
 Rates are derived from Docker's cumulative counters between two polls, so the first sample of a
 new container starts at zero and fills in on the next refresh.

@@ -11,6 +11,7 @@ const docker: Record<string, string> = {
   "Bubble size: {metric}": "Taille des bulles : {metric}",
   "Click a bubble to open the container details.": "Cliquez sur une bulle pour ouvrir les détails du conteneur.",
   "Container resource map": "Carte des ressources des conteneurs",
+  "Resize map": "Redimensionner la carte",
   "Top consumers": "Principaux consommateurs",
   "No running containers": "Aucun conteneur en cours",
   "Start a container to see it on the resource map.": "Démarrez un conteneur pour le voir sur la carte des ressources.",
