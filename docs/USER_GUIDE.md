@@ -446,7 +446,7 @@ can itself be reverted.
 - **Temperature unit**: Celsius or Fahrenheit.
 - **Server display name**.
 - **Refresh interval**.
-- **Language**.
+- **Language**: English (default) or French. The switch previews immediately; **Save changes** persists it on the server.
 - **Automatic updates**, **anonymous telemetry**, **email alerts**, **push notifications**.
 - Session information: account, authentication, HMAC session store, CSRF protection.
 - About: Unraid version, kernel, uptime, board, memory, license.

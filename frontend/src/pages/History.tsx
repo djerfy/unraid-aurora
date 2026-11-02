@@ -5,6 +5,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { Drawer, Modal } from "../components/ui/overlays";
 import { Badge, Button, Card, EmptyState, InputBase, cn } from "../components/ui/primitives";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatBytes, formatDateTime, relativeTime } from "../lib/format";
 import type { ConfigHistory, ConfigFileChange } from "../lib/types";
@@ -12,6 +13,7 @@ import type { ConfigHistory, ConfigFileChange } from "../lib/types";
 export function HistoryPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDiff, setShowDiff] = useState(false);
@@ -32,14 +34,18 @@ export function HistoryPage() {
   const rollback = useMutation({
     mutationFn: (id: string) => api.rollbackConfig(id),
     onSuccess: () => {
-      toast({ kind: "success", title: "Rollback applied", description: "The previous file contents were restored." });
+      toast({
+        kind: "success",
+        title: t("Rollback applied"),
+        description: t("The previous file contents were restored."),
+      });
       setRollbackTarget(null);
       setSelectedId(null);
       void queryClient.invalidateQueries({ queryKey: ["config-history"] });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "Rollback failed", description: error.message });
+      toast({ kind: "error", title: t("Rollback failed"), description: error.message });
     },
   });
 
@@ -62,20 +68,22 @@ export function HistoryPage() {
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Historique"
-        description="Every configuration file written by Aurora is snapshotted first. Review the diff, then roll back in one click."
+        eyebrow={t("System")}
+        title={t("History")}
+        description={t("Every configuration file written by Aurora is snapshotted first. Review the diff, then roll back in one click.")}
         meta={
           <>
-            <Badge tone="accent" dot>{entries.length} entries</Badge>
-            {entries[0] ? <span className="chip">last {relativeTime(entries[0].created)}</span> : null}
+            <Badge tone="accent" dot>{t(entries.length === 1 ? "{count} entry" : "{count} entries", { count: entries.length })}</Badge>
+            {entries[0] ? (
+              <span className="chip">{t("last {time}", { time: relativeTime(entries[0].created) })}</span>
+            ) : null}
           </>
         }
         actions={
           <InputBase
             value={query}
             onChange={setQuery}
-            placeholder="Search actions or files…"
+            placeholder={t("Search actions or files…")}
             icon={<Search className="size-3.5" />}
             className="w-60"
           />
@@ -86,8 +94,8 @@ export function HistoryPage() {
         <Card>
           <EmptyState
             icon={<HistoryIcon className="size-5" />}
-            title="No configuration changes yet"
-            description="Editing a container template, toggling autostart or any other file-backed setting will create a restorable entry here."
+            title={t("No configuration changes yet")}
+            description={t("Editing a container template, toggling autostart or any other file-backed setting will create a restorable entry here.")}
           />
         </Card>
       ) : (
@@ -101,21 +109,25 @@ export function HistoryPage() {
                 <button type="button" onClick={() => open(entry)} className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[12px] font-medium text-ink">{entry.description || entry.action}</p>
                   <p className="mt-0.5 truncate font-mono text-[9.5px] text-subtle">
-                    {entry.files.map((file) => file.path).join(" · ") || "no files"}
+                    {entry.files.map((file) => file.path).join(" · ") || t("no files")}
                   </p>
                 </button>
                 <span className="hidden shrink-0 text-right text-[10px] text-subtle sm:block">
                   <span className="block text-muted">{formatDateTime(entry.created)}</span>
                   <span className="font-mono text-[9px]">{entry.action}</span>
                 </span>
-                <Badge tone="neutral">{entry.files.length} file{entry.files.length > 1 ? "s" : ""}</Badge>
+                <Badge tone="neutral">
+                  {t(entry.files.length === 1 ? "{count} file" : "{count} files", { count: entry.files.length })}
+                </Badge>
                 <Button size="sm" variant="secondary" icon={<FileDiff className="size-3" />} onClick={() => open(entry)}>
-                  Détails
+                  {t("Details")}
                 </Button>
               </div>
             ))}
             {filtered.length === 0 ? (
-              <p className="px-5 py-8 text-center text-[11px] text-muted">No entry matches “{query}”.</p>
+              <p className="px-5 py-8 text-center text-[11px] text-muted">
+                {t("No entry matches “{query}”.", { query })}
+              </p>
             ) : null}
           </div>
         </Card>
@@ -124,8 +136,8 @@ export function HistoryPage() {
       <Drawer
         open={Boolean(selectedId)}
         onClose={() => setSelectedId(null)}
-        title="Configuration change"
-        subtitle={detail.data?.description ?? "Loading…"}
+        title={t("Configuration change")}
+        subtitle={detail.data?.description ?? t("Loading…")}
         footer={
           detail.data ? (
             <div className="flex flex-wrap gap-2">
@@ -134,37 +146,37 @@ export function HistoryPage() {
                 icon={<FileDiff className="size-3.5" />}
                 onClick={() => setShowDiff((value) => !value)}
               >
-                {showDiff ? "Hide diff" : "Différence"}
+                {showDiff ? t("Hide diff") : t("Diff")}
               </Button>
               <Button
                 variant="danger"
                 icon={<RotateCcw className="size-3.5" />}
                 onClick={() => setRollbackTarget(detail.data ?? null)}
               >
-                Rollback
+                {t("Rollback")}
               </Button>
             </div>
           ) : null
         }
       >
         {detail.isLoading ? (
-          <p className="text-[11px] text-muted">Loading history entry…</p>
+          <p className="text-[11px] text-muted">{t("Loading history entry…")}</p>
         ) : detail.isError ? (
           <p className="text-[11px] text-[var(--danger)]">{(detail.error as Error).message}</p>
         ) : detail.data ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <Meta label="Action" value={detail.data.action} />
-              <Meta label="Date" value={formatDateTime(detail.data.created)} />
-              <Meta label="Files" value={String(detail.data.files.length)} />
-              <Meta label="ID" value={detail.data.id} mono />
+              <Meta label={t("Action")} value={detail.data.action} />
+              <Meta label={t("Date")} value={formatDateTime(detail.data.created)} />
+              <Meta label={t("Files")} value={String(detail.data.files.length)} />
+              <Meta label={t("ID")} value={detail.data.id} mono />
             </div>
             {detail.data.files.map((file) => (
               <div key={file.path} className="rounded-xl border border-line">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
                   <span className="min-w-0 truncate font-mono text-[10px] text-soft">{file.path}</span>
                   <span className="flex items-center gap-2">
-                    <Badge tone={file.existed ? "success" : "warning"}>{file.existed ? "existed" : "created"}</Badge>
+                    <Badge tone={file.existed ? "success" : "warning"}>{file.existed ? t("existed") : t("created")}</Badge>
                     <span className="text-[9.5px] text-subtle">{formatBytes(file.size)}</span>
                   </span>
                 </div>
@@ -172,7 +184,9 @@ export function HistoryPage() {
               </div>
             ))}
             {!showDiff ? (
-              <p className="text-[10.5px] text-subtle">Clique sur « Différence » pour afficher les modifications ligne par ligne.</p>
+              <p className="text-[10.5px] text-subtle">
+                {t("Click “Diff” to show line-by-line changes.")}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -181,12 +195,12 @@ export function HistoryPage() {
       <Modal
         open={Boolean(rollbackTarget)}
         onClose={() => setRollbackTarget(null)}
-        title="Rollback this change?"
+        title={t("Rollback this change?")}
         description={rollbackTarget?.description}
         footer={
           <>
             <Button variant="secondary" onClick={() => setRollbackTarget(null)} disabled={rollback.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="danger"
@@ -196,15 +210,14 @@ export function HistoryPage() {
                 if (rollbackTarget) rollback.mutate(rollbackTarget.id);
               }}
             >
-              Rollback
+              {t("Rollback")}
             </Button>
           </>
         }
       >
         <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3 text-[10.5px] leading-relaxed text-muted">
           <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-[var(--warning)]" />
-          The current contents are snapshotted before restoring, so this rollback can itself be reverted from the
-          same page.
+          {t("The current contents are snapshotted before restoring, so this rollback can itself be reverted from the same page.")}
         </div>
       </Modal>
     </>
@@ -212,8 +225,9 @@ export function HistoryPage() {
 }
 
 function DiffBlock({ diff, file }: { diff: string; file: ConfigFileChange }) {
+  const { t } = useI18n();
   if (!diff) {
-    return <p className="px-3 py-2 text-[10.5px] text-subtle">No textual difference.</p>;
+    return <p className="px-3 py-2 text-[10.5px] text-subtle">{t("No textual difference.")}</p>;
   }
   return (
     <div className="max-h-80 overflow-auto bg-[#08090d] px-3 py-2 font-mono text-[10px] leading-relaxed">

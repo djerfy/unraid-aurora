@@ -3,6 +3,7 @@ import { ExternalLink, Keyboard, RefreshCw } from "lucide-react";
 import { Modal } from "../ui/overlays";
 import { Badge, Button } from "../ui/primitives";
 import { VMConsolePanel, type VMConsoleHandle, type ConsoleStatus } from "./VMConsolePanel";
+import { useI18n } from "../../i18n";
 import type { VM } from "../../lib/types";
 
 const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
@@ -13,6 +14,7 @@ const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
 };
 
 export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
   const [token, setToken] = useState(0);
   const panelRef = useRef<VMConsoleHandle>(null);
@@ -31,12 +33,12 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
     <Modal
       open
       onClose={onClose}
-      title={`Console · ${vm.name}`}
+      title={t("Console · {name}", { name: vm.name })}
       description={`${(vm.consoleProtocol || "vnc").toUpperCase()} · ${vm.os}`}
       size="xl"
       headerExtra={
         <Badge tone={TONE[status]} dot pulse={status === "connecting"}>
-          {status}
+          {t(status)}
         </Badge>
       }
       footer={
@@ -53,21 +55,22 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
             icon={<RefreshCw className="size-3.5" />}
             onClick={() => setToken((value) => value + 1)}
           >
-            Reconnect
+            {t("Reconnect")}
           </Button>
           <Button variant="secondary" icon={<ExternalLink className="size-3.5" />} onClick={openWindow}>
-            New window
+            {t("New window")}
           </Button>
           <Button variant="secondary" onClick={onClose}>
-            Close
+            {t("Close")}
           </Button>
         </>
       }
     >
       {vm.consoleProtocol && !vm.consoleKeyboard ? (
         <div className="mb-3 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] px-3 py-2.5 text-[10.5px] leading-relaxed text-[var(--warning)]">
-          This virtual machine has no keyboard device defined. Add one (PS/2 or USB) in the VM settings,
-          otherwise the guest will ignore every keystroke.
+          {t(
+            "This virtual machine has no keyboard device defined. Add one (PS/2 or USB) in the VM settings, otherwise the guest will ignore every keystroke.",
+          )}
         </div>
       ) : null}
       <VMConsolePanel

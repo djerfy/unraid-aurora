@@ -1,5 +1,6 @@
 import { Check, Loader2, RefreshCw, TriangleAlert, X } from "lucide-react";
 import type { ContainerUpdateEvent } from "../../lib/types";
+import { useI18n } from "../../i18n";
 import { Modal } from "../ui/overlays";
 import { Badge, Button, Progress } from "../ui/primitives";
 
@@ -28,6 +29,7 @@ export function ContainerUpdateModal({
   run: ContainerUpdateRun | null;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   if (!run) return null;
   const target = run.names[run.index] ?? "container";
   const last = run.events[run.events.length - 1];
@@ -38,15 +40,18 @@ export function ContainerUpdateModal({
     <Modal
       open
       onClose={run.running ? () => {} : onClose}
-      title={run.done ? "Update complete" : `Updating ${target}`}
+      title={run.done ? t("Update complete") : t("Updating {name}", { name: target })}
       description={
         run.names.length > 1
-          ? `Container ${run.index + 1} of ${run.names.length} · pull and recreate, like the Unraid webGUI.`
-          : "Pull the image and recreate the container with its current settings."
+          ? t("Container {index} of {count} · pull and recreate, like the Unraid webGUI.", {
+              index: run.index + 1,
+              count: run.names.length,
+            })
+          : t("Pull the image and recreate the container with its current settings.")
       }
       footer={
         <Button variant="secondary" onClick={onClose} disabled={run.running} icon={<X className="size-3.5" />}>
-          Close
+          {t("Close")}
         </Button>
       }
     >
@@ -54,11 +59,11 @@ export function ContainerUpdateModal({
         <div className="flex items-center justify-between gap-3">
           <span className="min-w-0 truncate font-mono text-[11px] text-soft">{target}</span>
           <span className="flex items-center gap-2">
-            {run.done ? <Badge tone="success" dot>success</Badge> : null}
-            {run.error ? <Badge tone="danger" dot>failed</Badge> : null}
+            {run.done ? <Badge tone="success" dot>{t("success")}</Badge> : null}
+            {run.error ? <Badge tone="danger" dot>{t("failed")}</Badge> : null}
             {run.running ? (
               <Badge tone="accent" dot pulse>
-                running
+                {t("running")}
               </Badge>
             ) : null}
           </span>
@@ -67,7 +72,7 @@ export function ContainerUpdateModal({
         <div>
           <Progress value={percent} height={6} tone={run.error ? "var(--danger)" : undefined} />
           <div className="mt-1.5 flex items-center justify-between text-[9.5px] text-subtle">
-            <span className="min-w-0 truncate font-mono">{last?.message ?? "Starting…"}</span>
+            <span className="min-w-0 truncate font-mono">{last?.message ?? t("Starting…")}</span>
             <span className="num shrink-0">{Math.round(percent)}%</span>
           </div>
         </div>
@@ -75,7 +80,7 @@ export function ContainerUpdateModal({
         <div className="space-y-1.5">
           {steps.length === 0 ? (
             <div className="flex items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)]/45 px-3 py-2 text-[10.5px] text-muted">
-              <Loader2 className="size-3.5 animate-spin" /> Preparing the update…
+              <Loader2 className="size-3.5 animate-spin" /> {t("Preparing the update…")}
             </div>
           ) : (
             steps.map((step) => {
@@ -94,7 +99,7 @@ export function ContainerUpdateModal({
                     <Check className="size-3.5 shrink-0 text-[var(--success)]" />
                   )}
                   <span className={failed ? "text-[var(--danger)]" : "text-soft"}>
-                    {STEP_LABELS[step.step] ?? step.step}
+                    {t(STEP_LABELS[step.step] ?? step.step)}
                   </span>
                   {step.step === "pull" && step.progress > 0 ? (
                     <span className="ml-auto num text-[9.5px] text-subtle">{Math.round(step.progress)}%</span>
@@ -113,7 +118,7 @@ export function ContainerUpdateModal({
 
         {run.running ? (
           <p className="flex items-center gap-1.5 text-[9.5px] text-subtle">
-            <RefreshCw className="size-3" /> Keep this window open; the server streams each stage.
+            <RefreshCw className="size-3" /> {t("Keep this window open; the server streams each stage.")}
           </p>
         ) : null}
       </div>

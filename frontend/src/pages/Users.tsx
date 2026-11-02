@@ -28,13 +28,21 @@ import {
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatDateTime, relativeTime } from "../lib/format";
+
+const USER_ROLES: Record<string, string> = {
+  administrator: "Administrator",
+  "read-only": "Read-only",
+  disabled: "Disabled",
+};
 
 export function UsersPage() {
   const { snapshot, refresh } = useApp();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -53,7 +61,7 @@ export function UsersPage() {
   const createUser = useMutation({
     mutationFn: api.createUser,
     onSuccess: () => {
-      toast({ kind: "success", title: "User created", description: addDraft.name });
+      toast({ kind: "success", title: t("User created"), description: addDraft.name });
       setAddOpen(false);
       invalidateUsers();
     },
@@ -62,7 +70,7 @@ export function UsersPage() {
   const updateUser = useMutation({
     mutationFn: ({ name, value }: { name: string; value: string }) => api.updateUser(name, value),
     onSuccess: () => {
-      toast({ kind: "success", title: "User updated" });
+      toast({ kind: "success", title: t("User updated") });
       setEditOpen(false);
       invalidateUsers();
     },
@@ -71,7 +79,7 @@ export function UsersPage() {
   const changePassword = useMutation({
     mutationFn: ({ name, value }: { name: string; value: string }) => api.changeUserPassword(name, value),
     onSuccess: () => {
-      toast({ kind: "success", title: "Password changed" });
+      toast({ kind: "success", title: t("Password changed") });
       setPasswordOpen(false);
       setPassword("");
       setPasswordConfirm("");
@@ -81,7 +89,7 @@ export function UsersPage() {
   const deleteUser = useMutation({
     mutationFn: (name: string) => api.deleteUser(name),
     onSuccess: () => {
-      toast({ kind: "info", title: "User deleted" });
+      toast({ kind: "info", title: t("User deleted") });
       setDeleteOpen(false);
       setSelectedName(null);
       invalidateUsers();
@@ -109,19 +117,25 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Users"
-        description="Accounts with access to the web interface, SMB shares and NFS exports."
+        eyebrow={t("System")}
+        title={t("Users")}
+        description={t("Accounts with access to the web interface, SMB shares and NFS exports.")}
         meta={
           <>
-            <Badge tone="accent" dot>{users.length} accounts</Badge>
-            <span className="chip">{admins.length} administrators</span>
+            <Badge tone="accent" dot>
+              {users.length === 1 ? t("1 account") : t("{count} accounts", { count: users.length })}
+            </Badge>
+            <span className="chip">
+              {admins.length === 1
+                ? t("1 administrator")
+                : t("{count} administrators", { count: admins.length })}
+            </span>
           </>
         }
         actions={
           <>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-              Refresh
+              {t("Refresh")}
             </Button>
             <Button
               variant="primary"
@@ -132,43 +146,49 @@ export function UsersPage() {
                 setAddOpen(true);
               }}
             >
-              Add user
+              {t("Add user")}
             </Button>
           </>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Stat icon={<Users className="size-4" />} label="Accounts" value={String(users.length)} hint="local users" />
-        <Stat icon={<ShieldCheck className="size-4" />} label="Administrators" value={String(admins.length)} hint="full web UI access" />
-        <Stat icon={<Lock className="size-4" />} label="Read-only" value={String(readOnly.length)} hint="restricted shares" />
-        <Stat icon={<FolderTree className="size-4" />} label="Scoped shares" value={String(shares.size)} hint="across all accounts" />
+        <Stat icon={<Users className="size-4" />} label={t("Accounts")} value={String(users.length)} hint={t("local users")} />
+        <Stat icon={<ShieldCheck className="size-4" />} label={t("Administrators")} value={String(admins.length)} hint={t("full web UI access")} />
+        <Stat icon={<Lock className="size-4" />} label={t("Read-only")} value={String(readOnly.length)} hint={t("restricted shares")} />
+        <Stat icon={<FolderTree className="size-4" />} label={t("Scoped shares")} value={String(shares.size)} hint={t("across all accounts")} />
       </div>
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
           <div>
-            <h2 className="text-[13px] font-semibold text-ink">Local accounts</h2>
-            <p className="mt-0.5 text-[10.5px] text-subtle">Managed by Unraid · permissions apply to SMB and NFS</p>
+            <h2 className="text-[13px] font-semibold text-ink">{t("Local accounts")}</h2>
+            <p className="mt-0.5 text-[10.5px] text-subtle">
+              {t("Managed by Unraid · permissions apply to SMB and NFS")}
+            </p>
           </div>
           <InputBase
             value={query}
             onChange={setQuery}
-            placeholder="Search users…"
+            placeholder={t("Search users…")}
             icon={<Search className="size-3.5" />}
             className="w-52"
           />
         </div>
 
         {filtered.length === 0 ? (
-          <EmptyState icon={<Users className="size-5" />} title="No users match your search" description="Try another name or clear the filter." />
+          <EmptyState
+            icon={<Users className="size-5" />}
+            title={t("No users match your search")}
+            description={t("Try another name or clear the filter.")}
+          />
         ) : (
           <>
             <div className="hidden grid-cols-[minmax(0,2fr)_120px_minmax(0,2fr)_140px_40px] gap-4 border-b border-line bg-[var(--surface-2)]/40 px-5 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle lg:grid">
-              <span>Account</span>
-              <span>Role</span>
-              <span>Share access</span>
-              <span>Last active</span>
+              <span>{t("Account")}</span>
+              <span>{t("Role")}</span>
+              <span>{t("Share access")}</span>
+              <span>{t("Last active")}</span>
               <span />
             </div>
             <div className="divide-y divide-line/60">
@@ -190,15 +210,15 @@ export function UsersPage() {
 
                   <div>
                     <Badge tone={user.role === "administrator" ? "violet" : user.role === "disabled" ? "neutral" : "info"}>
-                      {user.role}
+                      {roleLabel(t, user.role)}
                     </Badge>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
                     {(user.shares ?? []).length === 0 ? (
-                      <span className="text-[10px] text-subtle">No access</span>
+                      <span className="text-[10px] text-subtle">{t("No access")}</span>
                     ) : (user.shares ?? [])[0] === "all" ? (
-                      <Badge tone="neutral">All shares</Badge>
+                      <Badge tone="neutral">{t("All shares")}</Badge>
                     ) : (
                       <>
                         {(user.shares ?? []).slice(0, 2).map((share) => (
@@ -211,19 +231,19 @@ export function UsersPage() {
 
                   <div className="flex items-center gap-1.5 text-[10.5px] text-muted">
                     <Clock3 className="size-3 text-subtle" />
-                    {user.lastActive ? relativeTime(user.lastActive) : "never"}
+                    {user.lastActive ? relativeTime(user.lastActive) : t("never")}
                   </div>
 
                   <div className="flex justify-end">
                     <Menu
                       trigger={
-                        <IconButton label={`Actions for ${user.name}`} size="sm">
+                        <IconButton label={t("Actions for {name}", { name: user.name })} size="sm">
                           <span className="text-[15px] leading-none">⋯</span>
                         </IconButton>
                       }
                       items={[
-                        { label: "View profile", onSelect: () => setSelectedName(user.name) },
-                        { label: "Share permissions", onSelect: () => setSelectedName(user.name) },
+                        { label: t("View profile"), onSelect: () => setSelectedName(user.name) },
+                        { label: t("Share permissions"), onSelect: () => setSelectedName(user.name) },
                       ]}
                     />
                   </div>
@@ -238,16 +258,20 @@ export function UsersPage() {
         <Card className="card-pad">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-[13px] font-semibold text-ink">Share access matrix</h2>
-              <p className="mt-0.5 text-[10.5px] text-subtle">Which account can reach which share</p>
+              <h2 className="text-[13px] font-semibold text-ink">{t("Share access matrix")}</h2>
+              <p className="mt-0.5 text-[10.5px] text-subtle">{t("Which account can reach which share")}</p>
             </div>
-            <Badge tone="neutral">{snapshot.shares.length} shares</Badge>
+            <Badge tone="neutral">
+              {snapshot.shares.length === 1
+                ? t("1 share")
+                : t("{count} shares", { count: snapshot.shares.length })}
+            </Badge>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[560px] text-left">
               <thead>
                 <tr className="border-b border-line">
-                  <th className="pb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Share</th>
+                  <th className="pb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Share")}</th>
                   {users.map((user) => (
                     <th key={user.name} className="pb-2 text-center text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">
                       {user.name}
@@ -285,34 +309,40 @@ export function UsersPage() {
         </Card>
 
         <Card className="card-pad">
-          <h2 className="text-[13px] font-semibold text-ink">Access model</h2>
-          <p className="mt-0.5 text-[10.5px] text-subtle">How permissions are applied</p>
+          <h2 className="text-[13px] font-semibold text-ink">{t("Access model")}</h2>
+          <p className="mt-0.5 text-[10.5px] text-subtle">{t("How permissions are applied")}</p>
           <div className="mt-4 space-y-3">
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-soft">Administrators</span>
+                <span className="text-[11px] font-medium text-soft">{t("Administrators")}</span>
                 <Badge tone="violet">{admins.length}</Badge>
               </div>
-              <p className="mt-1 text-[10px] leading-relaxed text-muted">Full web interface access, array control and settings.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">
+                {t("Full web interface access, array control and settings.")}
+              </p>
             </div>
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-soft">Read-only</span>
+                <span className="text-[11px] font-medium text-soft">{t("Read-only")}</span>
                 <Badge tone="info">{readOnly.length}</Badge>
               </div>
-              <p className="mt-1 text-[10px] leading-relaxed text-muted">Scoped share access without array or system changes.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">
+                {t("Scoped share access without array or system changes.")}
+              </p>
             </div>
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-soft">Disabled</span>
+                <span className="text-[11px] font-medium text-soft">{t("Disabled")}</span>
                 <Badge tone="neutral">{users.filter((user) => user.role === "disabled").length}</Badge>
               </div>
-              <p className="mt-1 text-[10px] leading-relaxed text-muted">Retained accounts that cannot authenticate.</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted">
+                {t("Retained accounts that cannot authenticate.")}
+              </p>
             </div>
           </div>
           <div className="mt-3 flex items-start gap-2 rounded-xl border border-line p-3 text-[10px] leading-relaxed text-muted">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
-            Passwords are validated by Unraid; Aurora never stores credentials.
+            {t("Passwords are validated by Unraid; Aurora never stores credentials.")}
           </div>
         </Card>
       </div>
@@ -335,7 +365,7 @@ export function UsersPage() {
                   setPasswordOpen(true);
                 }}
               >
-                Change password
+                {t("Change password")}
               </Button>
               <Button
                 variant="secondary"
@@ -346,7 +376,7 @@ export function UsersPage() {
                   setEditOpen(true);
                 }}
               >
-                Edit
+                {t("Edit")}
               </Button>
               {selected.root ? null : (
                 <Button
@@ -357,7 +387,7 @@ export function UsersPage() {
                     setDeleteOpen(true);
                   }}
                 >
-                  Delete
+                  {t("Delete")}
                 </Button>
               )}
             </div>
@@ -371,36 +401,41 @@ export function UsersPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-semibold text-ink">{selected.name}</p>
-                  <Badge tone={selected.role === "administrator" ? "violet" : "info"}>{selected.role}</Badge>
+                  <Badge tone={selected.role === "administrator" ? "violet" : "info"}>{roleLabel(t, selected.role)}</Badge>
                 </div>
-                <p className="mt-1 text-[10.5px] text-muted">UID {selected.uid} · member of users</p>
+                <p className="mt-1 text-[10.5px] text-muted">
+                  {t("UID {uid} · member of users", { uid: selected.uid })}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Info label="Role" value={selected.role} />
-              <Info label="UID" value={String(selected.uid)} />
-              <Info label="Last active" value={selected.lastActive ? formatDateTime(selected.lastActive) : "Never"} />
-              <Info label="Account type" value={selected.root ? "System" : "Local"} />
+              <Info label={t("Role")} value={roleLabel(t, selected.role)} />
+              <Info label={t("UID")} value={String(selected.uid)} />
+              <Info
+                label={t("Last active")}
+                value={selected.lastActive ? formatDateTime(selected.lastActive) : t("Never")}
+              />
+              <Info label={t("Account type")} value={selected.root ? t("System") : t("Local")} />
             </div>
 
             <div>
               <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-                <KeyRound className="size-3.5" /> Share access
+                <KeyRound className="size-3.5" /> {t("Share access")}
               </h3>
               <div className="mt-2 overflow-hidden rounded-xl border border-line">
                 {(selected.shares ?? []).length === 0 ? (
-                  <p className="px-3 py-3 text-[11px] text-muted">This account has no share access.</p>
+                  <p className="px-3 py-3 text-[11px] text-muted">{t("This account has no share access.")}</p>
                 ) : (selected.shares ?? [])[0] === "all" ? (
                   <div className="flex items-center justify-between px-3 py-2.5 text-[11px]">
-                    <span className="text-soft">All shares</span>
-                    <Badge tone="success">read / write</Badge>
+                    <span className="text-soft">{t("All shares")}</span>
+                    <Badge tone="success">{t("read / write")}</Badge>
                   </div>
                 ) : (
                   (selected.shares ?? []).map((share) => (
                     <div key={share} className="flex items-center justify-between border-b border-line/60 px-3 py-2.5 text-[11px] last:border-0">
                       <span className="flex items-center gap-2 text-soft"><FolderTree className="size-3.5 text-subtle" /> {share}</span>
-                      <Badge tone="info">{selected.role === "read-only" ? "read only" : "read / write"}</Badge>
+                      <Badge tone="info">{selected.role === "read-only" ? t("read only") : t("read / write")}</Badge>
                     </div>
                   ))
                 )}
@@ -408,10 +443,9 @@ export function UsersPage() {
             </div>
 
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
-              <p className="flex items-center gap-1.5 font-medium text-soft"><UserCog className="size-3.5" /> Account management</p>
+              <p className="flex items-center gap-1.5 font-medium text-soft"><UserCog className="size-3.5" /> {t("Account management")}</p>
               <p className="mt-1.5">
-                Accounts are created through Unraid's own user manager. Passwords are sent once to emhttpd,
-                never stored by Aurora.
+                {t("Accounts are created through Unraid's own user manager. Passwords are sent once to emhttpd, never stored by Aurora.")}
               </p>
             </div>
           </div>
@@ -421,12 +455,12 @@ export function UsersPage() {
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        title="Add user"
-        description="Creates a Unix account, a Samba account and a share access entry, like the official Add User page."
+        title={t("Add user")}
+        description={t("Creates a Unix account, a Samba account and a share access entry, like the official Add User page.")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setAddOpen(false)} disabled={createUser.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
@@ -434,15 +468,15 @@ export function UsersPage() {
               onClick={() => {
                 setError("");
                 if (!/^[a-z_][a-z0-9_-]{0,39}$/.test(addDraft.name)) {
-                  setError("Use a lowercase name starting with a letter or underscore.");
+                  setError(t("Use a lowercase name starting with a letter or underscore."));
                   return;
                 }
                 if (!addDraft.password) {
-                  setError("A password is required.");
+                  setError(t("A password is required."));
                   return;
                 }
                 if (addDraft.password !== addDraft.confirm) {
-                  setError("Passwords do not match.");
+                  setError(t("Passwords do not match."));
                   return;
                 }
                 createUser.mutate({
@@ -452,16 +486,16 @@ export function UsersPage() {
                 });
               }}
             >
-              Create user
+              {t("Create user")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="User name" value={addDraft.name} onChange={(value) => setAddDraft((current) => ({ ...current, name: value }))} placeholder="jellyfin" />
-          <Field label="Description" value={addDraft.description} onChange={(value) => setAddDraft((current) => ({ ...current, description: value }))} placeholder="Media account" />
-          <Field label="Password" type="password" value={addDraft.password} onChange={(value) => setAddDraft((current) => ({ ...current, password: value }))} />
-          <Field label="Confirm password" type="password" value={addDraft.confirm} onChange={(value) => setAddDraft((current) => ({ ...current, confirm: value }))} />
+          <Field label={t("User name")} value={addDraft.name} onChange={(value) => setAddDraft((current) => ({ ...current, name: value }))} placeholder="jellyfin" />
+          <Field label={t("Description")} value={addDraft.description} onChange={(value) => setAddDraft((current) => ({ ...current, description: value }))} placeholder={t("Media account")} />
+          <Field label={t("Password")} type="password" value={addDraft.password} onChange={(value) => setAddDraft((current) => ({ ...current, password: value }))} />
+          <Field label={t("Confirm password")} type="password" value={addDraft.confirm} onChange={(value) => setAddDraft((current) => ({ ...current, confirm: value }))} />
           {error ? <ErrorLine message={error} /> : null}
         </div>
       </Modal>
@@ -469,11 +503,11 @@ export function UsersPage() {
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title={`Edit · ${selected?.name ?? ""}`}
+        title={t("Edit · {name}", { name: selected?.name ?? "" })}
         footer={
           <>
             <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={updateUser.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
@@ -483,13 +517,13 @@ export function UsersPage() {
                 if (selectedName) updateUser.mutate({ name: selectedName, value: description });
               }}
             >
-              Save
+              {t("Save")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="Description" value={description} onChange={setDescription} />
+          <Field label={t("Description")} value={description} onChange={setDescription} />
           {error ? <ErrorLine message={error} /> : null}
         </div>
       </Modal>
@@ -497,11 +531,11 @@ export function UsersPage() {
       <Modal
         open={passwordOpen}
         onClose={() => setPasswordOpen(false)}
-        title={`Change password · ${selected?.name ?? ""}`}
+        title={t("Change password · {name}", { name: selected?.name ?? "" })}
         footer={
           <>
             <Button variant="secondary" onClick={() => setPasswordOpen(false)} disabled={changePassword.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="primary"
@@ -509,24 +543,24 @@ export function UsersPage() {
               onClick={() => {
                 setError("");
                 if (!password) {
-                  setError("Enter a new password.");
+                  setError(t("Enter a new password."));
                   return;
                 }
                 if (password !== passwordConfirm) {
-                  setError("Passwords do not match.");
+                  setError(t("Passwords do not match."));
                   return;
                 }
                 if (selectedName) changePassword.mutate({ name: selectedName, value: password });
               }}
             >
-              Change password
+              {t("Change password")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
-          <Field label="New password" type="password" value={password} onChange={setPassword} />
-          <Field label="Confirm password" type="password" value={passwordConfirm} onChange={setPasswordConfirm} />
+          <Field label={t("New password")} type="password" value={password} onChange={setPassword} />
+          <Field label={t("Confirm password")} type="password" value={passwordConfirm} onChange={setPasswordConfirm} />
           {error ? <ErrorLine message={error} /> : null}
         </div>
       </Modal>
@@ -534,12 +568,12 @@ export function UsersPage() {
       <Modal
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        title={`Delete ${selected?.name ?? "user"}?`}
-        description="The account, its Samba credentials and share access entries are removed."
+        title={t("Delete {name}?", { name: selected?.name ?? t("user") })}
+        description={t("The account, its Samba credentials and share access entries are removed.")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleteUser.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="danger"
@@ -549,7 +583,7 @@ export function UsersPage() {
                 if (selectedName) deleteUser.mutate(selectedName);
               }}
             >
-              Delete user
+              {t("Delete user")}
             </Button>
           </>
         }
@@ -560,6 +594,11 @@ export function UsersPage() {
       </Modal>
     </>
   );
+}
+
+function roleLabel(t: (key: string) => string, role: string) {
+  const label = USER_ROLES[role];
+  return label ? t(label) : role;
 }
 
 function Field({

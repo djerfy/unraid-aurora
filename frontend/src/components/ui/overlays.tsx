@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn, IconButton, Kbd } from "./primitives";
 import { useBodyScrollLock } from "../../lib/useBodyScrollLock";
+import { useI18n } from "../../i18n";
 
 /* -------------------------------------------------------------------------- */
 /* Modal                                                                       */
@@ -33,6 +34,7 @@ export function Modal({
   size?: "sm" | "md" | "lg" | "xl";
 }) {
   useBodyScrollLock(open);
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -69,7 +71,7 @@ export function Modal({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {headerExtra}
-            <IconButton label="Close" size="sm" onClick={onClose}>
+            <IconButton label={t("Close")} size="sm" onClick={onClose}>
               <X className="size-4" />
             </IconButton>
           </div>
@@ -106,6 +108,7 @@ export function Drawer({
   width?: string;
 }) {
   useBodyScrollLock(open);
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -141,7 +144,7 @@ export function Drawer({
               {subtitle ? <div className="mt-1 text-xs text-muted">{subtitle}</div> : null}
             </div>
           </div>
-          <IconButton label="Close panel" onClick={onClose}>
+          <IconButton label={t("Close panel")} onClick={onClose}>
             <X className="size-4" />
           </IconButton>
         </header>
@@ -274,6 +277,7 @@ export function CommandPalette({
   commands: Command[];
 }) {
   useBodyScrollLock(open);
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -346,7 +350,7 @@ export function CommandPalette({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Command palette"
+        aria-label={t("Command palette")}
         className="animate-scale-in relative w-full max-w-[620px] overflow-hidden rounded-2xl border border-line bg-[var(--surface)] shadow-[var(--shadow-pop)]"
       >
         <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
@@ -355,7 +359,7 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search pages, containers, VMs, actions…"
+            placeholder={t("Search pages, containers, VMs, actions…")}
             className="h-6 w-full border-0 bg-transparent text-sm text-ink outline-none placeholder:text-subtle"
           />
           <Kbd>esc</Kbd>
@@ -363,7 +367,7 @@ export function CommandPalette({
 
         <div ref={listRef} className="max-h-[44vh] overflow-y-auto p-2">
           {visible.length === 0 ? (
-            <p className="px-3 py-10 text-center text-xs text-muted">No results for “{query}”.</p>
+            <p className="px-3 py-10 text-center text-xs text-muted">{t("No results for “{query}”.", { query })}</p>
           ) : (
             visible.map((command) => {
               visibleIndex += 1;
@@ -408,11 +412,11 @@ export function CommandPalette({
 
         <div className="flex items-center justify-between border-t border-line px-4 py-2.5 text-[10.5px] text-subtle">
           <span className="flex items-center gap-3">
-            <span className="flex items-center gap-1"><Kbd>↑</Kbd><Kbd>↓</Kbd> navigate</span>
-            <span className="flex items-center gap-1"><Kbd>↵</Kbd> open</span>
+            <span className="flex items-center gap-1"><Kbd>↑</Kbd><Kbd>↓</Kbd> {t("navigate")}</span>
+            <span className="flex items-center gap-1"><Kbd>↵</Kbd> {t("open")}</span>
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="status-dot live" /> {visible.length} results
+            <span className="status-dot live" /> {t("{count} results", { count: visible.length })}
           </span>
         </div>
       </div>

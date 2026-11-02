@@ -22,6 +22,7 @@ import {
   cn,
 } from "../components/ui/primitives";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatClock } from "../lib/format";
 import type { LogLine } from "../lib/types";
@@ -46,6 +47,7 @@ const SOURCE_PATHS: Record<string, string> = {
 
 export function LogsPage() {
   const { toast } = useToast();
+  const { t } = useI18n();
   const [source, setSource] = useState("syslog");
   const [level, setLevel] = useState("all");
   const [query, setQuery] = useState("");
@@ -76,6 +78,7 @@ export function LogsPage() {
 
   const errors = lines.filter((line) => line.level === "error").length;
   const warnings = lines.filter((line) => line.level === "warn").length;
+  const sourceTabs = SOURCES.map((item) => ({ ...item, label: t(item.label) }));
 
   const download = () => {
     const text = filtered.map((line) => `${line.time} ${line.level.toUpperCase()} ${line.message}`).join("\n");
@@ -86,20 +89,36 @@ export function LogsPage() {
     anchor.download = `aurora-${source}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.log`;
     anchor.click();
     URL.revokeObjectURL(url);
-    toast({ kind: "success", title: "Log file downloaded", description: `${filtered.length} lines exported.` });
+    toast({
+      kind: "success",
+      title: t("Log file downloaded"),
+      description: t(
+        filtered.length === 1 ? "{count} line exported." : "{count} lines exported.",
+        { count: filtered.length },
+      ),
+    });
   };
 
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Logs"
-        description="Tail system, Docker, Nginx, libvirt, mail and parity logs with instant filtering — no SSH required."
+        eyebrow={t("System")}
+        title={t("Logs")}
+        description={t("Tail system, Docker, Nginx, libvirt, mail and parity logs with instant filtering — no SSH required.")}
         meta={
           <>
-            <Badge tone={errors > 0 ? "danger" : "success"} dot>{errors} errors</Badge>
-            <Badge tone={warnings > 0 ? "warning" : "neutral"}>{warnings} warnings</Badge>
-            <span className="chip">{lines.length} recent lines</span>
+            <Badge tone={errors > 0 ? "danger" : "success"} dot>
+              {t(errors === 1 ? "{count} error" : "{count} errors", { count: errors })}
+            </Badge>
+            <Badge tone={warnings > 0 ? "warning" : "neutral"}>
+              {t(warnings === 1 ? "{count} warning" : "{count} warnings", { count: warnings })}
+            </Badge>
+            <span className="chip">
+              {t(
+                lines.length === 1 ? "{count} recent line" : "{count} recent lines",
+                { count: lines.length },
+              )}
+            </span>
           </>
         }
         actions={
@@ -109,24 +128,24 @@ export function LogsPage() {
               icon={<RefreshCw className={cn("size-3.5", logs.isFetching && "animate-spin")} />}
               onClick={() => void logs.refetch()}
             >
-              Refresh
+              {t("Refresh")}
             </Button>
             <Button variant="primary" icon={<Download className="size-3.5" />} onClick={download}>
-              Export
+              {t("Export logs")}
             </Button>
           </>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Stat icon={<ScrollText className="size-4" />} label="Source" value={SOURCES.find((item) => item.value === source)?.label ?? source} hint="active log stream" />
-        <Stat icon={<CircleAlert className="size-4" />} label="Errors" value={String(errors)} hint="in current buffer" tone={errors ? "danger" : "success"} />
-        <Stat icon={<TriangleAlert className="size-4" />} label="Warnings" value={String(warnings)} hint="in current buffer" tone={warnings ? "warning" : "success"} />
-        <Stat icon={<Info className="size-4" />} label="Visible" value={String(filtered.length)} hint="after filters" />
+        <Stat icon={<ScrollText className="size-4" />} label={t("Source")} value={sourceTabs.find((item) => item.value === source)?.label ?? source} hint={t("active log stream")} />
+        <Stat icon={<CircleAlert className="size-4" />} label={t("Errors")} value={String(errors)} hint={t("in current buffer")} tone={errors ? "danger" : "success"} />
+        <Stat icon={<TriangleAlert className="size-4" />} label={t("Warnings")} value={String(warnings)} hint={t("in current buffer")} tone={warnings ? "warning" : "success"} />
+        <Stat icon={<Info className="size-4" />} label={t("Visible")} value={String(filtered.length)} hint={t("after filters")} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Tabs items={SOURCES} value={source} onChange={setSource} />
+        <Tabs items={sourceTabs} value={source} onChange={setSource} />
         <div className="flex items-center gap-1">
           {[
             { value: "all", label: "All" },
@@ -143,19 +162,19 @@ export function LogsPage() {
                 level === item.value ? "bg-[var(--surface-3)] text-ink" : "text-muted hover:text-ink",
               )}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
         <div className="ml-auto flex items-center gap-3">
           <label className="flex items-center gap-2 text-[10.5px] text-muted">
-            <Switch checked={autoScroll} onChange={setAutoScroll} label="Auto scroll" />
-            Follow
+            <Switch checked={autoScroll} onChange={setAutoScroll} label={t("Auto scroll")} />
+            {t("Follow")}
           </label>
           <InputBase
             value={query}
             onChange={setQuery}
-            placeholder="Filter lines…"
+            placeholder={t("Filter lines…")}
             icon={<Search className="size-3.5" />}
             className="w-52"
           />
@@ -169,7 +188,7 @@ export function LogsPage() {
           </span>
           <span className="ml-auto flex items-center gap-1.5 font-mono text-[9px] text-[#5f6678]">
             <span className={cn("size-1.5 rounded-full", logs.isFetching ? "bg-[#f5b44a]" : "bg-[#3ddc97]")} />
-            {logs.isFetching ? "syncing" : "live tail"}
+            {logs.isFetching ? t("syncing") : t("live tail")}
           </span>
         </div>
 
@@ -193,14 +212,14 @@ export function LogsPage() {
                 icon={<RefreshCw className="size-3" />}
                 onClick={() => void logs.refetch()}
               >
-                Try again
+                {t("Try again")}
               </Button>
             </div>
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={<Search className="size-5" />}
-              title="No log lines match"
-              description="Adjust the level or search query to widen the result set."
+              title={t("No log lines match")}
+              description={t("Adjust the level or search query to widen the result set.")}
               className="text-white"
             />
           ) : (
@@ -209,8 +228,12 @@ export function LogsPage() {
         </div>
 
         <div className="flex items-center justify-between border-t border-[#1f2230] px-4 py-2 font-mono text-[9px] text-[#5f6678]">
-          <span>{filtered.length} lines · buffer 300</span>
-          <span>Aurora log viewer · refresh 6s</span>
+          <span>
+            {t(filtered.length === 1 ? "{count} line · buffer 300" : "{count} lines · buffer 300", {
+              count: filtered.length,
+            })}
+          </span>
+          <span>{t("Aurora log viewer · refresh 6s")}</span>
         </div>
       </Card>
     </>

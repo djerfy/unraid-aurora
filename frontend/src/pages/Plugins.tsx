@@ -24,6 +24,7 @@ import {
   cn,
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { useToast } from "../app/ToastProvider";
 import { hexToRgba } from "../lib/format";
@@ -32,6 +33,7 @@ import type { Plugin } from "../lib/types";
 export function PluginsPage() {
   const { snapshot } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState<Plugin | null>(null);
@@ -48,12 +50,18 @@ export function PluginsPage() {
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       toast({
         kind: available ? "warning" : "success",
-        title: available ? `${available} plugin update${available > 1 ? "s" : ""} available` : "All plugins are up to date",
-        description: `${plugins.length} plugin${plugins.length > 1 ? "s" : ""} checked`,
+        title: available
+          ? available === 1
+            ? t("{count} plugin update available", { count: available })
+            : t("{count} plugin updates available", { count: available })
+          : t("All plugins are up to date"),
+        description: plugins.length === 1
+          ? t("{count} plugin checked", { count: plugins.length })
+          : t("{count} plugins checked", { count: plugins.length }),
       });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "Plugin update check failed", description: error.message });
+      toast({ kind: "error", title: t("Plugin update check failed"), description: error.message });
     },
   });
 
@@ -72,22 +80,26 @@ export function PluginsPage() {
       toast({ kind: "success", title: success });
     } catch (error) {
       setUpdateRun((current) => (current ? { ...current, running: false, error: (error as Error).message } : current));
-      toast({ kind: "error", title: "Plugin operation failed", description: (error as Error).message });
+      toast({ kind: "error", title: t("Plugin operation failed"), description: (error as Error).message });
     }
   };
 
   const runUpdate = (plugin: Plugin) =>
-    streamPluginTask(`Updating ${plugin.name}`, (onEvent) => api.updatePlugin(plugin.name, onEvent), `${plugin.name} updated`);
+    streamPluginTask(
+      t("Updating {name}", { name: plugin.name }),
+      (onEvent) => api.updatePlugin(plugin.name, onEvent),
+      t("{name} updated", { name: plugin.name }),
+    );
 
   const runInstall = () => {
     const target = installURL.trim();
     if (!/^https?:\/\//i.test(target)) {
-      toast({ kind: "error", title: "Invalid plugin URL" });
+      toast({ kind: "error", title: t("Invalid plugin URL") });
       return;
     }
     setInstallOpen(false);
     setInstallURL("");
-    void streamPluginTask("Installing plugin", (onEvent) => api.installPlugin(target, onEvent), "Plugin installed");
+    void streamPluginTask(t("Installing plugin"), (onEvent) => api.installPlugin(target, onEvent), t("Plugin installed"));
   };
 
   const runRemove = () => {
@@ -95,7 +107,11 @@ export function PluginsPage() {
     const plugin = removeTarget;
     setRemoveTarget(null);
     setSelected(null);
-    void streamPluginTask(`Removing ${plugin.name}`, (onEvent) => api.removePlugin(plugin.name, onEvent), `${plugin.name} removed`);
+    void streamPluginTask(
+      t("Removing {name}", { name: plugin.name }),
+      (onEvent) => api.removePlugin(plugin.name, onEvent),
+      t("{name} removed", { name: plugin.name }),
+    );
   };
 
   if (!snapshot) return null;
@@ -117,13 +133,25 @@ export function PluginsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Plugins"
-        description="Extensions that add capabilities to Unraid — from applications and automation to hardware support."
+        eyebrow={t("System")}
+        title={t("Plugins")}
+        description={t("Extensions that add capabilities to Unraid — from applications and automation to hardware support.")}
         meta={
           <>
-            <Badge tone="accent" dot>{plugins.length} installed</Badge>
-            {updates.length > 0 ? <Badge tone="warning">{updates.length} updates available</Badge> : <Badge tone="success">Up to date</Badge>}
+            <Badge tone="accent" dot>
+              {plugins.length === 1
+                ? t("{count} plugin installed", { count: plugins.length })
+                : t("{count} plugins installed", { count: plugins.length })}
+            </Badge>
+            {updates.length > 0 ? (
+              <Badge tone="warning">
+                {updates.length === 1
+                  ? t("{count} update available", { count: updates.length })
+                  : t("{count} updates available", { count: updates.length })}
+              </Badge>
+            ) : (
+              <Badge tone="success">{t("Up to date")}</Badge>
+            )}
           </>
         }
         actions={
@@ -134,10 +162,10 @@ export function PluginsPage() {
               loading={check.isPending}
               onClick={() => check.mutate()}
             >
-              Check updates
+              {t("Check updates")}
             </Button>
             <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setInstallOpen(true)}>
-              Install plugin
+              {t("Install plugin")}
             </Button>
             <Button
               variant="secondary"
@@ -151,14 +179,20 @@ export function PluginsPage() {
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Stat icon={<Puzzle className="size-4" />} label="Installed" value={String(plugins.length)} hint="active extensions" />
-        <Stat icon={<Download className="size-4" />} label="Updates" value={String(updates.length)} hint={updates.length ? "ready to install" : "everything current"} tone={updates.length ? "warning" : "success"} />
-        <Stat icon={<Tag className="size-4" />} label="Categories" value={String(categories.length - 1)} hint="across your plugins" />
+        <Stat icon={<Puzzle className="size-4" />} label={t("Installed")} value={String(plugins.length)} hint={t("active extensions")} />
+        <Stat
+          icon={<Download className="size-4" />}
+          label={t("Updates")}
+          value={String(updates.length)}
+          hint={updates.length ? t("ready to install") : t("everything current")}
+          tone={updates.length ? "warning" : "success"}
+        />
+        <Stat icon={<Tag className="size-4" />} label={t("Categories")} value={String(categories.length - 1)} hint={t("across your plugins")} />
         <Stat
           icon={<ShieldCheck className="size-4" />}
-          label="Auto update"
-          value={snapshot.settings.autoUpdate ? "On" : "Off"}
-          hint={snapshot.settings.autoUpdate ? "notify and install" : "manual approval"}
+          label={t("Auto update")}
+          value={snapshot.settings.autoUpdate ? t("On") : t("Off")}
+          hint={snapshot.settings.autoUpdate ? t("notify and install") : t("manual approval")}
         />
       </div>
 
@@ -176,14 +210,14 @@ export function PluginsPage() {
                   : "border-line bg-[var(--surface-2)] text-muted hover:border-line-strong hover:text-ink",
               )}
             >
-              {item}
+              {item === "All" ? t("All") : item}
             </button>
           ))}
         </div>
         <InputBase
           value={query}
           onChange={setQuery}
-          placeholder="Search plugins…"
+          placeholder={t("Search plugins…")}
           icon={<Search className="size-3.5" />}
           className="ml-auto w-52"
         />
@@ -191,7 +225,11 @@ export function PluginsPage() {
 
       {filtered.length === 0 ? (
         <Card>
-          <EmptyState icon={<Puzzle className="size-5" />} title="No plugins match this filter" description="Try another category or search term." />
+          <EmptyState
+            icon={<Puzzle className="size-5" />}
+            title={t("No plugins match this filter")}
+            description={t("Try another category or search term.")}
+          />
         </Card>
       ) : (
         <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -210,7 +248,7 @@ export function PluginsPage() {
                     <span className="mt-0.5 block truncate text-[10px] text-subtle">{plugin.author}</span>
                   </span>
                 </button>
-                {plugin.updateAvailable ? <Badge tone="warning">update</Badge> : <Badge tone="success" dot>current</Badge>}
+                {plugin.updateAvailable ? <Badge tone="warning">{t("update")}</Badge> : <Badge tone="success" dot>{t("current")}</Badge>}
               </div>
 
               <p className="mt-3 line-clamp-2 min-h-[32px] text-[11px] leading-relaxed text-muted">{plugin.description}</p>
@@ -224,7 +262,7 @@ export function PluginsPage() {
               <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
                 <span className="flex items-center gap-1.5 text-[9.5px] text-subtle">
                   <span className={cn("status-dot", plugin.enabled ? "live" : "muted")} />
-                  {plugin.enabled ? "Enabled" : "Disabled"}
+                  {plugin.enabled ? t("Enabled") : t("Disabled")}
                 </span>
                 {plugin.updateAvailable ? (
                   <Button
@@ -234,7 +272,7 @@ export function PluginsPage() {
                     icon={<Download className="size-3" />}
                     onClick={() => void runUpdate(plugin)}
                   >
-                    Update
+                    {t("Update")}
                   </Button>
                 ) : null}
                 <Button
@@ -243,7 +281,7 @@ export function PluginsPage() {
                   className={`${plugin.updateAvailable ? "" : "ml-auto"} px-2 text-[11px]`}
                   onClick={() => setSelected(plugin)}
                 >
-                  Details
+                  {t("Details")}
                 </Button>
               </div>
             </Card>
@@ -269,7 +307,7 @@ export function PluginsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-semibold text-ink">{selected.name}</p>
-                  {selected.updateAvailable ? <Badge tone="warning">update available</Badge> : <Badge tone="success">up to date</Badge>}
+                  {selected.updateAvailable ? <Badge tone="warning">{t("update available")}</Badge> : <Badge tone="success">{t("up to date")}</Badge>}
                 </div>
                 <p className="mt-1 font-mono text-[10px] text-subtle">v{selected.version}</p>
               </div>
@@ -278,16 +316,16 @@ export function PluginsPage() {
             <p className="text-[11.5px] leading-relaxed text-muted">{selected.description}</p>
 
             <div className="grid grid-cols-2 gap-3">
-              <Info label="Installed" value={selected.version} />
-              <Info label="Latest" value={selected.latest} />
-              <Info label="Author" value={selected.author} />
-              <Info label="Category" value={selected.category} />
+              <Info label={t("Installed version")} value={selected.version} />
+              <Info label={t("Latest version")} value={selected.latest} />
+              <Info label={t("Author")} value={selected.author} />
+              <Info label={t("Category")} value={selected.category} />
             </div>
 
             {selected.updateAvailable ? (
               <div className="rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3">
                 <p className="flex items-center gap-2 text-[11px] font-semibold text-[var(--warning)]">
-                  <Download className="size-3.5" /> Version {selected.latest} is available
+                  <Download className="size-3.5" /> {t("Version {version} is available", { version: selected.latest })}
                 </p>
                 <div className="mt-2">
                   <Button
@@ -296,20 +334,19 @@ export function PluginsPage() {
                     icon={<Download className="size-3" />}
                     onClick={() => void runUpdate(selected)}
                   >
-                    Update plugin
+                    {t("Update plugin")}
                   </Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-xl border border-line p-3 text-[10.5px] text-[var(--success)]">
-                <CheckCircle2 className="size-3.5" /> This plugin is running the latest available version.
+                <CheckCircle2 className="size-3.5" /> {t("This plugin is running the latest available version.")}
               </div>
             )}
 
             <div className="flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
               <Boxes className="mt-0.5 size-3.5 shrink-0" />
-              Plugins extend Unraid at the system level. Only install plugins you trust, and keep a current
-              flash backup before updating.
+              {t("Plugins extend Unraid at the system level. Only install plugins you trust, and keep a current flash backup before updating.")}
             </div>
 
             <Button
@@ -317,7 +354,7 @@ export function PluginsPage() {
               icon={<Trash2 className="size-3.5" />}
               onClick={() => setRemoveTarget(selected)}
             >
-              Remove plugin
+              {t("Remove plugin")}
             </Button>
           </div>
         ) : null}
@@ -329,46 +366,46 @@ export function PluginsPage() {
           if (!updateRun?.running) setUpdateRun(null);
         }}
         title={updateRun?.title ?? ""}
-        description="Output from the official Unraid plugin manager."
+        description={t("Output from the official Unraid plugin manager.")}
         size="xl"
         footer={
           <Button variant="secondary" onClick={() => setUpdateRun(null)} disabled={updateRun?.running}>
-            Close
+            {t("Close")}
           </Button>
         }
       >
         <div className="space-y-3">
           <pre className="max-h-[55vh] overflow-auto rounded-xl border border-[#1f2230] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed text-[#c7cbd6]">
-            {updateRun?.lines.length ? updateRun.lines.join("\n") : "Starting plugin manager…"}
+            {updateRun?.lines.length ? updateRun.lines.join("\n") : t("Starting plugin manager…")}
           </pre>
           {updateRun?.error ? (
             <p className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2 text-[10.5px] text-[var(--danger)]">
               {updateRun.error}
             </p>
           ) : null}
-          {updateRun?.running ? <p className="text-[10px] text-subtle">Update in progress…</p> : null}
+          {updateRun?.running ? <p className="text-[10px] text-subtle">{t("Update in progress…")}</p> : null}
         </div>
       </Modal>
 
       <Modal
         open={installOpen}
         onClose={() => setInstallOpen(false)}
-        title="Install a plugin"
-        description="Downloads a .plg definition and runs it through the official Unraid plugin manager."
+        title={t("Install a plugin")}
+        description={t("Downloads a .plg definition and runs it through the official Unraid plugin manager.")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setInstallOpen(false)}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button variant="primary" icon={<Download className="size-3.5" />} onClick={runInstall}>
-              Install
+              {t("Install")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <label className="block space-y-1">
-            <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Plugin URL</span>
+            <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Plugin URL")}</span>
             <input
               value={installURL}
               onChange={(event) => setInstallURL(event.target.value)}
@@ -378,7 +415,7 @@ export function PluginsPage() {
           </label>
           <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3 text-[10.5px] leading-relaxed text-muted">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--warning)]" />
-            Plugins run as root. Only install definitions from sources you trust.
+            {t("Plugins run as root. Only install definitions from sources you trust.")}
           </div>
         </div>
       </Modal>
@@ -386,21 +423,21 @@ export function PluginsPage() {
       <Modal
         open={Boolean(removeTarget)}
         onClose={() => setRemoveTarget(null)}
-        title={`Remove ${removeTarget?.name ?? "plugin"}?`}
-        description="The official plugin manager removes the plugin files and its installed marker."
+        title={t("Remove {name}?", { name: removeTarget?.name ?? t("plugin") })}
+        description={t("The official plugin manager removes the plugin files and its installed marker.")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button variant="danger" icon={<Trash2 className="size-3.5" />} onClick={runRemove}>
-              Remove plugin
+              {t("Remove plugin")}
             </Button>
           </>
         }
       >
         <p className="text-[10.5px] leading-relaxed text-muted">
-          Settings and data stored outside the plugin directory are preserved.
+          {t("Settings and data stored outside the plugin directory are preserved.")}
         </p>
       </Modal>
     </>

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { CheckCircle2, Info, TriangleAlert, X, XCircle } from "lucide-react";
+import { useI18n } from "../i18n";
 
 type ToastKind = "success" | "error" | "info" | "warning";
 
@@ -41,6 +42,7 @@ const COLORS: Record<ToastKind, string> = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
@@ -81,7 +83,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 </div>
                 <button
                   type="button"
-                  aria-label="Dismiss notification"
+                  aria-label={t("Dismiss notification")}
                   onClick={() => dismiss(item.id)}
                   className="-mr-1 -mt-1 grid size-6 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-3)] hover:text-ink"
                 >

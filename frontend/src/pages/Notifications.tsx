@@ -29,6 +29,7 @@ import {
   cn,
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
+import { useI18n } from "../i18n";
 import { useAction } from "../lib/useAction";
 import { formatDateTime, relativeTime } from "../lib/format";
 import type { Notification } from "../lib/types";
@@ -51,6 +52,7 @@ const SOURCE_ICONS: Record<string, typeof HardDrive> = {
 
 export function NotificationsPage() {
   const { snapshot, refresh } = useApp();
+  const { t } = useI18n();
   const action = useAction();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -80,48 +82,75 @@ export function NotificationsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Overview"
-        title="Notifications"
-        description="Everything Unraid and your services want you to know, in one calm inbox."
+        eyebrow={t("Overview")}
+        title={t("Notifications")}
+        description={t("Everything Unraid and your services want you to know, in one calm inbox.")}
         meta={
           <>
             <Badge tone={unread.length > 0 ? "accent" : "success"} dot pulse={unread.length > 0}>
-              {unread.length > 0 ? `${unread.length} unread` : "All caught up"}
+              {unread.length > 0
+                ? unread.length === 1
+                  ? t("{count} unread notification", { count: unread.length })
+                  : t("{count} unread notifications", { count: unread.length })
+                : t("All caught up")}
             </Badge>
-            <span className="chip">{notifications.length} total</span>
+            <span className="chip">{t("{count} total", { count: notifications.length })}</span>
           </>
         }
         actions={
           <>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-              Refresh
+              {t("Refresh")}
             </Button>
             <Button
               variant="primary"
               icon={<CheckCheck className="size-3.5" />}
               disabled={unread.length === 0}
               loading={action.isPending}
-              onClick={() => action.mutate({ kind: "notification.ackall", success: "All notifications acknowledged" })}
+              onClick={() =>
+                action.mutate({ kind: "notification.ackall", success: t("All notifications acknowledged") })
+              }
             >
-              Mark all read
+              {t("Mark all read")}
             </Button>
           </>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Stat icon={<Inbox className="size-4" />} label="Inbox" value={String(notifications.filter((n) => !n.archived).length)} hint="active notifications" />
-        <Stat icon={<BellRing className="size-4" />} label="Unread" value={String(unread.length)} hint="waiting for you" tone={unread.length ? "warning" : "success"} />
-        <Stat icon={<CircleAlert className="size-4" />} label="Warnings" value={String(notifications.filter((n) => n.importance !== "normal" && !n.archived).length)} hint="warning or alert level" />
-        <Stat icon={<Archive className="size-4" />} label="Archived" value={String(archived.length)} hint="kept for reference" />
+        <Stat
+          icon={<Inbox className="size-4" />}
+          label={t("Inbox")}
+          value={String(notifications.filter((n) => !n.archived).length)}
+          hint={t("active notifications")}
+        />
+        <Stat
+          icon={<BellRing className="size-4" />}
+          label={t("Unread")}
+          value={String(unread.length)}
+          hint={t("waiting for you")}
+          tone={unread.length ? "warning" : "success"}
+        />
+        <Stat
+          icon={<CircleAlert className="size-4" />}
+          label={t("Warnings")}
+          value={String(notifications.filter((n) => n.importance !== "normal" && !n.archived).length)}
+          hint={t("warning or alert level")}
+        />
+        <Stat
+          icon={<Archive className="size-4" />}
+          label={t("Archived")}
+          value={String(archived.length)}
+          hint={t("kept for reference")}
+        />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Tabs
           items={[
-            { value: "all", label: "Inbox", count: notifications.filter((n) => !n.archived).length },
-            { value: "unread", label: "Unread", count: unread.length },
-            { value: "archived", label: "Archived", count: archived.length },
+            { value: "all", label: t("Inbox"), count: notifications.filter((n) => !n.archived).length },
+            { value: "unread", label: t("Unread"), count: unread.length },
+            { value: "archived", label: t("Archived"), count: archived.length },
           ]}
           value={filter}
           onChange={(value) => setFilter(value as Filter)}
@@ -129,7 +158,7 @@ export function NotificationsPage() {
         <InputBase
           value={query}
           onChange={setQuery}
-          placeholder="Search notifications…"
+          placeholder={t("Search notifications…")}
           icon={<Search className="size-3.5" />}
           className="w-56"
         />
@@ -139,8 +168,14 @@ export function NotificationsPage() {
         <Card>
           <EmptyState
             icon={<Bell className="size-5" />}
-            title={filter === "unread" ? "No unread notifications" : filter === "archived" ? "Nothing archived yet" : "Your inbox is clear"}
-            description="Notifications from the array, Docker, UPS and plugins will show up here."
+            title={
+              filter === "unread"
+                ? t("No unread notifications")
+                : filter === "archived"
+                  ? t("Nothing archived yet")
+                  : t("Your inbox is clear")
+            }
+            description={t("Notifications from the array, Docker, UPS and plugins will show up here.")}
           />
         </Card>
       ) : (
@@ -173,7 +208,7 @@ export function NotificationsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-[12.5px] font-semibold text-ink">{item.title}</p>
                       {!item.read && !item.archived ? <span className="size-1.5 rounded-full bg-[var(--accent)]" /> : null}
-                      {item.archived ? <Badge tone="neutral">archived</Badge> : null}
+                      {item.archived ? <Badge tone="neutral">{t("archived")}</Badge> : null}
                     </div>
                     <p className="mt-0.5 truncate text-[11px] text-soft">{item.subject}</p>
                     <p className="mt-1 line-clamp-2 text-[10.5px] leading-relaxed text-muted">{item.description}</p>
@@ -188,31 +223,47 @@ export function NotificationsPage() {
                   <div className="flex shrink-0 items-start gap-1" onClick={(event) => event.stopPropagation()}>
                     {!item.read && !item.archived ? (
                       <IconButton
-                        label="Mark as read"
+                        label={t("Mark as read")}
                         size="sm"
-                        onClick={() => action.mutate({ kind: "notification.ack", target: item.id, success: "Notification acknowledged" })}
+                        onClick={() =>
+                          action.mutate({
+                            kind: "notification.ack",
+                            target: item.id,
+                            success: t("Notification acknowledged"),
+                          })
+                        }
                       >
                         <Check className="size-3.5" />
                       </IconButton>
                     ) : null}
                     <Menu
                       trigger={
-                        <IconButton label="Notification actions" size="sm">
+                        <IconButton label={t("Notification actions")} size="sm">
                           <span className="text-[15px] leading-none">⋯</span>
                         </IconButton>
                       }
                       items={[
                         {
-                          label: "Mark as read",
+                          label: t("Mark as read"),
                           icon: <Check className="size-3.5" />,
                           disabled: item.read,
-                          onSelect: () => action.mutate({ kind: "notification.ack", target: item.id, success: "Notification acknowledged" }),
+                          onSelect: () =>
+                            action.mutate({
+                              kind: "notification.ack",
+                              target: item.id,
+                              success: t("Notification acknowledged"),
+                            }),
                         },
                         {
-                          label: "Archive",
+                          label: t("Archive"),
                           icon: <Archive className="size-3.5" />,
                           disabled: item.archived,
-                          onSelect: () => action.mutate({ kind: "notification.archive", target: item.id, success: "Notification archived" }),
+                          onSelect: () =>
+                            action.mutate({
+                              kind: "notification.archive",
+                              target: item.id,
+                              success: t("Notification archived"),
+                            }),
                         },
                       ]}
                     />
@@ -239,11 +290,15 @@ export function NotificationsPage() {
                 icon={<Check className="size-3.5" />}
                 disabled={selected.read}
                 onClick={() => {
-                  action.mutate({ kind: "notification.ack", target: selected.id, success: "Notification acknowledged" });
+                  action.mutate({
+                    kind: "notification.ack",
+                    target: selected.id,
+                    success: t("Notification acknowledged"),
+                  });
                   setSelected(null);
                 }}
               >
-                Mark as read
+                {t("Mark as read")}
               </Button>
               <Button
                 variant="primary"
@@ -251,11 +306,15 @@ export function NotificationsPage() {
                 icon={<Archive className="size-3.5" />}
                 disabled={selected.archived}
                 onClick={() => {
-                  action.mutate({ kind: "notification.archive", target: selected.id, success: "Notification archived" });
+                  action.mutate({
+                    kind: "notification.archive",
+                    target: selected.id,
+                    success: t("Notification archived"),
+                  });
                   setSelected(null);
                 }}
               >
-                Archive
+                {t("Archive")}
               </Button>
             </div>
           ) : null
@@ -265,26 +324,25 @@ export function NotificationsPage() {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={IMPORTANCE[selected.importance as keyof typeof IMPORTANCE]?.tone ?? "info"}>
-                {IMPORTANCE[selected.importance as keyof typeof IMPORTANCE]?.label ?? selected.importance}
+                {t(IMPORTANCE[selected.importance as keyof typeof IMPORTANCE]?.label ?? selected.importance)}
               </Badge>
               <Badge tone="neutral">{selected.source}</Badge>
-              {selected.read ? <Badge tone="success">read</Badge> : <Badge tone="accent" dot>unread</Badge>}
-              {selected.archived ? <Badge tone="neutral">archived</Badge> : null}
+              {selected.read ? <Badge tone="success">{t("read")}</Badge> : <Badge tone="accent" dot>{t("unread")}</Badge>}
+              {selected.archived ? <Badge tone="neutral">{t("archived")}</Badge> : null}
             </div>
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/50 p-4">
               <p className="text-[12.5px] font-semibold text-ink">{selected.subject}</p>
               <p className="mt-2 whitespace-pre-line text-[11.5px] leading-relaxed text-muted">{selected.description}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Info label="Received" value={formatDateTime(selected.timestamp)} />
-              <Info label="Relative" value={relativeTime(selected.timestamp)} />
-              <Info label="Source" value={selected.source} />
-              <Info label="Identifier" value={selected.id} />
+              <Info label={t("Received")} value={formatDateTime(selected.timestamp)} />
+              <Info label={t("Relative")} value={relativeTime(selected.timestamp)} />
+              <Info label={t("Source")} value={selected.source} />
+              <Info label={t("Identifier")} value={selected.id} />
             </div>
             <div className="flex items-start gap-2 rounded-xl border border-line p-3 text-[10.5px] text-muted">
               <Mail className="mt-0.5 size-3.5 shrink-0 text-subtle" />
-              Email and push delivery follow your notification agent settings. Aurora keeps the in-app inbox in
-              sync with Unraid.
+              {t("Email and push delivery follow your notification agent settings. Aurora keeps the in-app inbox in sync with Unraid.")}
             </div>
           </div>
         ) : null}

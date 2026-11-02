@@ -287,10 +287,11 @@ needs no extra Go dependency.
 main.tsx
   QueryClientProvider
     ThemeProvider            localStorage theme/accent/density, system listener
-      ToastProvider          max 3 stacked toasts, auto-dismiss
-        AppDataProvider      session query, bootstrap query, SSE, history
-          BrowserRouter
-            App              routes + document title
+      AppDataProvider        session query, bootstrap query, SSE, history
+        I18nProvider         settings.language, English source keys + French dictionary
+          ToastProvider      max 3 stacked toasts, auto-dismiss
+            BrowserRouter
+              App            routes + document title
 ```
 
 - **Server state** lives in TanStack Query (`bootstrap` every 12 s, logs every 6 s, container logs on demand).
@@ -299,6 +300,10 @@ main.tsx
 - **Actions** go through `useAction`, which invalidates `bootstrap` and shows a toast on success/failure.
 - **Routing** is explicit in `App.tsx`; the classic filesystem routing is gone.
 - **Command palette** is generated from navigation, global actions, containers and VMs.
+- **Translations** use English strings as keys (`t("Storage")`). Missing French entries fall back to
+  English; formatters (dates, relative times, numbers) follow the selected locale. The choice is
+  stored in `settings.language` (`en` by default, `fr` available) and mirrored to `localStorage`
+  for the sign-in screen.
 
 ### Route table
 

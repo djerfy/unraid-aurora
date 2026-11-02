@@ -40,12 +40,14 @@ import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import { useApp } from "../app/AppDataProvider";
 import { useAction } from "../lib/useAction";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import {
   formatBytes,
   formatDateTime,
   formatDuration,
   formatPercent,
+  formatShortDate,
   formatSpeed,
   relativeTime,
 } from "../lib/format";
@@ -59,16 +61,28 @@ const TABS = [
 ];
 
 const MOVER_PHASES = [
-  { key: "scanning", label: "Recherche" },
-  { key: "calculating", label: "Calculs" },
-  { key: "moving", label: "Déplacement" },
-  { key: "finishing", label: "Finalisation" },
+  { key: "scanning", label: "Scanning" },
+  { key: "calculating", label: "Calculating" },
+  { key: "moving", label: "Moving" },
+  { key: "finishing", label: "Finishing" },
 ];
+
+const CACHE_MODES: Record<string, string> = {
+  no: "No",
+  yes: "Yes",
+  prefer: "Prefer",
+  only: "Only",
+};
+
+function cacheModeLabel(t: (key: string) => string, mode: string) {
+  return CACHE_MODES[mode] ? t(CACHE_MODES[mode]) : mode;
+}
 
 export function StoragePage() {
   const { snapshot, metrics, history, refresh } = useApp();
   const action = useAction();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "array";
   const [selectedDisk, setSelectedDisk] = useState<Disk | null>(null);
@@ -110,24 +124,26 @@ export function StoragePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Infrastructure"
-        title="Storage"
-        description="Your array, shares and cache pools — with live health, throughput and parity telemetry."
+        eyebrow={t("Infrastructure")}
+        title={t("Storage")}
+        description={t(
+          "Your array, shares and cache pools — with live health, throughput and parity telemetry.",
+        )}
         meta={
           <>
             <Badge tone={array.state === "STARTED" ? "success" : "neutral"} dot>
-              Array {array.state.toLowerCase()}
+              {array.state === "STARTED" ? t("Array started") : t("Array stopped")}
             </Badge>
             <Badge tone={array.status === "protected" ? "violet" : "warning"}>
-              {array.status === "protected" ? "Parity protected" : "Unprotected"}
+              {array.status === "protected" ? t("Parity protected") : t("Unprotected")}
             </Badge>
-            <span className="chip">{disks.length} devices</span>
+            <span className="chip">{t("{count} devices", { count: disks.length })}</span>
           </>
         }
         actions={
           <>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-              Refresh
+              {t("Refresh")}
             </Button>
             {array.state === "STARTED" ? (
               <Button
@@ -135,7 +151,7 @@ export function StoragePage() {
                 icon={<Square className="size-3.5" />}
                 onClick={() => setArrayModal("stop")}
               >
-                Stop array
+                {t("Stop array")}
               </Button>
             ) : (
               <Button
@@ -143,7 +159,7 @@ export function StoragePage() {
                 icon={<Play className="size-3.5" />}
                 onClick={() => setArrayModal("start")}
               >
-                Start array
+                {t("Start array")}
               </Button>
             )}
             {array.state === "STARTED" && parity.running ? (
@@ -154,11 +170,11 @@ export function StoragePage() {
                 onClick={() =>
                   action.mutate({
                     kind: parity.paused ? "parity.resume" : "parity.pause",
-                    success: parity.paused ? "Parity check resumed" : "Parity check paused",
+                    success: parity.paused ? t("Parity check resumed") : t("Parity check paused"),
                   })
                 }
               >
-                {parity.paused ? "Resume check" : "Pause check"}
+                {parity.paused ? t("Resume check") : t("Pause check")}
               </Button>
             ) : array.state === "STARTED" ? (
               <Button
@@ -166,10 +182,10 @@ export function StoragePage() {
                 icon={<Play className="size-3.5" />}
                 loading={action.isPending}
                 onClick={() =>
-                  action.mutate({ kind: "parity.start", success: "Parity check started" })
+                  action.mutate({ kind: "parity.start", success: t("Parity check started") })
                 }
               >
-                Start parity check
+                {t("Start parity check")}
               </Button>
             ) : null}
           </>
@@ -179,9 +195,12 @@ export function StoragePage() {
       <div className="mb-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           icon={<HardDrive className="size-4" />}
-          label="Array capacity"
+          label={t("Array capacity")}
           value={formatBytes(array.used)}
-          detail={`of ${formatBytes(array.total)} · ${formatBytes(array.free)} free`}
+          detail={t("of {total} · {free} free", {
+            total: formatBytes(array.total),
+            free: formatBytes(array.free),
+          })}
         >
           <SegmentBar
             height={5}
@@ -193,7 +212,7 @@ export function StoragePage() {
                   : `color-mix(in srgb, var(--accent) ${86 - index * 7}%, var(--surface-3))`,
                 label: disk.name,
               })),
-              { value: Math.max(1, array.free), color: "var(--surface-3)", label: "free" },
+              { value: Math.max(1, array.free), color: "var(--surface-3)", label: t("free") },
             ]}
             className="mt-3"
           />
@@ -201,41 +220,65 @@ export function StoragePage() {
 
         <SummaryCard
           icon={<ShieldCheck className="size-4" />}
-          label="Protection"
-          value={parity.configured ? `${parity.disks.length}× parity` : "None"}
+          label={t("Protection")}
+          value={parity.configured ? t("{count}× parity", { count: parity.disks.length }) : t("None")}
           detail={
             parity.lastCheck
-              ? `Last check ${relativeTime(parity.lastCheck.date)} · ${parity.lastCheck.errors} errors`
-              : "No parity check recorded"
+              ? t(
+                  parity.lastCheck.errors === 1
+                    ? "Last check {time} · {count} error"
+                    : "Last check {time} · {count} errors",
+                  {
+                    time: relativeTime(parity.lastCheck.date),
+                    count: parity.lastCheck.errors,
+                  },
+                )
+              : t("No parity check recorded")
           }
         >
           <div className="mt-3 flex items-center gap-1.5">
             <span className={cn("status-dot", parity.errors > 0 ? "danger" : "live")} />
             <span className="text-[10.5px] text-muted">
-              {parity.errors > 0 ? `${parity.errors} sync errors` : "No sync errors detected"}
+              {parity.errors > 0
+                ? t(
+                    parity.errors === 1 ? "{count} sync error" : "{count} sync errors",
+                    { count: parity.errors },
+                  )
+                : t("No sync errors detected")}
             </span>
           </div>
         </SummaryCard>
 
         <SummaryCard
           icon={<Database className="size-4" />}
-          label="Cache pool"
+          label={t("Cache pool")}
           value={pools[0] ? formatBytes(pools[0].used) : "—"}
-          detail={pools[0] ? `${pools[0].devices.length} devices · ${pools[0].fsType} · ${formatBytes(pools[0].free)} free` : "No cache pool"}
+          detail={
+            pools[0]
+              ? t("{count} devices · {fs} · {free} free", {
+                  count: pools[0].devices.length,
+                  fs: pools[0].fsType,
+                  free: formatBytes(pools[0].free),
+                })
+              : t("No cache pool")
+          }
         >
           <Progress value={pools[0]?.usage ?? 0} height={5} className="mt-3" />
         </SummaryCard>
 
         <SummaryCard
           icon={<Activity className="size-4" />}
-          label="Live throughput"
+          label={t("Live throughput")}
           value={formatSpeed((metrics?.diskRead ?? 0) + (metrics?.diskWrite ?? 0))}
-          detail={`${formatSpeed(metrics?.diskRead ?? 0)} read · ${formatSpeed(metrics?.diskWrite ?? 0)} write`}
+          detail={t("{read} read · {write} write", {
+            read: formatSpeed(metrics?.diskRead ?? 0),
+            write: formatSpeed(metrics?.diskWrite ?? 0),
+          })}
         >
           <AreaChart
             series={[
-              { values: history.slice(-80).map((p) => p.diskRead), color: "var(--info)", label: "Read" },
-              { values: history.slice(-80).map((p) => p.diskWrite), color: "var(--violet)", label: "Write" },
+              { values: history.slice(-80).map((p) => p.diskRead), color: "var(--info)", label: t("Read") },
+              { values: history.slice(-80).map((p) => p.diskWrite), color: "var(--violet)", label: t("Write") },
             ]}
             height={30}
             grid={false}
@@ -249,6 +292,7 @@ export function StoragePage() {
         <Tabs
           items={TABS.map((item) => ({
             ...item,
+            label: t(item.label),
             count:
               item.value === "array"
                 ? disks.length
@@ -266,18 +310,18 @@ export function StoragePage() {
             <InputBase
               value={query}
               onChange={setQuery}
-              placeholder="Filter shares…"
+              placeholder={t("Filter shares…")}
               icon={<Search className="size-3.5" />}
               className="w-56"
             />
             <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setShareEditor({ share: null })}>
-              New share
+              {t("New share")}
             </Button>
           </div>
         ) : tab === "array" ? (
           <label className="flex items-center gap-2 text-[11px] text-muted">
-            <Switch checked={showIO} onChange={setShowIO} label="Show live I/O" />
-            Show live I/O
+            <Switch checked={showIO} onChange={setShowIO} label={t("Show live I/O")} />
+            {t("Show live I/O")}
           </label>
         ) : null}
       </div>
@@ -287,28 +331,34 @@ export function StoragePage() {
           <MoverCard arrayRunning={array.state === "STARTED"} />
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[10.5px] text-subtle">
             <Info className="size-3.5" />
-            <span>Spin disks down to save energy. A spun-down disk wakes automatically on first access.</span>
+            <span>
+              {t("Spin disks down to save energy. A spun-down disk wakes automatically on first access.")}
+            </span>
             <span className="ml-auto flex items-center gap-1.5">
-              <span className="status-dot" /> {dataDisks.filter((d) => d.status === "active").length} active
-              <span className="status-dot muted" /> {dataDisks.filter((d) => d.status === "standby").length} standby
+              <span className="status-dot" />{" "}
+              {t("{count} active", { count: dataDisks.filter((d) => d.status === "active").length })}
+              <span className="status-dot muted" />{" "}
+              {t("{count} standby", { count: dataDisks.filter((d) => d.status === "standby").length })}
             </span>
           </div>
 
           <Card>
             <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
               <div>
-                <h2 className="text-[13px] font-semibold text-ink">Array devices</h2>
-                <p className="mt-0.5 text-[10.5px] text-subtle">Parity, data disks and pool members</p>
+                <h2 className="text-[13px] font-semibold text-ink">{t("Array devices")}</h2>
+                <p className="mt-0.5 text-[10.5px] text-subtle">
+                  {t("Parity, data disks and pool members")}
+                </p>
               </div>
-              <Badge tone="neutral">{formatBytes(array.total)} usable</Badge>
+              <Badge tone="neutral">{t("{size} usable", { size: formatBytes(array.total) })}</Badge>
             </div>
 
-            <DiskGroup label="Parity" disks={parityDisks} showIO={showIO} onSelect={setSelectedDisk} />
-            <DiskGroup label="Data" disks={dataDisks} showIO={showIO} onSelect={setSelectedDisk} />
+            <DiskGroup label={t("Parity")} disks={parityDisks} showIO={showIO} onSelect={setSelectedDisk} />
+            <DiskGroup label={t("Data")} disks={dataDisks} showIO={showIO} onSelect={setSelectedDisk} />
             {cacheDisks.length ? (
-              <DiskGroup label="Cache pool" disks={cacheDisks} showIO={showIO} onSelect={setSelectedDisk} />
+              <DiskGroup label={t("Cache pool")} disks={cacheDisks} showIO={showIO} onSelect={setSelectedDisk} />
             ) : null}
-            {flash ? <DiskGroup label="Boot" disks={[flash]} showIO={showIO} onSelect={setSelectedDisk} /> : null}
+            {flash ? <DiskGroup label={t("Boot")} disks={[flash]} showIO={showIO} onSelect={setSelectedDisk} /> : null}
           </Card>
         </div>
       ) : null}
@@ -318,8 +368,8 @@ export function StoragePage() {
           <Card>
             <EmptyState
               icon={<FolderTree className="size-5" />}
-              title="No shares match your filter"
-              description="Try a different name or clear the search field."
+              title={t("No shares match your filter")}
+              description={t("Try a different name or clear the search field.")}
             />
           </Card>
         ) : (
@@ -344,13 +394,15 @@ export function StoragePage() {
                         <Database className="size-3.5" />
                       </span>
                       <div>
-                        <h2 className="text-[13px] font-semibold text-ink">{pool.name} pool</h2>
-                        <p className="text-[10.5px] text-subtle">{pool.fsType} · cache pool</p>
+                        <h2 className="text-[13px] font-semibold text-ink">
+                          {t("{name} pool", { name: pool.name })}
+                        </h2>
+                        <p className="text-[10.5px] text-subtle">{t("{fs} · cache pool", { fs: pool.fsType })}</p>
                       </div>
                     </div>
                   </div>
                   <Badge tone={pool.status === "healthy" ? "success" : "warning"} dot>
-                    {pool.status}
+                    {pool.status === "healthy" ? t("Healthy") : pool.status}
                   </Badge>
                 </div>
 
@@ -359,7 +411,12 @@ export function StoragePage() {
                     <div className="flex items-end justify-between">
                       <div>
                         <p className="num text-[24px] font-semibold leading-none text-ink">{formatBytes(pool.used)}</p>
-                        <p className="mt-1 text-[10.5px] text-subtle">of {formatBytes(pool.size)} · {formatBytes(pool.free)} free</p>
+                        <p className="mt-1 text-[10.5px] text-subtle">
+                          {t("of {size} · {free} free", {
+                            size: formatBytes(pool.size),
+                            free: formatBytes(pool.free),
+                          })}
+                        </p>
                       </div>
                       <span className="num text-xs text-muted">{formatPercent(pool.usage, 1)}</span>
                     </div>
@@ -374,7 +431,7 @@ export function StoragePage() {
                           </div>
                           <span className="num text-[10px] text-muted">{disk.temp}°C</span>
                           <Badge tone={disk.smart === "passed" ? "success" : "warning"}>
-                            {disk.smart === "passed" ? "Healthy" : "Check SMART"}
+                            {disk.smart === "passed" ? t("Healthy") : t("Check SMART")}
                           </Badge>
                         </div>
                       ))}
@@ -383,7 +440,7 @@ export function StoragePage() {
                   <Ring value={pool.usage} size={132} stroke={8}>
                     <div className="text-center">
                       <p className="num text-[24px] font-semibold leading-none text-ink">{Math.round(pool.usage)}%</p>
-                      <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">used</p>
+                      <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">{t("used")}</p>
                     </div>
                   </Ring>
                 </div>
@@ -396,12 +453,14 @@ export function StoragePage() {
               <span className="grid size-7 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-[var(--violet)]">
                 <Gauge className="size-3.5" />
               </span>
-              <h2 className="text-[13px] font-semibold text-ink">Cache strategy</h2>
+              <h2 className="text-[13px] font-semibold text-ink">{t("Cache strategy")}</h2>
             </div>
             <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
-              Shares configured with <span className="font-medium text-soft">Only</span> keep data on the
-              cache pool permanently. <span className="font-medium text-soft">Prefer</span> uses the pool as a
-              fast landing zone before the mover runs.
+              {t("Shares configured with")}{" "}
+              <span className="font-medium text-soft">{t("Only")}</span>{" "}
+              {t("keep data on the cache pool permanently.")}{" "}
+              <span className="font-medium text-soft">{t("Prefer")}</span>{" "}
+              {t("uses the pool as a fast landing zone before the mover runs.")}
             </p>
             <div className="mt-4 space-y-2.5">
               {shares
@@ -409,7 +468,7 @@ export function StoragePage() {
                 .map((share) => (
                   <div key={share.name} className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-soft">{share.name}</span>
-                    <span className="chip">{share.cacheMode}</span>
+                    <span className="chip">{cacheModeLabel(t, share.cacheMode)}</span>
                   </div>
                 ))}
             </div>
@@ -422,28 +481,30 @@ export function StoragePage() {
           <Card className="card-pad xl:col-span-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-[13px] font-semibold text-ink">Parity check</h2>
+                <h2 className="text-[13px] font-semibold text-ink">{t("Parity check")}</h2>
                 <p className="mt-0.5 text-[10.5px] text-subtle">
-                  {parity.running ? "Checking all data disks against parity" : "No check running"}
+                  {parity.running
+                    ? t("Checking all data disks against parity")
+                    : t("No check running")}
                 </p>
               </div>
               <Badge tone={parity.running ? (parity.paused ? "warning" : "accent") : "neutral"} dot pulse={parity.running && !parity.paused}>
-                {parity.paused ? "Paused" : parity.running ? "Running" : "Idle"}
+                {parity.paused ? t("Paused") : parity.running ? t("Running") : t("Idle")}
               </Badge>
             </div>
             <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-center">
               <Ring value={parity.progress} size={150} stroke={10}>
                 <div className="text-center">
                   <p className="num text-[30px] font-semibold leading-none text-ink">{parity.progress.toFixed(1)}%</p>
-                  <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">complete</p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">{t("complete")}</p>
                 </div>
               </Ring>
               <div className="flex-1 space-y-3">
-                <DataRow label="Speed" value={formatSpeed(parity.speed)} />
-                <DataRow label="Position" value={formatBytes(parity.position)} />
-                <DataRow label="Elapsed" value={formatDuration(parity.elapsed)} />
-                <DataRow label="Remaining" value={eta > 0 ? formatDuration(eta) : "—"} />
-                <DataRow label="Sync errors" value={String(parity.errors)} tone={parity.errors > 0 ? "warning" : "success"} />
+                <DataRow label={t("Speed")} value={formatSpeed(parity.speed)} />
+                <DataRow label={t("Position")} value={formatBytes(parity.position)} />
+                <DataRow label={t("Elapsed")} value={formatDuration(parity.elapsed)} />
+                <DataRow label={t("Remaining")} value={eta > 0 ? formatDuration(eta) : "—"} />
+                <DataRow label={t("Sync errors")} value={String(parity.errors)} tone={parity.errors > 0 ? "warning" : "success"} />
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
@@ -456,18 +517,18 @@ export function StoragePage() {
                     onClick={() =>
                       action.mutate({
                         kind: parity.paused ? "parity.resume" : "parity.pause",
-                        success: parity.paused ? "Parity check resumed" : "Parity check paused",
+                        success: parity.paused ? t("Parity check resumed") : t("Parity check paused"),
                       })
                     }
                   >
-                    {parity.paused ? "Resume" : "Pause"}
+                    {parity.paused ? t("Resume") : t("Pause")}
                   </Button>
                   <Button
                     variant="danger"
                     loading={action.isPending}
-                    onClick={() => action.mutate({ kind: "parity.stop", success: "Parity check stopped" })}
+                    onClick={() => action.mutate({ kind: "parity.stop", success: t("Parity check stopped") })}
                   >
-                    Stop check
+                    {t("Stop check")}
                   </Button>
                 </>
               ) : (
@@ -475,46 +536,66 @@ export function StoragePage() {
                   variant="primary"
                   icon={<Play className="size-3.5" />}
                   loading={action.isPending}
-                  onClick={() => action.mutate({ kind: "parity.start", success: "Parity check started" })}
+                  onClick={() => action.mutate({ kind: "parity.start", success: t("Parity check started") })}
                 >
-                  Start check
+                  {t("Start check")}
                 </Button>
               )}
-              <Button variant="ghost" onClick={() => toast({ kind: "info", title: "Parity scheduler", description: "Configure schedules from Settings → Scheduler." })}>
-                Schedule
+              <Button variant="ghost" onClick={() => toast({ kind: "info", title: t("Parity scheduler"), description: t("Configure schedules from Settings → Scheduler.") })}>
+                {t("Schedule")}
               </Button>
             </div>
           </Card>
 
           <Card className="card-pad xl:col-span-5">
-            <h2 className="text-[13px] font-semibold text-ink">Protection overview</h2>
+            <h2 className="text-[13px] font-semibold text-ink">{t("Protection overview")}</h2>
             <div className="mt-4 space-y-3">
-              <DataRow label="Parity devices" value={parity.disks.join(", ") || "None"} />
-              <DataRow label="Data disks" value={String(dataDisks.length)} />
-              <DataRow label="Last check" value={parity.lastCheck ? formatDateTime(parity.lastCheck.date) : "—"} />
-              <DataRow label="Last duration" value={parity.lastCheck ? formatDuration(parity.lastCheck.duration) : "—"} />
-              <DataRow label="Last speed" value={parity.lastCheck ? formatSpeed(parity.lastCheck.speed) : "—"} />
-              <DataRow label="Result" value={parity.lastCheck ? `${parity.lastCheck.errors} errors · ${parity.lastCheck.status}` : "—"} tone={parity.lastCheck?.errors ? "warning" : "success"} />
+              <DataRow label={t("Parity devices")} value={parity.disks.join(", ") || t("None")} />
+              <DataRow label={t("Data disks")} value={String(dataDisks.length)} />
+              <DataRow label={t("Last check")} value={parity.lastCheck ? formatDateTime(parity.lastCheck.date) : "—"} />
+              <DataRow label={t("Last duration")} value={parity.lastCheck ? formatDuration(parity.lastCheck.duration) : "—"} />
+              <DataRow label={t("Last speed")} value={parity.lastCheck ? formatSpeed(parity.lastCheck.speed) : "—"} />
+              <DataRow
+                label={t("Result")}
+                value={
+                  parity.lastCheck
+                    ? `${t(
+                        parity.lastCheck.errors === 1 ? "{count} error" : "{count} errors",
+                        { count: parity.lastCheck.errors },
+                      )} · ${
+                        parity.lastCheck.status === "completed"
+                          ? t("Completed")
+                          : parity.lastCheck.status === "failed"
+                            ? t("Failed")
+                            : parity.lastCheck.status
+                      }`
+                    : "—"
+                }
+                tone={parity.lastCheck?.errors ? "warning" : "success"}
+              />
             </div>
             <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/60 p-3 text-[10.5px] leading-relaxed text-muted">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
-              Parity protects against a single disk failure. Keep a current flash backup and verify SMART
-              status regularly.
+              {t("Parity protects against a single disk failure. Keep a current flash backup and verify SMART status regularly.")}
             </div>
           </Card>
 
           <Card className="card-pad xl:col-span-12">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-[13px] font-semibold text-ink">Check history</h2>
-                <p className="mt-0.5 text-[10.5px] text-subtle">Speed across the last {parity.history.length} checks</p>
+                <h2 className="text-[13px] font-semibold text-ink">{t("Check history")}</h2>
+                <p className="mt-0.5 text-[10.5px] text-subtle">
+                  {t("Speed across the last {count} checks", { count: parity.history.length })}
+                </p>
               </div>
-              <Badge tone="neutral">{formatBytes(parity.lastCheck?.size ?? 0)} scanned</Badge>
+              <Badge tone="neutral">
+                {t("{size} scanned", { size: formatBytes(parity.lastCheck?.size ?? 0) })}
+              </Badge>
             </div>
             <BarChart
               values={[...(parity.history ?? [])].reverse().map((check) => check.speed)}
               labels={[...(parity.history ?? [])].reverse().map((check) =>
-                new Date(check.date).toLocaleDateString([], { month: "short", day: "numeric" }),
+                formatShortDate(check.date),
               )}
               height={170}
               formatValue={(value) => formatSpeed(value)}
@@ -525,11 +606,11 @@ export function StoragePage() {
               <table className="w-full min-w-[620px] text-left">
                 <thead>
                   <tr className="border-b border-line text-[9.5px] uppercase tracking-[0.1em] text-subtle">
-                    <th className="pb-2 font-medium">Date</th>
-                    <th className="pb-2 font-medium">Duration</th>
-                    <th className="pb-2 font-medium">Speed</th>
-                    <th className="pb-2 font-medium">Errors</th>
-                    <th className="pb-2 text-right font-medium">Status</th>
+                    <th className="pb-2 font-medium">{t("Date")}</th>
+                    <th className="pb-2 font-medium">{t("Duration")}</th>
+                    <th className="pb-2 font-medium">{t("Speed")}</th>
+                    <th className="pb-2 font-medium">{t("Errors")}</th>
+                    <th className="pb-2 text-right font-medium">{t("Status")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60">
@@ -541,7 +622,11 @@ export function StoragePage() {
                       <td className="num py-2.5 text-muted">{check.errors}</td>
                       <td className="py-2.5 text-right">
                         <Badge tone={check.status === "completed" ? "success" : "warning"}>
-                          {check.status === "completed" ? "Completed" : check.status}
+                          {check.status === "completed"
+                            ? t("Completed")
+                            : check.status === "failed"
+                              ? t("Failed")
+                              : check.status}
                         </Badge>
                       </td>
                     </tr>
@@ -570,11 +655,13 @@ export function StoragePage() {
                 action.mutate({
                   kind: selectedDisk.status === "active" ? "disk.spindown" : "disk.spinup",
                   target: selectedDisk.name,
-                  success: selectedDisk.status === "active" ? `${selectedDisk.name} spinning down` : `${selectedDisk.name} spinning up`,
+                  success: selectedDisk.status === "active"
+                    ? t("{name} spinning down", { name: selectedDisk.name })
+                    : t("{name} spinning up", { name: selectedDisk.name }),
                 })
               }
             >
-              {selectedDisk.status === "active" ? "Spin down" : "Spin up"}
+              {selectedDisk.status === "active" ? t("Spin down") : t("Spin up")}
             </Button>
           ) : null
         }
@@ -584,29 +671,31 @@ export function StoragePage() {
             <div className="flex items-center justify-between rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
               <div>
                 <p className="num text-[22px] font-semibold text-ink">{formatBytes(selectedDisk.size)}</p>
-                <p className="mt-1 text-[10.5px] text-subtle">{selectedDisk.fsType} · {selectedDisk.type}</p>
+                <p className="mt-1 text-[10.5px] text-subtle">
+                  {selectedDisk.fsType} · {t(selectedDisk.type)}
+                </p>
               </div>
               <Badge tone={selectedDisk.smart === "passed" ? "success" : "warning"} dot>
-                SMART {selectedDisk.smart}
+                {t("SMART {status}", { status: selectedDisk.smart })}
               </Badge>
             </div>
             <Progress value={selectedDisk.size > 0 ? (selectedDisk.used / selectedDisk.size) * 100 : 0} height={7} />
             <div className="grid grid-cols-2 gap-3">
-              <Detail label="Used" value={formatBytes(selectedDisk.used)} />
-              <Detail label="Free" value={formatBytes(selectedDisk.free)} />
-              <Detail label="Temperature" value={`${selectedDisk.temp}°C`} icon={<Thermometer className="size-3" />} />
-              <Detail label="Errors" value={String(selectedDisk.errors)} />
-              <Detail label="Serial" value={selectedDisk.serial} />
-              <Detail label="Firmware" value={selectedDisk.firmware} />
-              <Detail label="Spinup group" value={selectedDisk.spinupGroup || "—"} />
-              <Detail label="Encrypted" value={selectedDisk.luks ? "Yes" : "No"} />
+              <Detail label={t("Used")} value={formatBytes(selectedDisk.used)} />
+              <Detail label={t("Free")} value={formatBytes(selectedDisk.free)} />
+              <Detail label={t("Temperature")} value={`${selectedDisk.temp}°C`} icon={<Thermometer className="size-3" />} />
+              <Detail label={t("Errors")} value={String(selectedDisk.errors)} />
+              <Detail label={t("Serial")} value={selectedDisk.serial} />
+              <Detail label={t("Firmware")} value={selectedDisk.firmware} />
+              <Detail label={t("Spinup group")} value={selectedDisk.spinupGroup || "—"} />
+              <Detail label={t("Encrypted")} value={selectedDisk.luks ? t("Yes") : t("No")} />
             </div>
             <DiskSmartSection device={selectedDisk.device} />
 
             {(selectedDisk.warnings ?? []).length > 0 ? (
               <div className="rounded-xl border border-[color-mix(in_srgb,var(--warning)_25%,transparent)] bg-[var(--warning-soft)] p-3">
                 <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--warning)]">
-                  <CircleAlert className="size-3.5" /> SMART warnings
+                  <CircleAlert className="size-3.5" /> {t("SMART warnings")}
                 </p>
                 <ul className="mt-1.5 space-y-1 text-[10.5px] text-muted">
                   {(selectedDisk.warnings ?? []).map((warning) => (
@@ -616,10 +705,14 @@ export function StoragePage() {
               </div>
             ) : null}
             <div className="rounded-xl border border-line p-3">
-              <p className="text-[10px] uppercase tracking-[0.1em] text-subtle">Live I/O</p>
+              <p className="text-[10px] uppercase tracking-[0.1em] text-subtle">{t("Live I/O")}</p>
               <div className="mt-2 flex gap-6">
-                <span className="num text-[11px] text-soft">{formatSpeed(selectedDisk.readBps)} read</span>
-                <span className="num text-[11px] text-soft">{formatSpeed(selectedDisk.writeBps)} write</span>
+                <span className="num text-[11px] text-soft">
+                  {t("{speed} read", { speed: formatSpeed(selectedDisk.readBps) })}
+                </span>
+                <span className="num text-[11px] text-soft">
+                  {t("{speed} write", { speed: formatSpeed(selectedDisk.writeBps) })}
+                </span>
               </div>
             </div>
           </div>
@@ -634,7 +727,7 @@ export function StoragePage() {
         footer={
           selectedShare ? (
             <Button variant="primary" className="w-full" onClick={() => setShareEditor({ share: selectedShare })}>
-              Edit settings
+              {t("Edit settings")}
             </Button>
           ) : null
         }
@@ -644,28 +737,31 @@ export function StoragePage() {
             <div className="flex items-center justify-between rounded-xl border border-line bg-[var(--surface-2)]/60 p-4">
               <div>
                 <p className="num text-[22px] font-semibold text-ink">{formatBytes(selectedShare.used)}</p>
-                <p className="mt-1 text-[10.5px] text-subtle">of {formatBytes(selectedShare.size)}</p>
+                <p className="mt-1 text-[10.5px] text-subtle">{t("of {size}", { size: formatBytes(selectedShare.size) })}</p>
               </div>
               <span className="num text-sm text-soft">{formatPercent(selectedShare.usage, 1)}</span>
             </div>
             <Progress value={selectedShare.usage} height={7} />
             <div className="flex flex-wrap gap-1.5">
-              <Badge tone={selectedShare.smb ? "info" : "neutral"}>SMB {selectedShare.smb ? "on" : "off"}</Badge>
-              <Badge tone={selectedShare.nfs ? "violet" : "neutral"}>NFS {selectedShare.nfs ? "on" : "off"}</Badge>
-              <Badge tone="accent">Cache {selectedShare.cacheMode}</Badge>
-              {selectedShare.exclusive ? <Badge tone="success">Exclusive</Badge> : null}
+              <Badge tone={selectedShare.smb ? "info" : "neutral"}>
+                {selectedShare.smb ? t("SMB on") : t("SMB off")}
+              </Badge>
+              <Badge tone={selectedShare.nfs ? "violet" : "neutral"}>
+                {selectedShare.nfs ? t("NFS on") : t("NFS off")}
+              </Badge>
+              <Badge tone="accent">{t("Cache {mode}", { mode: cacheModeLabel(t, selectedShare.cacheMode) })}</Badge>
+              {selectedShare.exclusive ? <Badge tone="success">{t("Exclusive")}</Badge> : null}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Detail label="Allocator" value={selectedShare.allocator} />
-              <Detail label="Split level" value={selectedShare.splitLevel} />
-              <Detail label="Pool" value={selectedShare.pool || "Array"} />
-              <Detail label="Security" value={selectedShare.security} />
-              <Detail label="Free" value={formatBytes(selectedShare.free)} />
-              <Detail label="Last modified" value={relativeTime(selectedShare.lastModified)} />
+              <Detail label={t("Allocator")} value={selectedShare.allocator} />
+              <Detail label={t("Split level")} value={selectedShare.splitLevel} />
+              <Detail label={t("Pool")} value={selectedShare.pool || t("Array")} />
+              <Detail label={t("Security")} value={selectedShare.security} />
+              <Detail label={t("Free")} value={formatBytes(selectedShare.free)} />
+              <Detail label={t("Last modified")} value={relativeTime(selectedShare.lastModified)} />
             </div>
             <div className="rounded-xl border border-line p-3 text-[10.5px] leading-relaxed text-muted">
-              Shares are virtual folders that span one or more disks. Allocation happens automatically and can
-              be tuned per share.
+              {t("Shares are virtual folders that span one or more disks. Allocation happens automatically and can be tuned per share.")}
             </div>
           </div>
         ) : null}
@@ -726,6 +822,7 @@ function DiskGroup({
   onSelect: (disk: Disk) => void;
 }) {
   const action = useAction();
+  const { t } = useI18n();
   return (
     <div>
       <div className="flex items-center gap-2 border-b border-line bg-[var(--surface-2)]/45 px-5 py-1.5">
@@ -773,7 +870,13 @@ function DiskGroup({
 
               <div className="hidden text-right sm:block">
                 <p className="num text-[10.5px] text-soft">{disk.temp > 0 ? `${disk.temp}°C` : "—"}</p>
-                <p className="text-[8.5px] uppercase tracking-[0.1em] text-subtle">{disk.status}</p>
+                <p className="text-[8.5px] uppercase tracking-[0.1em] text-subtle">
+                  {disk.status === "active"
+                    ? t("Active")
+                    : disk.status === "standby"
+                      ? t("Standby")
+                      : disk.status}
+                </p>
               </div>
 
               <div className="hidden w-[76px] text-right md:block">
@@ -784,20 +887,22 @@ function DiskGroup({
                   </>
                 ) : (
                   <Badge tone={disk.smart === "passed" ? "success" : "warning"}>
-                    {disk.smart === "passed" ? "SMART" : "Check"}
+                    {disk.smart === "passed" ? t("SMART") : t("Check")}
                   </Badge>
                 )}
               </div>
 
               <div className="flex items-center gap-1">
                 <IconButton
-                  label={disk.status === "active" ? "Spin down" : "Spin up"}
+                  label={disk.status === "active" ? t("Spin down") : t("Spin up")}
                   size="sm"
                   onClick={() =>
                     action.mutate({
                       kind: disk.status === "active" ? "disk.spindown" : "disk.spinup",
                       target: disk.name,
-                      success: disk.status === "active" ? `${disk.name} spinning down` : `${disk.name} spinning up`,
+                      success: disk.status === "active"
+                        ? t("{name} spinning down", { name: disk.name })
+                        : t("{name} spinning up", { name: disk.name }),
                     })
                   }
                 >
@@ -805,22 +910,24 @@ function DiskGroup({
                 </IconButton>
                 <Menu
                   trigger={
-                    <IconButton label="Disk actions" size="sm">
+                    <IconButton label={t("Disk actions")} size="sm">
                       <span className="text-[14px] leading-none">⋯</span>
                     </IconButton>
                   }
                   items={[
-                    { label: "View details", onSelect: () => onSelect(disk) },
+                    { label: t("View details"), onSelect: () => onSelect(disk) },
                     {
-                      label: disk.status === "active" ? "Spin down" : "Spin up",
+                      label: disk.status === "active" ? t("Spin down") : t("Spin up"),
                       onSelect: () =>
                         action.mutate({
                           kind: disk.status === "active" ? "disk.spindown" : "disk.spinup",
                           target: disk.name,
-                          success: disk.status === "active" ? `${disk.name} spinning down` : `${disk.name} spinning up`,
+                          success: disk.status === "active"
+                            ? t("{name} spinning down", { name: disk.name })
+                            : t("{name} spinning up", { name: disk.name }),
                         }),
                     },
-                    { label: "SMART report", onSelect: () => onSelect(disk) },
+                    { label: t("SMART report"), onSelect: () => onSelect(disk) },
                   ]}
                 />
               </div>
@@ -836,6 +943,7 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
   const queryClient = useQueryClient();
   const { snapshot } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [draft, setDraft] = useState<ShareConfig | null>(null);
   const [error, setError] = useState("");
   const [includeText, setIncludeText] = useState("");
@@ -879,7 +987,7 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
   const save = async () => {
     if (!draft) return;
     if (!/^[A-Za-z][A-Za-z0-9._-]{0,39}$/.test(draft.name)) {
-      setError("Share name must start with a letter and contain only letters, digits, '.', '_' or '-'.");
+      setError(t("Share name must start with a letter and contain only letters, digits, '.', '_' or '-'."));
       return;
     }
     const next: ShareConfig = {
@@ -899,8 +1007,12 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
       await api.updateShareNFS(next.name, next);
       toast({
         kind: "success",
-        title: share ? (share.name === next.name ? "Share updated" : "Share renamed") : "Share created",
-        description: "A snapshot is available in Historique for rollback.",
+        title: share
+          ? share.name === next.name
+            ? t("Share updated")
+            : t("Share renamed")
+          : t("Share created"),
+        description: t("A snapshot is available in History for rollback."),
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       void queryClient.invalidateQueries({ queryKey: ["config-history"] });
@@ -918,127 +1030,135 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
     <Modal
       open
       onClose={onClose}
-      title={share ? `Settings · ${share.name}` : "New share"}
-      description="Share properties, SMB export and NFS export. The current configuration file is snapshotted before applying."
+      title={share ? t("Settings · {name}", { name: share.name }) : t("New share")}
+      description={t("Share properties, SMB export and NFS export. The current configuration file is snapshotted before applying.")}
       size="xl"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button variant="primary" loading={saving} disabled={!draft} onClick={() => void save()}>
-            Apply changes
+            {t("Apply changes")}
           </Button>
         </>
       }
     >
       {config.isLoading ? (
-        <p className="text-[11px] text-muted">Loading share configuration…</p>
+        <p className="text-[11px] text-muted">{t("Loading share configuration…")}</p>
       ) : config.isError ? (
         <ErrorLine message={(config.error as Error).message} />
       ) : draft ? (
         <div className="space-y-5">
           <section>
-            <SectionTitle title="Share" hint="Name, description and free-space floor" />
+            <SectionTitle title={t("Share")} hint={t("Name, description and free-space floor")} />
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <TextInput label="Name" value={draft.name} onChange={(value) => update({ name: value })} placeholder="media" />
-              <TextInput label="Comment" value={draft.comment} onChange={(value) => update({ comment: value })} />
-              <TextInput label="Minimum free space" value={draft.floor} onChange={(value) => update({ floor: value })} placeholder="0 or 10G" />
+              <TextInput label={t("Name")} value={draft.name} onChange={(value) => update({ name: value })} placeholder="media" />
+              <TextInput label={t("Comment")} value={draft.comment} onChange={(value) => update({ comment: value })} />
+              <TextInput label={t("Minimum free space")} value={draft.floor} onChange={(value) => update({ floor: value })} placeholder="0 or 10G" />
             </div>
             {share ? (
-              <p className="mt-1 text-[9.5px] text-subtle">Renaming moves the share configuration; existing data stays on disk.</p>
+              <p className="mt-1 text-[9.5px] text-subtle">
+                {t("Renaming moves the share configuration; existing data stays on disk.")}
+              </p>
             ) : null}
           </section>
 
           <section>
-            <SectionTitle title="Storage" hint="Primary/secondary storage, cache mode and allocation" />
+            <SectionTitle title={t("Storage")} hint={t("Primary/secondary storage, cache mode and allocation")} />
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <SelectInput label="Primary storage" value={draft.cachePool} onChange={(value) => update({ cachePool: value })}>
-                <option value="">Array</option>
+              <SelectInput label={t("Primary storage")} value={draft.cachePool} onChange={(value) => update({ cachePool: value })}>
+                <option value="">{t("Array")}</option>
                 {pools.map((pool) => (
                   <option key={pool.name} value={pool.name}>{pool.name}</option>
                 ))}
               </SelectInput>
-              <SelectInput label="Secondary storage" value={draft.cachePool2} onChange={(value) => update({ cachePool2: value })}>
-                <option value="">None / Array</option>
+              <SelectInput label={t("Secondary storage")} value={draft.cachePool2} onChange={(value) => update({ cachePool2: value })}>
+                <option value="">{t("None / Array")}</option>
                 {pools.map((pool) => (
                   <option key={pool.name} value={pool.name}>{pool.name}</option>
                 ))}
               </SelectInput>
-              <SelectInput label="Cache mode" value={draft.useCache} onChange={(value) => update({ useCache: value })}>
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-                <option value="prefer">Prefer</option>
-                <option value="only">Only</option>
+              <SelectInput label={t("Cache mode")} value={draft.useCache} onChange={(value) => update({ useCache: value })}>
+                <option value="no">{t("No")}</option>
+                <option value="yes">{t("Yes")}</option>
+                <option value="prefer">{t("Prefer")}</option>
+                <option value="only">{t("Only")}</option>
               </SelectInput>
-              <SelectInput label="Allocation method" value={draft.allocator} onChange={(value) => update({ allocator: value })}>
-                <option value="highwater">High-water</option>
-                <option value="fillup">Fill-up</option>
-                <option value="mostfree">Most-free</option>
+              <SelectInput label={t("Allocation method")} value={draft.allocator} onChange={(value) => update({ allocator: value })}>
+                <option value="highwater">{t("High-water")}</option>
+                <option value="fillup">{t("Fill-up")}</option>
+                <option value="mostfree">{t("Most-free")}</option>
               </SelectInput>
-              <SelectInput label="Split level" value={draft.splitLevel} onChange={(value) => update({ splitLevel: value })}>
-                <option value="">Automatic</option>
+              <SelectInput label={t("Split level")} value={draft.splitLevel} onChange={(value) => update({ splitLevel: value })}>
+                <option value="">{t("Automatic")}</option>
                 {["1", "2", "3", "4", "5", "0"].map((level) => (
-                  <option key={level} value={level}>{level === "0" ? "Manual" : `Split at level ${level}`}</option>
+                  <option key={level} value={level}>
+                    {level === "0" ? t("Manual") : t("Split at level {level}", { level })}
+                  </option>
                 ))}
               </SelectInput>
-              <SelectInput label="Copy-on-write" value={draft.cow} onChange={() => undefined} disabled>
-                <option value="auto">Auto</option>
-                <option value="no">No</option>
+              <SelectInput label={t("Copy-on-write")} value={draft.cow} onChange={() => undefined} disabled>
+                <option value="auto">{t("Auto")}</option>
+                <option value="no">{t("No")}</option>
               </SelectInput>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <TextInput label="Included disks (comma separated)" value={includeText} onChange={setIncludeText} placeholder="disk1, disk2" />
-              <TextInput label="Excluded disks (comma separated)" value={excludeText} onChange={setExcludeText} placeholder="disk3" />
+              <TextInput label={t("Included disks (comma separated)")} value={includeText} onChange={setIncludeText} placeholder="disk1, disk2" />
+              <TextInput label={t("Excluded disks (comma separated)")} value={excludeText} onChange={setExcludeText} placeholder="disk3" />
             </div>
-            <p className="mt-2 text-[9.5px] text-subtle">Copy-on-write can only be chosen when creating a share.</p>
+            <p className="mt-2 text-[9.5px] text-subtle">
+              {t("Copy-on-write can only be chosen when creating a share.")}
+            </p>
           </section>
 
           <section>
-            <SectionTitle title="SMB" hint="Windows/Samba export and security" />
+            <SectionTitle title={t("SMB")} hint={t("Windows/Samba export and security")} />
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <SelectInput label="Export" value={draft.smbExport} onChange={(value) => update({ smbExport: value })}>
-                <option value="-">No</option>
-                <option value="e">Yes</option>
-                <option value="eh">Yes (hidden)</option>
-                <option value="et">Yes / Time Machine</option>
-                <option value="eth">Yes / Time Machine (hidden)</option>
+              <SelectInput label={t("Export")} value={draft.smbExport} onChange={(value) => update({ smbExport: value })}>
+                <option value="-">{t("No")}</option>
+                <option value="e">{t("Yes")}</option>
+                <option value="eh">{t("Yes (hidden)")}</option>
+                <option value="et">{t("Yes / Time Machine")}</option>
+                <option value="eth">{t("Yes / Time Machine (hidden)")}</option>
               </SelectInput>
-              <SelectInput label="Security" value={draft.smbSecurity} onChange={(value) => update({ smbSecurity: value })}>
-                <option value="public">Public</option>
-                <option value="secure">Secure</option>
-                <option value="private">Private</option>
+              <SelectInput label={t("Security")} value={draft.smbSecurity} onChange={(value) => update({ smbSecurity: value })}>
+                <option value="public">{t("Public")}</option>
+                <option value="secure">{t("Secure")}</option>
+                <option value="private">{t("Private")}</option>
               </SelectInput>
-              <SelectInput label="Case-sensitive names" value={draft.smbCaseSensitive} onChange={(value) => update({ smbCaseSensitive: value })}>
-                <option value="auto">Auto</option>
-                <option value="yes">Yes</option>
-                <option value="forced">Force lower</option>
+              <SelectInput label={t("Case-sensitive names")} value={draft.smbCaseSensitive} onChange={(value) => update({ smbCaseSensitive: value })}>
+                <option value="auto">{t("Auto")}</option>
+                <option value="yes">{t("Yes")}</option>
+                <option value="forced">{t("Force lower")}</option>
               </SelectInput>
-              <TextInput label="Time Machine limit (MB)" value={draft.smbVolumeSizeLimit} onChange={(value) => update({ smbVolumeSizeLimit: value })} placeholder="0" />
+              <TextInput label={t("Time Machine limit (MB)")} value={draft.smbVolumeSizeLimit} onChange={(value) => update({ smbVolumeSizeLimit: value })} placeholder="0" />
             </div>
           </section>
 
           <section>
-            <SectionTitle title="NFS" hint="Network file system export and rules" />
+            <SectionTitle title={t("NFS")} hint={t("Network file system export and rules")} />
             <div className="grid gap-2 sm:grid-cols-2">
-              <SelectInput label="Export" value={draft.nfsExport} onChange={(value) => update({ nfsExport: value })}>
-                <option value="-">No</option>
-                <option value="e">Yes</option>
+              <SelectInput label={t("Export")} value={draft.nfsExport} onChange={(value) => update({ nfsExport: value })}>
+                <option value="-">{t("No")}</option>
+                <option value="e">{t("Yes")}</option>
               </SelectInput>
-              <SelectInput label="Security" value={draft.nfsSecurity} onChange={(value) => update({ nfsSecurity: value })}>
-                <option value="public">Public</option>
-                <option value="secure">Secure</option>
-                <option value="private">Private</option>
+              <SelectInput label={t("Security")} value={draft.nfsSecurity} onChange={(value) => update({ nfsSecurity: value })}>
+                <option value="public">{t("Public")}</option>
+                <option value="secure">{t("Secure")}</option>
+                <option value="private">{t("Private")}</option>
               </SelectInput>
             </div>
             {draft.nfsSecurity === "private" ? (
               <label className="mt-2 block space-y-1">
-                <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">NFS rules</span>
+                <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">
+                  {t("NFS rules")}
+                </span>
                 <textarea
                   value={draft.nfsHostList}
                   onChange={(event) => update({ nfsHostList: event.target.value })}
                   rows={4}
-                  placeholder="*(rw,sec=sys,insecure,anongid=100,anonuid=99,no_root_squash,lock)"
+                  placeholder={t("*(rw,sec=sys,insecure,anongid=100,anonuid=99,no_root_squash,lock)")}
                   className="w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-2 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
                 />
               </label>
@@ -1047,8 +1167,9 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
 
           <div className="flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
-            The share configuration is snapshotted before the change. Use <span className="text-soft">Historique</span> to
-            review the diff or roll back.
+            {t("The share configuration is snapshotted before the change. Use")}{" "}
+            <span className="text-soft">{t("History")}</span>{" "}
+            {t("to review the diff or roll back.")}
           </div>
 
           {error ? <ErrorLine message={error} /> : null}
@@ -1130,6 +1251,7 @@ function ErrorLine({ message }: { message: string }) {
 function DiskSmartSection({ device }: { device: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const smart = useQuery({
     queryKey: ["smart", device],
     queryFn: () => api.diskSmart(device),
@@ -1138,11 +1260,15 @@ function DiskSmartSection({ device }: { device: string }) {
   const test = useMutation({
     mutationFn: () => api.runSmartTest(device),
     onSuccess: () => {
-      toast({ kind: "success", title: "SMART test started", description: "The short self-test runs in the background." });
+      toast({
+        kind: "success",
+        title: t("SMART test started"),
+        description: t("The short self-test runs in the background."),
+      });
       void queryClient.invalidateQueries({ queryKey: ["smart", device] });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "SMART test failed", description: error.message });
+      toast({ kind: "error", title: t("SMART test failed"), description: error.message });
     },
   });
 
@@ -1152,40 +1278,46 @@ function DiskSmartSection({ device }: { device: string }) {
     <div className="rounded-xl border border-line">
       <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5">
         <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">
-          <ShieldCheck className="size-3.5" /> SMART
+          <ShieldCheck className="size-3.5" /> {t("SMART")}
         </p>
         {report ? (
           <Badge tone={report.passed ? "success" : report.available ? "danger" : "neutral"} dot>
-            {report.available ? (report.passed ? "passed" : "failing") : "unavailable"}
+            {report.available
+              ? report.passed
+                ? t("passed")
+                : t("failing")
+              : t("unavailable")}
           </Badge>
         ) : null}
       </div>
       <div className="space-y-3 p-3">
         {smart.isLoading ? (
-          <p className="text-[10.5px] text-muted">Reading SMART data…</p>
+          <p className="text-[10.5px] text-muted">{t("Reading SMART data…")}</p>
         ) : smart.isError ? (
           <p className="text-[10.5px] text-[var(--danger)]">{(smart.error as Error).message}</p>
         ) : report ? (
           <>
             {!report.available ? (
-              <p className="text-[10.5px] text-muted">{report.message || "SMART data is not available for this disk."}</p>
+              <p className="text-[10.5px] text-muted">
+                {report.message || t("SMART data is not available for this disk.")}
+              </p>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-2">
-                  <Detail label="Temperature" value={report.temperature ? `${report.temperature}°C` : "—"} />
-                  <Detail label="Power-on" value={report.powerOnHours ? `${report.powerOnHours} h` : "—"} />
-                  <Detail label="Self-test" value={report.selfTest || "—"} />
+                  <Detail label={t("Temperature")} value={report.temperature ? `${report.temperature}°C` : "—"} />
+                  <Detail label={t("Power-on")} value={report.powerOnHours ? `${report.powerOnHours} h` : "—"} />
+                  <Detail label={t("Self-test")} value={report.selfTest || "—"} />
                 </div>
                 {report.attributes.length > 0 ? (
                   <div className="max-h-60 overflow-y-auto rounded-lg border border-line/70">
                     <table className="w-full text-left">
                       <thead className="sticky top-0 bg-[var(--surface-2)] text-[8.5px] uppercase tracking-[0.08em] text-subtle">
                         <tr>
-                          <th className="px-2 py-1.5 font-medium">Attribute</th>
-                          <th className="px-2 py-1.5 text-right font-medium">Value</th>
-                          <th className="px-2 py-1.5 text-right font-medium">Worst</th>
-                          <th className="px-2 py-1.5 text-right font-medium">Thr.</th>
-                          <th className="px-2 py-1.5 text-right font-medium">Raw</th>
+                          <th className="px-2 py-1.5 font-medium">{t("Attribute")}</th>
+                          <th className="px-2 py-1.5 text-right font-medium">{t("Value")}</th>
+                          <th className="px-2 py-1.5 text-right font-medium">{t("Worst")}</th>
+                          <th className="px-2 py-1.5 text-right font-medium">{t("Thr.")}</th>
+                          <th className="px-2 py-1.5 text-right font-medium">{t("Raw")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1208,7 +1340,12 @@ function DiskSmartSection({ device }: { device: string }) {
               </>
             )}
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[9.5px] text-subtle">Serial {report.serial || "—"} · firmware {report.firmware || "—"}</p>
+              <p className="text-[9.5px] text-subtle">
+                {t("Serial {serial} · firmware {firmware}", {
+                  serial: report.serial || "—",
+                  firmware: report.firmware || "—",
+                })}
+              </p>
               <Button
                 size="sm"
                 variant="secondary"
@@ -1217,7 +1354,7 @@ function DiskSmartSection({ device }: { device: string }) {
                 disabled={!report.available}
                 onClick={() => test.mutate()}
               >
-                Short test
+                {t("Short test")}
               </Button>
             </div>
           </>
@@ -1228,6 +1365,7 @@ function DiskSmartSection({ device }: { device: string }) {
 }
 
 function ShareCard({ share, onOpen }: { share: Share; onOpen: () => void }) {
+  const { t } = useI18n();
   return (
     <Card hover className="card-pad cursor-pointer" onClick={onOpen}>
       <div className="flex items-start justify-between gap-3">
@@ -1245,15 +1383,15 @@ function ShareCard({ share, onOpen }: { share: Share; onOpen: () => void }) {
       <div className="mt-4">
         <Progress value={share.usage} height={6} />
         <div className="mt-2 flex justify-between font-mono text-[9.5px] text-subtle">
-          <span>{formatBytes(share.used)} used</span>
-          <span>{formatBytes(share.free)} free</span>
+          <span>{t("{size} used", { size: formatBytes(share.used) })}</span>
+          <span>{t("{size} free", { size: formatBytes(share.free) })}</span>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {share.smb ? <Badge tone="info">SMB</Badge> : null}
-        {share.nfs ? <Badge tone="violet">NFS</Badge> : null}
-        <Badge tone="neutral">cache {share.cacheMode}</Badge>
-        {share.exclusive ? <Badge tone="success">exclusive</Badge> : null}
+        {share.smb ? <Badge tone="info">{t("SMB")}</Badge> : null}
+        {share.nfs ? <Badge tone="violet">{t("NFS")}</Badge> : null}
+        <Badge tone="neutral">{t("cache {mode}", { mode: cacheModeLabel(t, share.cacheMode) })}</Badge>
+        {share.exclusive ? <Badge tone="success">{t("exclusive")}</Badge> : null}
       </div>
     </Card>
   );
@@ -1295,6 +1433,7 @@ function Detail({ label, value, icon }: { label: string; value: string; icon?: R
 function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [filesRun, setFilesRun] = useState<MoverRun | null>(null);
   const statusQuery = useQuery({
@@ -1314,14 +1453,22 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
     try {
       if (action === "start") {
         await api.startMover();
-        toast({ kind: "success", title: "Mover started", description: "It runs in the background; you can leave this page." });
+        toast({
+          kind: "success",
+          title: t("Mover started"),
+          description: t("It runs in the background; you can leave this page."),
+        });
       } else {
         await api.stopMover();
-        toast({ kind: "info", title: "Mover stopped" });
+        toast({ kind: "info", title: t("Mover stopped") });
       }
       await queryClient.invalidateQueries({ queryKey: ["mover"] });
     } catch (error) {
-      toast({ kind: "error", title: `Unable to ${action} mover`, description: (error as Error).message });
+      toast({
+        kind: "error",
+        title: action === "start" ? t("Unable to start mover") : t("Unable to stop mover"),
+        description: (error as Error).message,
+      });
     } finally {
       setBusy(false);
     }
@@ -1335,17 +1482,19 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
             <ArrowRightLeft className="size-4" />
           </span>
           <div>
-            <h2 className="text-[13px] font-semibold text-ink">Mover</h2>
-            <p className="mt-0.5 text-[10.5px] text-subtle">Move cache data to the array and back, in the background</p>
+            <h2 className="text-[13px] font-semibold text-ink">{t("Mover")}</h2>
+            <p className="mt-0.5 text-[10.5px] text-subtle">
+              {t("Move cache data to the array and back, in the background")}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={running ? "accent" : "neutral"} dot pulse={running}>
-            {running ? "Running" : "Ready"}
+            {running ? t("Running") : t("Ready")}
           </Badge>
           {running ? (
             <Button size="sm" variant="danger" icon={<Square className="size-3" />} loading={busy} onClick={() => void run("stop")}>
-              Stop
+              {t("Stop")}
             </Button>
           ) : (
             <Button
@@ -1356,7 +1505,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
               loading={busy}
               onClick={() => void run("start")}
             >
-              Start mover
+              {t("Start mover")}
             </Button>
           )}
         </div>
@@ -1380,24 +1529,24 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
                         : "border-line bg-[var(--surface-2)]/40 text-subtle",
                   )}
                 >
-                  {phase.label}
+                  {t(phase.label)}
                 </div>
               );
             })}
           </div>
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate text-[11.5px] text-soft">
-              {status?.action || "Calculating totals…"}
+              {status?.action || t("Calculating totals…")}
               {status?.file ? <span className="ml-2 font-mono text-[10px] text-subtle">{status.file}</span> : null}
             </p>
             <span className="num shrink-0 text-[12px] text-ink">{status?.progress.toFixed(1)}%</span>
           </div>
           <Progress value={status?.progress ?? 0} height={7} />
           <div className="grid grid-cols-2 gap-3 text-[10px] sm:grid-cols-4">
-            <MoverStat label="Moved" value={formatBytes(Math.max(0, (status?.total ?? 0) - (status?.remain ?? 0)))} />
-            <MoverStat label="Remaining" value={formatBytes(status?.remain ?? 0)} />
-            <MoverStat label="Throughput" value={formatSpeed(status?.throughput ?? 0)} />
-            <MoverStat label="ETA" value={status && status.eta > 0 ? formatDuration(status.eta) : "—"} />
+            <MoverStat label={t("Moved")} value={formatBytes(Math.max(0, (status?.total ?? 0) - (status?.remain ?? 0)))} />
+            <MoverStat label={t("Remaining")} value={formatBytes(status?.remain ?? 0)} />
+            <MoverStat label={t("Throughput")} value={formatSpeed(status?.throughput ?? 0)} />
+            <MoverStat label={t("ETA")} value={status && status.eta > 0 ? formatDuration(status.eta) : "—"} />
           </div>
           {status?.files?.length ? (
             <button
@@ -1405,13 +1554,15 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
               onClick={() => setFilesRun({ started: "", finished: "", duration: 0, total: 0, moved: 0, status: "running", files: status.files })}
               className="text-left text-[10px] text-subtle underline decoration-dotted underline-offset-2 hover:text-soft"
             >
-              {status.files.length} fichier{status.files.length > 1 ? "s" : ""} déplacé{status.files.length > 1 ? "s" : ""} observé{status.files.length > 1 ? "s" : ""}
+              {status.files.length === 1
+                ? t("{count} moved file observed", { count: status.files.length })
+                : t("{count} moved files observed", { count: status.files.length })}
             </button>
           ) : null}
           {status && status.shareTotal > 0 ? (
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 p-3">
               <div className="flex items-center justify-between text-[10px]">
-                <span className="text-muted">Current item</span>
+                <span className="text-muted">{t("Current item")}</span>
                 <span className="num text-subtle">{shareProgress.toFixed(1)}% · {formatSpeed(status.shareThroughput)}</span>
               </div>
               <Progress value={shareProgress} height={4} className="mt-2" tone="var(--violet)" />
@@ -1419,21 +1570,27 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
           ) : null}
           {!status?.total ? (
             <p className="text-[10px] text-subtle">
-              Progress reporting is disabled in Unraid (Settings → Scheduler → Mover). The job still runs.
+              {t("Progress reporting is disabled in Unraid (Settings → Scheduler → Mover). The job still runs.")}
             </p>
           ) : null}
         </div>
       ) : (
         <p className="mt-4 text-[11px] leading-relaxed text-muted">
-          The mover honours each share's cache mode: <span className="text-soft">Yes</span> moves to the array,
-          <span className="text-soft"> Prefer</span> brings data back to the pool. Progress is read from Unraid's
-          <span className="font-mono text-[10px]"> mover.ini</span> and survives a page refresh.
+          {t("The mover honours each share's cache mode:")}{" "}
+          <span className="text-soft">{t("Yes")}</span>{" "}
+          {t("moves to the array,")}{" "}
+          <span className="text-soft">{t("Prefer")}</span>{" "}
+          {t("brings data back to the pool. Progress is read from Unraid's")}
+          <span className="font-mono text-[10px]"> mover.ini</span>{" "}
+          {t("and survives a page refresh.")}
         </p>
       )}
 
       {status?.history?.length ? (
         <div className="mt-4 border-t border-line pt-3">
-          <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Recent runs</p>
+          <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">
+            {t("Recent runs")}
+          </p>
           <div className="space-y-1.5">
             {status.history.slice(0, 6).map((run, index) => (
               <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
@@ -1445,12 +1602,20 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
                     onClick={() => setFilesRun(run)}
                     className="text-[10px] text-[var(--accent)] underline decoration-dotted underline-offset-2"
                   >
-                    {run.files.length} fichiers
+                    {run.files.length === 1
+                      ? t("{count} file", { count: run.files.length })
+                      : t("{count} files", { count: run.files.length })}
                   </button>
                 ) : (
-                  <span className="text-[9.5px] text-subtle">no file list</span>
+                  <span className="text-[9.5px] text-subtle">{t("no file list")}</span>
                 )}
-                <Badge tone={run.status === "completed" ? "success" : "warning"}>{run.status}</Badge>
+                <Badge tone={run.status === "completed" ? "success" : "warning"}>
+                  {run.status === "completed"
+                    ? t("Completed")
+                    : run.status === "failed"
+                      ? t("Failed")
+                      : run.status}
+                </Badge>
               </div>
             ))}
           </div>
@@ -1460,12 +1625,12 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
       <Modal
         open={Boolean(filesRun)}
         onClose={() => setFilesRun(null)}
-        title="Fichiers déplacés"
-        description={filesRun?.finished ? formatDateTime(filesRun.finished) : "Exécution en cours"}
+        title={t("Moved files")}
+        description={filesRun?.finished ? formatDateTime(filesRun.finished) : t("Run in progress")}
         size="lg"
         footer={
           <Button variant="secondary" onClick={() => setFilesRun(null)}>
-            Close
+            {t("Close")}
           </Button>
         }
       >
@@ -1481,7 +1646,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
             ))}
           </div>
         ) : (
-          <p className="text-[11px] text-muted">No file was recorded for this run.</p>
+          <p className="text-[11px] text-muted">{t("No file was recorded for this run.")}</p>
         )}
       </Modal>
     </Card>
@@ -1504,6 +1669,7 @@ function MoverStat({ label, value }: { label: string; value: string }) {
 function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [keyType, setKeyType] = useState<"none" | "passphrase" | "keyfile">("none");
   const [passphrase, setPassphrase] = useState("");
   const [keyfile, setKeyfile] = useState("");
@@ -1524,7 +1690,7 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 1024 * 1024) {
-      setError("The keyfile must be smaller than 1 MiB.");
+      setError(t("The keyfile must be smaller than 1 MiB."));
       return;
     }
     const reader = new FileReader();
@@ -1533,17 +1699,17 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
       setKeyfile(result.includes(",") ? result.split(",")[1] : result);
       setError("");
     };
-    reader.onerror = () => setError("Unable to read the keyfile.");
+    reader.onerror = () => setError(t("Unable to read the keyfile."));
     reader.readAsDataURL(file);
   };
 
   const start = async () => {
     if (keyType === "passphrase" && !passphrase) {
-      setError("Enter the array passphrase.");
+      setError(t("Enter the array passphrase."));
       return;
     }
     if (keyType === "keyfile" && !keyfile) {
-      setError("Select the encryption keyfile.");
+      setError(t("Select the encryption keyfile."));
       return;
     }
     setSaving(true);
@@ -1556,7 +1722,11 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
       });
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       await queryClient.invalidateQueries({ queryKey: ["mover"] });
-      toast({ kind: "success", title: "Array start requested", description: "The array is starting." });
+      toast({
+        kind: "success",
+        title: t("Array start requested"),
+        description: t("The array is starting."),
+      });
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -1569,14 +1739,14 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
     <Modal
       open={open}
       onClose={onClose}
-      title="Start the array"
-      description="Provide the encryption key when the array uses LUKS."
+      title={t("Start the array")}
+      description={t("Provide the encryption key when the array uses LUKS.")}
       size="md"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>{t("Cancel")}</Button>
           <Button variant="primary" icon={<Play className="size-3.5" />} loading={saving} onClick={() => void start()}>
-            Start array
+            {t("Start array")}
           </Button>
         </>
       }
@@ -1584,7 +1754,7 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
       <div className="space-y-4">
         <div>
           <label htmlFor="array-key-type" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
-            Encryption key
+            {t("Encryption key")}
           </label>
           <select
             id="array-key-type"
@@ -1592,15 +1762,15 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
             onChange={(event) => { setKeyType(event.target.value as typeof keyType); setError(""); }}
             className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11.5px] text-soft outline-none focus:border-[var(--accent-line)]"
           >
-            <option value="none">No key (unencrypted array)</option>
-            <option value="passphrase">Passphrase</option>
-            <option value="keyfile">Keyfile</option>
+            <option value="none">{t("No key (unencrypted array)")}</option>
+            <option value="passphrase">{t("Passphrase")}</option>
+            <option value="keyfile">{t("Keyfile")}</option>
           </select>
         </div>
         {keyType === "passphrase" ? (
           <div>
             <label htmlFor="array-passphrase" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
-              Passphrase
+              {t("Passphrase")}
             </label>
             <div className="flex h-9 items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-2.5">
               <LockKeyhole className="size-3.5 text-subtle" />
@@ -1609,17 +1779,19 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
                 type="password"
                 value={passphrase}
                 onChange={(event) => setPassphrase(event.target.value)}
-                placeholder="Printable ASCII characters"
+                placeholder={t("Printable ASCII characters")}
                 className="h-full w-full bg-transparent text-[12px] text-ink outline-none placeholder:text-subtle"
               />
             </div>
-            <p className="mt-1 text-[9.5px] text-subtle">Unraid accepts printable ASCII characters from space to tilde.</p>
+            <p className="mt-1 text-[9.5px] text-subtle">
+              {t("Unraid accepts printable ASCII characters from space to tilde.")}
+            </p>
           </div>
         ) : null}
         {keyType === "keyfile" ? (
           <div>
             <label htmlFor="array-keyfile" className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
-              Keyfile
+              {t("Keyfile")}
             </label>
             <input
               id="array-keyfile"
@@ -1627,15 +1799,17 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
               onChange={readKeyfile}
               className="block w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-2 text-[10.5px] text-muted file:mr-3 file:rounded-md file:border-0 file:bg-[var(--surface-3)] file:px-2 file:py-1 file:text-[10px] file:text-soft"
             />
-            <p className="mt-1 text-[9.5px] text-subtle">The file is uploaded to the keyfile path configured by Unraid.</p>
+            <p className="mt-1 text-[9.5px] text-subtle">
+              {t("The file is uploaded to the keyfile path configured by Unraid.")}
+            </p>
           </div>
         ) : null}
         <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
           <span>
-            <span className="block text-[11px] font-medium text-soft">Maintenance mode</span>
-            <span className="block text-[9.5px] text-subtle">Start the array without mounting disks.</span>
+            <span className="block text-[11px] font-medium text-soft">{t("Maintenance mode")}</span>
+            <span className="block text-[9.5px] text-subtle">{t("Start the array without mounting disks.")}</span>
           </span>
-          <Switch checked={maintenance} onChange={setMaintenance} label="Maintenance mode" />
+          <Switch checked={maintenance} onChange={setMaintenance} label={t("Maintenance mode")} />
         </label>
         {error ? (
           <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">
@@ -1650,6 +1824,7 @@ function ArrayStartModal({ open, onClose }: { open: boolean; onClose: () => void
 function ArrayStopModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -1660,7 +1835,11 @@ function ArrayStopModal({ open, onClose }: { open: boolean; onClose: () => void 
       await api.stopArray();
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       await queryClient.invalidateQueries({ queryKey: ["mover"] });
-      toast({ kind: "info", title: "Array stop requested", description: "The array is stopping." });
+      toast({
+        kind: "info",
+        title: t("Array stop requested"),
+        description: t("The array is stopping."),
+      });
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -1673,20 +1852,20 @@ function ArrayStopModal({ open, onClose }: { open: boolean; onClose: () => void 
     <Modal
       open={open}
       onClose={onClose}
-      title="Stop the array?"
-      description="Services and shares will become unavailable until the array is started again."
+      title={t("Stop the array?")}
+      description={t("Services and shares will become unavailable until the array is started again.")}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>{t("Cancel")}</Button>
           <Button variant="danger" icon={<Square className="size-3.5" />} loading={saving} onClick={() => void stop()}>
-            Stop array
+            {t("Stop array")}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
         <p className="text-[11px] leading-relaxed text-muted">
-          Unraid will flush pending writes and stop the array. Encryption keys are not stored by Aurora.
+          {t("Unraid will flush pending writes and stop the array. Encryption keys are not stored by Aurora.")}
         </p>
         {error ? (
           <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">

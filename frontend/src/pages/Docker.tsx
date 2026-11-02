@@ -45,6 +45,7 @@ import {
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { useAction } from "../lib/useAction";
 import { api } from "../lib/api";
 import {
@@ -61,6 +62,7 @@ type Filter = "all" | "running" | "stopped" | "updates";
 export function DockerPage() {
   const { snapshot, refresh } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const action = useAction();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
@@ -159,8 +161,11 @@ export function DockerPage() {
     void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     toast({
       kind: "success",
-      title: targets.length > 1 ? "Containers updated" : `${targets[0].name} updated`,
-      description: `${targets.length} image${targets.length > 1 ? "s" : ""} pulled and recreated.`,
+      title: targets.length > 1 ? t("Containers updated") : t("{name} updated", { name: targets[0].name }),
+      description:
+        targets.length > 1
+          ? t("{count} images pulled and recreated.", { count: targets.length })
+          : t("1 image pulled and recreated."),
     });
   };
 
@@ -172,21 +177,31 @@ export function DockerPage() {
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       toast({
         kind: available ? "warning" : "success",
-        title: available ? `${available} update${available > 1 ? "s" : ""} available` : "All images are up to date",
+        title: available
+          ? available === 1
+            ? t("1 update available")
+            : t("{count} updates available", { count: available })
+          : t("All images are up to date"),
         description:
-          `${checks.length} image${checks.length > 1 ? "s" : ""} checked` +
-          (failed ? ` · ${failed} could not be checked` : ""),
+          (checks.length === 1
+            ? t("1 image checked")
+            : t("{count} images checked", { count: checks.length })) +
+          (failed
+            ? failed === 1
+              ? t(" · 1 could not be checked")
+              : t(" · {count} could not be checked", { count: failed })
+            : ""),
       });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "Update check failed", description: error.message });
+      toast({ kind: "error", title: t("Update check failed"), description: error.message });
     },
   });
 
   const remove = useMutation({
     mutationFn: (container: Container) => api.removeContainer(container.id),
     onSuccess: (_result, container) => {
-      toast({ kind: "info", title: `${container.name} removed` });
+      toast({ kind: "info", title: t("{name} removed", { name: container.name }) });
       if (selectedName === container.name) closeContainer();
       setRemoving(null);
       setRemoveError("");
@@ -194,7 +209,7 @@ export function DockerPage() {
     },
     onError: (error: Error) => {
       setRemoveError(error.message);
-      toast({ kind: "error", title: "Removal failed", description: error.message });
+      toast({ kind: "error", title: t("Removal failed"), description: error.message });
     },
   });
 
@@ -204,20 +219,36 @@ export function DockerPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Infrastructure"
-        title="Containers"
-        description="Every Docker workload on the server, with live resource usage and one-click lifecycle controls."
+        eyebrow={t("Infrastructure")}
+        title={t("Containers")}
+        description={t("Every Docker workload on the server, with live resource usage and one-click lifecycle controls.")}
         meta={
           <>
-            <Badge tone="success" dot pulse>{running.length} running</Badge>
-            {stopped.length > 0 ? <Badge tone="neutral">{stopped.length} stopped</Badge> : null}
-            {updates.length > 0 ? <Badge tone="warning">{updates.length} updates</Badge> : null}
+            <Badge tone="success" dot pulse>
+              {running.length === 1
+                ? t("1 running")
+                : t("{count} running", { count: running.length })}
+            </Badge>
+            {stopped.length > 0 ? (
+              <Badge tone="neutral">
+                {stopped.length === 1
+                  ? t("1 stopped")
+                  : t("{count} stopped", { count: stopped.length })}
+              </Badge>
+            ) : null}
+            {updates.length > 0 ? (
+              <Badge tone="warning">
+                {updates.length === 1
+                  ? t("1 update")
+                  : t("{count} updates", { count: updates.length })}
+              </Badge>
+            ) : null}
           </>
         }
         actions={
           <>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-              Refresh
+              {t("Refresh")}
             </Button>
             <Button
               variant="secondary"
@@ -225,7 +256,7 @@ export function DockerPage() {
               loading={checkUpdates.isPending}
               onClick={() => checkUpdates.mutate()}
             >
-              Check updates
+              {t("Check updates")}
             </Button>
             <Button
               variant="secondary"
@@ -234,24 +265,31 @@ export function DockerPage() {
               disabled={updates.length === 0 || Boolean(updateRun?.running)}
               onClick={() => void runUpdates(updates)}
             >
-              Update all {updates.length > 0 ? `(${updates.length})` : ""}
+              {updates.length > 0
+                ? t("Update all ({count})", { count: updates.length })
+                : t("Update all")}
             </Button>
             <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setCreating(true)}>
-              New container
+              {t("New container")}
             </Button>
           </>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <MetricCard icon={<Boxes className="size-4" />} label="Running" value={`${running.length}`} hint={`${containers.length} total`} />
-        <MetricCard icon={<Cpu className="size-4" />} label="CPU footprint" value={formatPercent(totalCpu, 1)} hint="across all containers" />
-        <MetricCard icon={<MemoryStick className="size-4" />} label="Memory" value={formatMemory(totalMemory)} hint="resident memory" />
+        <MetricCard
+          icon={<Boxes className="size-4" />}
+          label={t("Running")}
+          value={`${running.length}`}
+          hint={containers.length === 1 ? t("1 total") : t("{count} total", { count: containers.length })}
+        />
+        <MetricCard icon={<Cpu className="size-4" />} label={t("CPU footprint")} value={formatPercent(totalCpu, 1)} hint={t("across all containers")} />
+        <MetricCard icon={<MemoryStick className="size-4" />} label={t("Memory")} value={formatMemory(totalMemory)} hint={t("resident memory")} />
         <MetricCard
           icon={<TriangleAlert className="size-4" />}
-          label="Updates"
+          label={t("Updates")}
           value={`${updates.length}`}
-          hint={updates.length ? "images ready to pull" : "everything is current"}
+          hint={updates.length ? t("images ready to pull") : t("everything is current")}
           tone={updates.length ? "warning" : "success"}
         />
       </div>
@@ -260,10 +298,10 @@ export function DockerPage() {
         <Tabs
           size="md"
           items={[
-            { value: "all", label: "All", count: containers.length },
-            { value: "running", label: "Running", count: running.length },
-            { value: "stopped", label: "Stopped", count: stopped.length },
-            { value: "updates", label: "Updates", count: updates.length },
+            { value: "all", label: t("All"), count: containers.length },
+            { value: "running", label: t("Running"), count: running.length },
+            { value: "stopped", label: t("Stopped"), count: stopped.length },
+            { value: "updates", label: t("Updates"), count: updates.length },
           ]}
           value={filter}
           onChange={(value) => setFilter(value as Filter)}
@@ -272,7 +310,7 @@ export function DockerPage() {
           <InputBase
             value={query}
             onChange={setQuery}
-            placeholder="Search containers…"
+            placeholder={t("Search containers…")}
             icon={<Search className="size-3.5" />}
             className="w-52"
           />
@@ -280,7 +318,7 @@ export function DockerPage() {
             <button
               type="button"
               onClick={() => setView("grid")}
-              aria-label="Grid view"
+              aria-label={t("Grid view")}
               className={cn("grid size-7 place-items-center rounded-md transition", view === "grid" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
             >
               <Boxes className="size-3.5" />
@@ -288,7 +326,7 @@ export function DockerPage() {
             <button
               type="button"
               onClick={() => setView("list")}
-              aria-label="List view"
+              aria-label={t("List view")}
               className={cn("grid size-7 place-items-center rounded-md transition", view === "list" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
             >
               <List className="size-3.5" />
@@ -301,11 +339,11 @@ export function DockerPage() {
         <Card>
           <EmptyState
             icon={<Boxes className="size-5" />}
-            title="No containers match this view"
-            description="Adjust the filter or search query to see your workloads."
+            title={t("No containers match this view")}
+            description={t("Adjust the filter or search query to see your workloads.")}
             action={
               <Button variant="secondary" onClick={() => { setFilter("all"); setQuery(""); }}>
-                Clear filters
+                {t("Clear filters")}
               </Button>
             }
           />
@@ -331,17 +369,17 @@ export function DockerPage() {
         <Card>
           <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
             <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-56 lg:flex-none">
-              Container
+              {t("Container")}
             </span>
-            <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">Image</span>
-            <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">Network</span>
+            <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Image")}</span>
+            <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">{t("Network")}</span>
             <span className="hidden w-28 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">IP</span>
             <span className="hidden flex-1 lg:block" aria-hidden="true" />
-            <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">State</span>
+            <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
             <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
-            <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">Memory</span>
-            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">Uptime</span>
-            <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Actions</span>
+            <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
+            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Uptime")}</span>
+            <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
           </div>
           <div className="divide-y divide-line/60">
             {filtered.map((container) => (
@@ -387,12 +425,12 @@ export function DockerPage() {
       <Modal
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
-        title={`Remove ${removing?.name ?? "container"}?`}
-        description="The container is stopped and deleted. Bind mounts and appdata stay on disk."
+        title={t("Remove {name}?", { name: removing?.name ?? t("container") })}
+        description={t("The container is stopped and deleted. Bind mounts and appdata stay on disk.")}
         footer={
           <>
             <Button variant="secondary" onClick={() => setRemoving(null)} disabled={remove.isPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="danger"
@@ -402,14 +440,14 @@ export function DockerPage() {
                 if (removing) remove.mutate(removing);
               }}
             >
-              Remove container
+              {t("Remove container")}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <p className="text-[11px] leading-relaxed text-muted">
-            This action cannot be undone from Aurora. Recreate the container from its image if needed.
+            {t("This action cannot be undone from Aurora. Recreate the container from its image if needed.")}
           </p>
           {removeError ? (
             <div className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[10.5px] text-[var(--danger)]">
@@ -438,6 +476,7 @@ function ContainerCard({
   busy?: boolean;
 }) {
   const action = useAction();
+  const { t } = useI18n();
   const running = container.state === "running";
   const ports = container.ports ?? [];
   const memoryUsage = container.memoryLimit ? (container.memory / container.memoryLimit) * 100 : 0;
@@ -467,36 +506,38 @@ function ContainerCard({
         </button>
         <Menu
           trigger={
-            <IconButton label={`Actions for ${container.name}`} size="sm">
+            <IconButton label={t("Actions for {name}", { name: container.name })} size="sm">
               <span className="text-[15px] leading-none">⋯</span>
             </IconButton>
           }
           items={[
-            { label: "Details & logs", icon: <InfoIcon className="size-3.5" />, onSelect: onOpen },
-            { label: "Edit settings", icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
+            { label: t("Details & logs"), icon: <InfoIcon className="size-3.5" />, onSelect: onOpen },
+            { label: t("Edit settings"), icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
             ...(container.updateAvailable
               ? [{
-                  label: "Update image & restart",
+                  label: t("Update image & restart"),
                   icon: <ArrowDownToLine className="size-3.5" />,
                   onSelect: onUpdate,
                 }]
               : []),
             {
-              label: running ? "Restart" : "Start",
+              label: running ? t("Restart") : t("Start"),
               icon: running ? <RotateCw className="size-3.5" /> : <Play className="size-3.5" />,
               onSelect: () =>
                 action.mutate({
                   kind: running ? "container.restart" : "container.start",
                   target: container.name,
-                  success: running ? `${container.name} restarted` : `${container.name} started`,
+                  success: running
+                    ? t("{name} restarted", { name: container.name })
+                    : t("{name} started", { name: container.name }),
                 }),
             },
             ...(container.webUi
-              ? [{ label: "Open web UI", onSelect: () => window.open(container.webUi, "_blank", "noopener") }]
+              ? [{ label: t("Open web UI"), onSelect: () => window.open(container.webUi, "_blank", "noopener") }]
               : []),
             { label: "", separator: true },
             {
-              label: running ? "Stop" : "Already stopped",
+              label: running ? t("Stop") : t("Already stopped"),
               icon: <Square className="size-3.5" />,
               danger: running,
               disabled: !running,
@@ -504,20 +545,20 @@ function ContainerCard({
                 action.mutate({
                   kind: "container.stop",
                   target: container.name,
-                  success: `${container.name} stopped`,
+                  success: t("{name} stopped", { name: container.name }),
                 }),
             },
-            { label: "Remove container", icon: <Trash2 className="size-3.5" />, danger: true, onSelect: onRemove },
+            { label: t("Remove container"), icon: <Trash2 className="size-3.5" />, danger: true, onSelect: onRemove },
           ]}
         />
       </div>
 
       <div className="relative mt-4 flex items-center gap-2">
         <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot pulse={running}>
-          {running ? "Running" : container.state}
+          {running ? t("Running") : container.state}
         </Badge>
-        <span className="text-[10px] text-subtle">{container.status}</span>
-        {container.updateAvailable ? <Badge tone="warning" className="ml-auto">Update</Badge> : null}
+        <span className="text-[10px] text-subtle">{running ? t("Up {time}", { time: formatUptime(container.uptime) }) : container.status}</span>
+        {container.updateAvailable ? <Badge tone="warning" className="ml-auto">{t("Update")}</Badge> : null}
       </div>
 
       <div className="relative mt-4 grid grid-cols-2 gap-3">
@@ -530,7 +571,7 @@ function ContainerCard({
         </div>
         <div>
           <div className="flex items-center justify-between text-[9.5px]">
-            <span className="text-subtle">Memory</span>
+            <span className="text-subtle">{t("Memory")}</span>
             <span className="num text-soft">{formatMemory(container.memory)}</span>
           </div>
           <Progress value={memoryUsage} height={4} className="mt-1.5" tone="var(--info)" />
@@ -544,24 +585,24 @@ function ContainerCard({
           </span>
         ))}
         {ports.length > 3 ? <span className="text-[9.5px] text-subtle">+{ports.length - 3}</span> : null}
-        {ports.length === 0 ? <span className="text-[9.5px] text-subtle">No published ports</span> : null}
+        {ports.length === 0 ? <span className="text-[9.5px] text-subtle">{t("No published ports")}</span> : null}
       </div>
 
       <div className="relative mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
         <span className="flex items-center gap-1">
           <Network className="size-3" /> {container.network || "—"}
         </span>
-        <span className="font-mono">{container.ip || "no address"}</span>
+        <span className="font-mono">{container.ip || t("No address")}</span>
       </div>
 
       <div className="relative mt-4 flex items-center gap-2 border-t border-line pt-3">
         <span className="flex items-center gap-1 text-[9.5px] text-subtle">
-          <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : "stopped"}
+          <Clock3 className="size-3" /> {running ? formatUptime(container.uptime) : t("stopped")}
         </span>
         <div className="ml-auto flex items-center gap-1">
           {container.updateAvailable ? (
             <IconButton
-              label="Update image and restart"
+              label={t("Update image and restart")}
               size="sm"
               disabled={busy}
               onClick={onUpdate}
@@ -572,14 +613,16 @@ function ContainerCard({
             <span className="size-8" aria-hidden="true" />
           )}
           <IconButton
-            label={running ? "Restart container" : "Start container"}
+            label={running ? t("Restart container") : t("Start container")}
             size="sm"
             disabled={busy}
             onClick={() =>
               action.mutate({
                 kind: running ? "container.restart" : "container.start",
                 target: container.name,
-                success: running ? `${container.name} restarted` : `${container.name} started`,
+                success: running
+                  ? t("{name} restarted", { name: container.name })
+                  : t("{name} started", { name: container.name }),
               })
             }
           >
@@ -587,17 +630,21 @@ function ContainerCard({
           </IconButton>
           {running ? (
             <IconButton
-              label="Stop container"
+              label={t("Stop container")}
               size="sm"
               onClick={() =>
-                action.mutate({ kind: "container.stop", target: container.name, success: `${container.name} stopped` })
+                action.mutate({
+                  kind: "container.stop",
+                  target: container.name,
+                  success: t("{name} stopped", { name: container.name }),
+                })
               }
             >
               <Square className="size-3.5" />
             </IconButton>
           ) : null}
           {container.webUi ? (
-            <IconButton label="Open web UI" size="sm" onClick={() => window.open(container.webUi, "_blank", "noopener")}>
+            <IconButton label={t("Open web UI")} size="sm" onClick={() => window.open(container.webUi, "_blank", "noopener")}>
               <ExternalLink className="size-3.5" />
             </IconButton>
           ) : null}
@@ -623,6 +670,7 @@ function ContainerRow({
   busy?: boolean;
 }) {
   const action = useAction();
+  const { t } = useI18n();
   const running = container.state === "running";
   return (
     <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
@@ -635,7 +683,7 @@ function ContainerRow({
         />
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-[12px] font-medium text-ink">{container.name}</span>
-          {container.updateAvailable ? <Badge tone="warning">update</Badge> : null}
+          {container.updateAvailable ? <Badge tone="warning">{t("update")}</Badge> : null}
         </span>
       </button>
       <span className="hidden w-44 shrink-0 truncate text-[9.5px] text-subtle md:block" title={container.image}>
@@ -649,7 +697,7 @@ function ContainerRow({
       </span>
       <span className="hidden flex-1 lg:block" aria-hidden="true" />
       <span className="w-20 shrink-0">
-        <Badge tone={running ? "success" : "neutral"} dot>{running ? "Running" : container.state}</Badge>
+        <Badge tone={running ? "success" : "neutral"} dot>{running ? t("Running") : container.state}</Badge>
       </span>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
@@ -657,7 +705,7 @@ function ContainerRow({
       <div className="flex w-[176px] shrink-0 items-center justify-end gap-1">
         {container.updateAvailable ? (
           <IconButton
-            label="Update image and restart"
+            label={t("Update image and restart")}
             size="sm"
             disabled={busy}
             onClick={onUpdate}
@@ -668,26 +716,28 @@ function ContainerRow({
           <span className="size-8" aria-hidden="true" />
         )}
         <IconButton
-          label={running ? "Restart" : "Start"}
+          label={running ? t("Restart") : t("Start")}
           size="sm"
           disabled={busy}
           onClick={() =>
             action.mutate({
               kind: running ? "container.restart" : "container.start",
               target: container.name,
-              success: running ? `${container.name} restarted` : `${container.name} started`,
+              success: running
+                ? t("{name} restarted", { name: container.name })
+                : t("{name} started", { name: container.name }),
             })
           }
         >
           {running ? <RotateCw className={cn("size-3.5", busy && "animate-spin")} /> : <Play className="size-3.5" />}
         </IconButton>
-        <IconButton label="Edit settings" size="sm" onClick={onEdit}>
+        <IconButton label={t("Edit settings")} size="sm" onClick={onEdit}>
           <Settings2 className="size-3.5" />
         </IconButton>
-        <IconButton label="Details and logs" size="sm" onClick={onOpen}>
+        <IconButton label={t("Details and logs")} size="sm" onClick={onOpen}>
           <InfoIcon className="size-3.5" />
         </IconButton>
-        <IconButton label="Remove container" size="sm" onClick={onRemove}>
+        <IconButton label={t("Remove container")} size="sm" onClick={onRemove}>
           <Trash2 className="size-3.5" />
         </IconButton>
       </div>
@@ -711,6 +761,7 @@ function ContainerDrawer({
   const action = useAction();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const running = container?.state === "running";
@@ -719,13 +770,13 @@ function ContainerDrawer({
     onSuccess: (_result, enabled) => {
       toast({
         kind: "success",
-        title: enabled ? "Autostart enabled" : "Autostart disabled",
+        title: enabled ? t("Autostart enabled") : t("Autostart disabled"),
         description: container?.name,
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "Autostart update failed", description: error.message });
+      toast({ kind: "error", title: t("Autostart update failed"), description: error.message });
     },
   });
 
@@ -767,7 +818,7 @@ function ContainerDrawer({
       subtitle={
         <span className="flex flex-wrap items-center gap-2">
           <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot>
-            {running ? "Running" : container.state}
+            {running ? t("Running") : container.state}
           </Badge>
           <span>{container.image}</span>
         </span>
@@ -783,26 +834,32 @@ function ContainerDrawer({
               action.mutate({
                 kind: running ? "container.restart" : "container.start",
                 target: container.name,
-                success: running ? `${container.name} restarted` : `${container.name} started`,
+                success: running
+                  ? t("{name} restarted", { name: container.name })
+                  : t("{name} started", { name: container.name }),
               })
             }
           >
-            {running ? "Restart" : "Start"}
+            {running ? t("Restart") : t("Start")}
           </Button>
           {running ? (
             <Button
               variant="danger"
               className="flex-1"
               onClick={() =>
-                action.mutate({ kind: "container.stop", target: container.name, success: `${container.name} stopped` })
+                action.mutate({
+                  kind: "container.stop",
+                  target: container.name,
+                  success: t("{name} stopped", { name: container.name }),
+                })
               }
             >
-              Stop
+              {t("Stop")}
             </Button>
           ) : null}
           {container.webUi ? (
             <Button variant="primary" icon={<ExternalLink className="size-3.5" />} onClick={() => window.open(container.webUi, "_blank", "noopener")}>
-              Open
+              {t("Open")}
             </Button>
           ) : null}
         </div>
@@ -815,30 +872,30 @@ function ContainerDrawer({
           className="w-full"
           onClick={() => onEdit(container)}
         >
-          Edit configuration
+          {t("Edit configuration")}
         </Button>
         <div className="grid grid-cols-2 gap-3">
-          <Info label="Repository" value={container.repository} className="col-span-2" />
-          <Info label="Tag" value={container.tag} />
-          <Info label="Version" value={container.version || "—"} />
-          <Info label="Category" value={container.category || "—"} />
-          <Info label="Restart policy" value={container.restartPolicy || "—"} />
-          <Info label="Created" value={relativeTime(container.created)} />
-          <Info label="Network" value={container.network || "—"} />
-          <Info label="IP address" value={container.ip || "—"} />
-          <Info label="Uptime" value={running ? formatUptime(container.uptime) : "—"} />
-          <Info label="Memory" value={formatMemory(container.memory)} />
+          <Info label={t("Repository")} value={container.repository} className="col-span-2" />
+          <Info label={t("Tag")} value={container.tag} />
+          <Info label={t("Version")} value={container.version || "—"} />
+          <Info label={t("Category")} value={container.category || "—"} />
+          <Info label={t("Restart policy")} value={container.restartPolicy || "—"} />
+          <Info label={t("Created")} value={relativeTime(container.created)} />
+          <Info label={t("Network")} value={container.network || "—"} />
+          <Info label={t("IP address")} value={container.ip || "—"} />
+          <Info label={t("Uptime")} value={running ? formatUptime(container.uptime) : "—"} />
+          <Info label={t("Memory")} value={formatMemory(container.memory)} />
         </div>
 
         <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
           <span>
-            <span className="block text-[11px] font-medium text-soft">Start with the array</span>
-            <span className="block text-[9.5px] text-subtle">Unraid autostart list</span>
+            <span className="block text-[11px] font-medium text-soft">{t("Start with the array")}</span>
+            <span className="block text-[9.5px] text-subtle">{t("Unraid autostart list")}</span>
           </span>
           <Switch
             checked={container.autostart}
             onChange={(enabled) => autostart.mutate(enabled)}
-            label="Autostart container"
+            label={t("Autostart container")}
             disabled={autostart.isPending}
           />
         </label>
@@ -846,18 +903,18 @@ function ContainerDrawer({
         {container.updateAvailable ? (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3">
             <p className="flex items-center gap-2 text-[11px] text-[var(--warning)]">
-              <TriangleAlert className="size-3.5" /> A newer image is available
+              <TriangleAlert className="size-3.5" /> {t("A newer image is available")}
             </p>
             <Button size="sm" variant="soft" onClick={() => onUpdate(container)}>
-              Update now
+              {t("Update now")}
             </Button>
           </div>
         ) : null}
 
         <div>
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">Published ports</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Published ports")}</h3>
           {(container.ports ?? []).length === 0 ? (
-            <p className="mt-2 text-[11px] text-muted">No ports are published for this container.</p>
+            <p className="mt-2 text-[11px] text-muted">{t("No ports are published for this container.")}</p>
           ) : (
             <div className="mt-2 overflow-hidden rounded-xl border border-line">
               {(container.ports ?? []).map((port) => (
@@ -873,13 +930,13 @@ function ContainerDrawer({
         <div>
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-              <Terminal className="size-3.5" /> Container logs
+              <Terminal className="size-3.5" /> {t("Container logs")}
             </h3>
             <div className="flex items-center gap-1">
-              <IconButton label="Reload logs" size="sm" onClick={() => void logs.refetch()}>
+              <IconButton label={t("Reload logs")} size="sm" onClick={() => void logs.refetch()}>
                 <RefreshCw className={cn("size-3.5", logs.isFetching && "animate-spin")} />
               </IconButton>
-              <IconButton label="Copy logs" size="sm" onClick={() => void copyLogs()}>
+              <IconButton label={t("Copy logs")} size="sm" onClick={() => void copyLogs()}>
                 {copied ? <Check className="size-3.5 text-[var(--success)]" /> : <Copy className="size-3.5" />}
               </IconButton>
             </div>
@@ -889,7 +946,7 @@ function ContainerDrawer({
             className="mt-2 h-64 overflow-y-auto rounded-xl border border-[#23252e] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed"
           >
             {logs.isLoading ? (
-              <p className="text-[#6b7280]">Loading logs…</p>
+              <p className="text-[#6b7280]">{t("Loading logs…")}</p>
             ) : logs.data?.length ? (
               logs.data.map((line, index) => (
                 <div key={`${line.time}-${index}`} className="flex gap-2">
@@ -906,7 +963,7 @@ function ContainerDrawer({
                 </div>
               ))
             ) : (
-              <p className="text-[#6b7280]">No logs available.</p>
+              <p className="text-[#6b7280]">{t("No logs available.")}</p>
             )}
           </div>
         </div>

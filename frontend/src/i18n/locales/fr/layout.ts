@@ -1,0 +1,98 @@
+const layout: Record<string, string> = {
+  // Navigation
+  "Overview": "Vue d'ensemble",
+  "Infrastructure": "Infrastructure",
+  "System": "Système",
+  "Dashboard": "Tableau de bord",
+  "Notifications": "Notifications",
+  "Storage": "Stockage",
+  "Containers": "Conteneurs",
+  "Virtual machines": "Machines virtuelles",
+  "Network": "Réseau",
+  "GPUs": "GPU",
+  "Balance": "Équilibrage",
+  "Users": "Utilisateurs",
+  "Plugins": "Plugins",
+  "Logs": "Journaux",
+  "Terminal": "Terminal",
+  "Tools": "Outils",
+  "History": "Historique",
+  "Settings": "Paramètres",
+
+  // Sidebar
+  "Signed out": "Déconnecté",
+  "Your session has been closed.": "Votre session a été fermée.",
+  "Sign out failed": "Échec de la déconnexion",
+  "Aurora home": "Accueil Aurora",
+  "Expand sidebar": "Développer la barre latérale",
+  "Collapse sidebar": "Réduire la barre latérale",
+  "{name} · Unraid {version} · {uptime} uptime": "{name} · Unraid {version} · en service depuis {uptime}",
+  "{name}, online": "{name}, en ligne",
+  "{used} used": "{used} utilisés",
+  "{free} free": "{free} libres",
+  "Host administrator": "Administrateur de l'hôte",
+  "Quick actions": "Actions rapides",
+  "Quick actions (⌘K)": "Actions rapides (⌘K)",
+  "Sign out": "Se déconnecter",
+  "Close menu": "Fermer le menu",
+
+  // Brand
+  "Unraid control": "Contrôle Unraid",
+
+  // Topbar
+  "Open navigation": "Ouvrir la navigation",
+  "Search or jump to…": "Rechercher ou accéder à…",
+  "Reconnecting": "Reconnexion",
+  "Switch to light theme": "Passer au thème clair",
+  "Switch to dark theme": "Passer au thème sombre",
+  "Mark all": "Tout marquer",
+  "{count} unread": "Non lues : {count}",
+  "You are all caught up": "Vous êtes à jour",
+  "All notifications acknowledged": "Toutes les notifications ont été marquées comme lues",
+  "No notifications yet.": "Aucune notification pour l'instant.",
+  "View all notifications": "Voir toutes les notifications",
+  "Account settings": "Paramètres du compte",
+  "Documentation": "Documentation",
+
+  // App shell and command palette
+  "Connecting to your server": "Connexion à votre serveur",
+  "Restoring your session": "Restauration de votre session",
+  "Connection lost": "Connexion perdue",
+  "Aurora cannot reach the server": "Aurora ne parvient pas à joindre le serveur",
+  "Try again": "Réessayer",
+  "Sign in": "Se connecter",
+  "Go to {page}": "Ouvrir : {page}",
+  "Navigation": "Navigation",
+  "Appearance": "Apparence",
+  "Refresh server data": "Actualiser les données du serveur",
+  "Re-sync all widgets": "Resynchroniser tous les widgets",
+  "Open containers": "Ouvrir les conteneurs",
+  "Open virtual machines": "Ouvrir les machines virtuelles",
+  "{count} running": "{count} en cours",
+  "Container · {state} · {image}": "Conteneur · {state} · {image}",
+  "Container actions": "Actions sur les conteneurs",
+  "Restart {name}": "Redémarrer {name}",
+  "Start {name}": "Démarrer {name}",
+  "Stop {name}": "Arrêter {name}",
+  "{name} restarted": "Redémarrage de {name}",
+  "{name} started": "Démarrage de {name}",
+  "Virtual machine · {state} · {os}": "Machine virtuelle · {state} · {os}",
+  "VM actions": "Actions sur les VM",
+  "{name} is shutting down": "Arrêt de {name} en cours",
+  "Aurora · an independent, modern control plane for Unraid. Session {user}.":
+    "Aurora · un plan de contrôle moderne et indépendant pour Unraid. Session : {user}.",
+
+  // Overlays
+  "Close panel": "Fermer le panneau",
+  "Command palette": "Palette de commandes",
+  "Search pages, containers, VMs, actions…": "Rechercher des pages, des conteneurs, des VM ou des actions…",
+  "No results for “{query}”.": "Aucun résultat pour « {query} ».",
+  "navigate": "naviguer",
+  "open": "ouvrir",
+  "{count} results": "{count} résultats",
+
+  // Primitives
+  "Usage": "Utilisation",
+};
+
+export default layout;

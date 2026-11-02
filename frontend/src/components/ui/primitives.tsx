@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { ChevronRight, Loader2 } from "lucide-react";
+import { useI18n } from "../../i18n";
 
 export function cn(...values: Array<string | false | null | undefined>): string {
   return values.filter(Boolean).join(" ");
@@ -180,7 +181,7 @@ export function Progress({
   trackClassName,
   height = 6,
   striped = false,
-  label = "Usage",
+  label,
 }: {
   value: number;
   tone?: string;
@@ -190,6 +191,7 @@ export function Progress({
   striped?: boolean;
   label?: string;
 }) {
+  const { t } = useI18n();
   const safe = Math.min(100, Math.max(0, value));
   const background = tone ?? "linear-gradient(90deg, var(--accent), var(--accent-2))";
   return (
@@ -197,7 +199,7 @@ export function Progress({
       className={cn("w-full overflow-hidden rounded-full bg-[var(--surface-3)]", trackClassName, className)}
       style={{ height }}
       role="progressbar"
-      aria-label={label}
+      aria-label={label ?? t("Usage")}
       aria-valuenow={Math.round(safe)}
       aria-valuemin={0}
       aria-valuemax={100}

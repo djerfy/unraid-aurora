@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { useI18n } from "../../i18n";
 import type { VM } from "../../lib/types";
 
 export type ConsoleStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -81,7 +82,11 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
   onStatus?: (status: ConsoleStatus, message: string) => void;
   className?: string;
 }>(function VMConsolePanel({ vm, reconnectToken, onStatus, className }, ref) {
+  const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
+  // Held in a ref so a locale change never re-runs the connection effect.
+  const tRef = useRef(t);
+  tRef.current = t;
   const clientRef = useRef<{
     disconnect: () => void;
     focus: (options?: FocusOptions) => void;
@@ -190,10 +195,10 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
         connection.addEventListener("disconnect", (event: Event) => {
           if (cancelled) return;
           const detail = (event as CustomEvent<{ clean?: boolean }>).detail;
-          report("disconnected", detail?.clean ? "Session closed." : "The console connection was lost.");
+          report("disconnected", detail?.clean ? tRef.current("Session closed.") : tRef.current("The console connection was lost."));
         });
         connection.addEventListener("securityfailure", () => {
-          report("error", "The virtual machine rejected the console connection.");
+          report("error", tRef.current("The virtual machine rejected the console connection."));
         });
         client = connection;
         clientRef.current = connection;

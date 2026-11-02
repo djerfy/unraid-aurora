@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell, BootScreen, ErrorScreen } from "./components/layout/AppShell";
 import { useApp } from "./app/AppDataProvider";
 import { PAGE_META } from "./components/layout/nav";
+import { useI18n } from "./i18n";
 import { DashboardPage } from "./pages/Dashboard";
 import { StoragePage } from "./pages/Storage";
 import { DockerPage } from "./pages/Docker";
@@ -34,10 +35,11 @@ function ProtectedShell() {
 
 function TitleSync() {
   const location = useLocation();
+  const { t } = useI18n();
   useEffect(() => {
     const meta = PAGE_META[location.pathname];
-    document.title = meta ? `${meta.title} · Aurora` : "Aurora · Unraid";
-  }, [location.pathname]);
+    document.title = meta ? `${t(meta.title)} · Aurora` : "Aurora · Unraid";
+  }, [location.pathname, t]);
   return null;
 }
 

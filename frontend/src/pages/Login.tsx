@@ -16,12 +16,14 @@ import { Button } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useTheme } from "../app/ThemeProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api, ApiError } from "../lib/api";
 
 export function LoginPage() {
   const { session } = useApp();
   const { resolvedTheme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -44,13 +46,13 @@ export function LoginPage() {
       await api.login(username.trim(), password);
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
-      toast({ kind: "success", title: "Welcome back", description: "Your session is now active." });
+      toast({ kind: "success", title: t("Welcome back"), description: t("Your session is now active.") });
       navigate("/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.status === 429 ? "Too many attempts. Try again in 15 minutes." : err.message);
+        setError(err.status === 429 ? t("Too many attempts. Try again in 15 minutes.") : err.message);
       } else {
-        setError("Unable to reach the server. Check your connection and try again.");
+        setError(t("Unable to reach the server. Check your connection and try again."));
       }
     } finally {
       setLoading(false);
@@ -78,7 +80,7 @@ export function LoginPage() {
           <div className="flex items-center justify-between gap-4">
             <AuroraWordmark />
             <span className="flex items-center gap-1.5 rounded-full border border-line bg-[var(--surface-2)]/60 px-2.5 py-1 text-[10px] font-medium text-muted backdrop-blur">
-              <span className="size-1.5 rounded-full bg-[var(--success)]" /> Control plane online
+              <span className="size-1.5 rounded-full bg-[var(--success)]" /> {t("Control plane online")}
             </span>
           </div>
 
@@ -97,30 +99,29 @@ export function LoginPage() {
                 <AuroraMark size={56} />
               </div>
               <span className="absolute -left-6 top-16 rounded-lg border border-line bg-[var(--surface-2)]/80 px-2.5 py-1.5 font-mono text-[9px] text-muted backdrop-blur">
-                NATIVE · SHADOW
+                {t("NATIVE · SHADOW")}
               </span>
               <span className="absolute -right-2 bottom-20 rounded-lg border border-line bg-[var(--surface-2)]/80 px-2.5 py-1.5 font-mono text-[9px] text-muted backdrop-blur">
-                LIVE · 2s
+                {t("LIVE · 2s")}
               </span>
             </div>
 
             <div className="mt-12 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">Unraid, reimagined</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">{t("Unraid, reimagined")}</p>
               <h1 className="mt-3 text-[34px] font-semibold leading-[1.1] tracking-[-0.04em] text-ink">
-                Your data.
+                {t("Your data.")}
                 <br />
-                <span className="text-ink">In perfect focus.</span>
+                <span className="text-ink">{t("In perfect focus.")}</span>
               </h1>
               <p className="mx-auto mt-4 max-w-sm text-[12.5px] leading-relaxed text-muted">
-                One calm surface for your array, containers, virtual machines and network — with live telemetry
-                and deliberate controls.
+                {t("One calm surface for your array, containers, virtual machines and network — with live telemetry and deliberate controls.")}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-[10px] text-subtle">
             <ShieldCheck className="size-3.5 text-[var(--accent)]" />
-            Native host authentication · no credentials stored
+            {t("Native host authentication · no credentials stored")}
           </div>
         </section>
 
@@ -135,7 +136,7 @@ export function LoginPage() {
                 type="button"
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                 className="grid size-9 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-muted transition hover:text-ink"
-                aria-label="Toggle theme"
+                aria-label={t("Toggle theme")}
               >
                 {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
               </button>
@@ -145,16 +146,16 @@ export function LoginPage() {
           <div className="relative mx-auto flex w-full max-w-[380px] flex-1 flex-col justify-center py-10">
             <div className="mb-8">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-[var(--surface-2)] px-2.5 py-1 text-[10px] font-medium text-muted">
-                <ShieldCheck className="size-3 text-[var(--accent)]" /> Secure session
+                <ShieldCheck className="size-3 text-[var(--accent)]" /> {t("Secure session")}
               </span>
-              <h2 className="mt-5 text-[27px] font-semibold tracking-[-0.03em] text-ink">Welcome back</h2>
-              <p className="mt-1.5 text-[12.5px] text-muted">Sign in with the root account of this server.</p>
+              <h2 className="mt-5 text-[27px] font-semibold tracking-[-0.03em] text-ink">{t("Welcome back")}</h2>
+              <p className="mt-1.5 text-[12.5px] text-muted">{t("Sign in with the root account of this server.")}</p>
             </div>
 
             <form onSubmit={(event) => void submit(event)} className="space-y-4">
               <div>
                 <label htmlFor="username" className="mb-1.5 block text-[10.5px] font-medium uppercase tracking-[0.1em] text-subtle">
-                  Username
+                  {t("Username")}
                 </label>
                 <div className="flex h-11 items-center gap-2.5 rounded-xl border border-line bg-[var(--surface-2)] px-3 transition focus-within:border-[var(--accent-line)] focus-within:bg-[var(--surface)]">
                   <User className="size-4 text-subtle" />
@@ -173,7 +174,7 @@ export function LoginPage() {
 
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-[10.5px] font-medium uppercase tracking-[0.1em] text-subtle">
-                  Root password
+                  {t("Root password")}
                 </label>
                 <div className="flex h-11 items-center gap-2.5 rounded-xl border border-line bg-[var(--surface-2)] px-3 transition focus-within:border-[var(--accent-line)] focus-within:bg-[var(--surface)]">
                   <LockKeyhole className="size-4 text-subtle" />
@@ -190,7 +191,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("Hide password") : t("Show password")}
                     className="text-subtle transition hover:text-ink"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -212,7 +213,7 @@ export function LoginPage() {
                 className="w-full"
                 icon={!loading ? <ArrowRight className="size-4" /> : undefined}
               >
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? t("Signing in…") : t("Sign in")}
               </Button>
             </form>
           </div>
@@ -220,7 +221,7 @@ export function LoginPage() {
       </div>
 
       <footer className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-4 text-[10px] text-subtle sm:px-10">
-        <span>Independent interface for Unraid</span>
+        <span>{t("Independent interface for Unraid")}</span>
         <span className="flex items-center gap-3">
           <a href="https://unraid.net" target="_blank" rel="noreferrer" className="transition hover:text-ink">
             unraid.net ↗

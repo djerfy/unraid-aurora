@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import type { ActionKind } from "../lib/types";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 
 type ActionInput = {
   kind: ActionKind;
@@ -14,6 +15,7 @@ type ActionInput = {
 export function useAction() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useI18n();
 
   return useMutation({
     mutationFn: ({ kind, target = "" }: ActionInput) => api.action(kind, target),
@@ -22,7 +24,7 @@ export function useAction() {
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     },
     onError: (error: Error, variables) => {
-      toast({ kind: "error", title: "Action failed", description: error.message });
+      toast({ kind: "error", title: t("Action failed"), description: error.message });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       console.error("action failed", variables.kind, variables.target, error);
     },

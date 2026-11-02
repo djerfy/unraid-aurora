@@ -21,6 +21,7 @@ import { useHotkeys } from "../../lib/hooks";
 import { NAV_ITEMS } from "./nav";
 import { EntityIcon, containerIconURL, vmIconURL } from "../ui/entity-icon";
 import { AuroraWordmark } from "./Brand";
+import { useI18n } from "../../i18n";
 
 // Shortcuts must not steal keystrokes from editors, terminals or consoles.
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -29,7 +30,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return ["INPUT", "TEXTAREA", "SELECT", "CANVAS"].includes(element.tagName) || element.isContentEditable;
 }
 
-function BootScreen({ message = "Connecting to your server" }: { message?: string }) {
+function BootScreen({ message }: { message?: string }) {
+  const { t } = useI18n();
   return (
     <div className="relative grid min-h-dvh place-items-center bg-[var(--bg)]">
       <div className="app-atmosphere" />
@@ -37,7 +39,7 @@ function BootScreen({ message = "Connecting to your server" }: { message?: strin
         <AuroraWordmark />
         <div className="mt-8 flex items-center gap-2 text-[11px] text-subtle">
           <span className="status-dot live" />
-          {message}
+          {message ? t(message) : t("Connecting to your server")}
         </div>
         <div className="mt-3 h-px w-40 overflow-hidden bg-[var(--surface-3)]">
           <div className="h-px w-1/2 animate-[shimmer_1.4s_infinite] bg-[var(--accent)]" />
@@ -49,16 +51,17 @@ function BootScreen({ message = "Connecting to your server" }: { message?: strin
 
 function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   return (
     <div className="relative grid min-h-dvh place-items-center bg-[var(--bg)] px-6">
       <div className="app-atmosphere" />
       <div className="card relative w-full max-w-md p-8 text-center">
-        <p className="eyebrow text-[var(--danger)]">Connection lost</p>
-        <h1 className="mt-3 text-xl font-semibold text-ink">Aurora cannot reach the server</h1>
+        <p className="eyebrow text-[var(--danger)]">{t("Connection lost")}</p>
+        <h1 className="mt-3 text-xl font-semibold text-ink">{t("Aurora cannot reach the server")}</h1>
         <p className="mt-2 text-xs leading-relaxed text-muted">{error.message}</p>
         <div className="mt-6 flex justify-center gap-2">
-          <Button variant="primary" onClick={onRetry}>Try again</Button>
-          <Button variant="secondary" onClick={() => navigate("/login")}>Sign in</Button>
+          <Button variant="primary" onClick={onRetry}>{t("Try again")}</Button>
+          <Button variant="secondary" onClick={() => navigate("/login")}>{t("Sign in")}</Button>
         </div>
       </div>
     </div>
@@ -68,6 +71,7 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
 export function AppShell() {
   const { snapshot, session, error, refresh } = useApp();
   const { resolvedTheme, setTheme, setPreferences } = useTheme();
+  const { t } = useI18n();
   const action = useAction();
   const navigate = useNavigate();
   const location = useLocation();
@@ -134,9 +138,9 @@ export function AppShell() {
     if (!snapshot) return [];
     const navigation: Command[] = NAV_ITEMS.map((item) => ({
       id: `nav-${item.to}`,
-      label: item.label,
-      hint: `Go to ${item.label.toLowerCase()}`,
-      group: "Navigation",
+      label: t(item.label),
+      hint: t("Go to {page}", { page: t(item.label) }),
+      group: t("Navigation"),
       icon: <item.icon className="size-3.5" />,
       run: () => navigate(item.to),
     }));
@@ -144,33 +148,33 @@ export function AppShell() {
     const globals: Command[] = [
       {
         id: "theme",
-        label: resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme",
-        hint: "Appearance",
-        group: "Actions",
+        label: resolvedTheme === "dark" ? t("Switch to light theme") : t("Switch to dark theme"),
+        hint: t("Appearance"),
+        group: t("Actions"),
         icon: resolvedTheme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />,
         run: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
       },
       {
         id: "refresh",
-        label: "Refresh server data",
-        hint: "Re-sync all widgets",
-        group: "Actions",
+        label: t("Refresh server data"),
+        hint: t("Re-sync all widgets"),
+        group: t("Actions"),
         icon: <RefreshCw className="size-3.5" />,
         run: () => refresh(),
       },
       {
         id: "new-container",
-        label: "Open containers",
-        hint: `${snapshot.containers.filter((c) => c.state === "running").length} running`,
-        group: "Actions",
+        label: t("Open containers"),
+        hint: t("{count} running", { count: snapshot.containers.filter((c) => c.state === "running").length }),
+        group: t("Actions"),
         icon: <Boxes className="size-3.5" />,
         run: () => navigate("/docker"),
       },
       {
         id: "new-vm",
-        label: "Open virtual machines",
-        hint: `${snapshot.vms.filter((v) => v.state === "running").length} running`,
-        group: "Actions",
+        label: t("Open virtual machines"),
+        hint: t("{count} running", { count: snapshot.vms.filter((v) => v.state === "running").length }),
+        group: t("Actions"),
         icon: <MonitorPlay className="size-3.5" />,
         run: () => navigate("/vms"),
       },
@@ -179,8 +183,8 @@ export function AppShell() {
     const containers: Command[] = snapshot.containers.map((container) => ({
       id: `ct-open-${container.id}`,
       label: container.name,
-      hint: `Container · ${container.state} · ${container.image}`,
-      group: "Containers",
+      hint: t("Container · {state} · {image}", { state: container.state, image: container.image }),
+      group: t("Containers"),
       keywords: `container docker ${container.state} ${container.image} ${container.category} ${container.network} ${container.ip}`,
       icon: (
         <EntityIcon
@@ -197,16 +201,16 @@ export function AppShell() {
       const running = container.state === "running";
       return {
         id: `ct-action-${container.id}`,
-        label: running ? `Restart ${container.name}` : `Start ${container.name}`,
+        label: running ? t("Restart {name}", { name: container.name }) : t("Start {name}", { name: container.name }),
         hint: `${container.state} · ${container.image}`,
-        group: "Container actions",
+        group: t("Container actions"),
         keywords: `docker container ${container.state} ${container.image}`,
         icon: running ? <RotateCw className="size-3.5" /> : <Play className="size-3.5" />,
         run: () =>
           action.mutate({
             kind: running ? "container.restart" : "container.start",
             target: container.name,
-            success: running ? `${container.name} restarted` : `${container.name} started`,
+            success: running ? t("{name} restarted", { name: container.name }) : t("{name} started", { name: container.name }),
           }),
       };
     });
@@ -214,8 +218,8 @@ export function AppShell() {
     const vms: Command[] = snapshot.vms.map((vm) => ({
       id: `vm-open-${vm.id}`,
       label: vm.name,
-      hint: `Virtual machine · ${vm.state} · ${vm.os}`,
-      group: "Virtual machines",
+      hint: t("Virtual machine · {state} · {os}", { state: vm.state, os: vm.os }),
+      group: t("Virtual machines"),
       keywords: `vm qemu kvm ${vm.state} ${vm.os}`,
       icon: (
         <EntityIcon
@@ -232,22 +236,22 @@ export function AppShell() {
       const running = vm.state === "running";
       return {
         id: `vm-action-${vm.id}`,
-        label: running ? `Stop ${vm.name}` : `Start ${vm.name}`,
+        label: running ? t("Stop {name}", { name: vm.name }) : t("Start {name}", { name: vm.name }),
         hint: `${vm.state} · ${vm.os}`,
-        group: "VM actions",
+        group: t("VM actions"),
         keywords: `vm qemu kvm ${vm.state} ${vm.os}`,
         icon: running ? <Square className="size-3.5" /> : <Play className="size-3.5" />,
         run: () =>
           action.mutate({
             kind: running ? "vm.stop" : "vm.start",
             target: vm.name,
-            success: running ? `${vm.name} is shutting down` : `${vm.name} started`,
+            success: running ? t("{name} is shutting down", { name: vm.name }) : t("{name} started", { name: vm.name }),
           }),
       };
     });
 
     return [...navigation, ...globals, ...containers, ...containerActions, ...vms, ...vmActions];
-  }, [snapshot, navigate, resolvedTheme, setTheme, refresh, action]);
+  }, [snapshot, navigate, resolvedTheme, setTheme, refresh, action, t]);
 
   if (error) return <ErrorScreen error={error} onRetry={() => refresh()} />;
   if (!snapshot) return <BootScreen />;
@@ -293,7 +297,9 @@ export function AppShell() {
 
         {!isTerminal ? <footer className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-5 text-[10.5px] text-subtle sm:px-6 lg:px-8">
           <span>
-            Aurora · an independent, modern control plane for Unraid. Session {session?.user ?? "root"}.
+            {t("Aurora · an independent, modern control plane for Unraid. Session {user}.", {
+              user: session?.user ?? "root",
+            })}
           </span>
           <span className="flex items-center gap-3">
             <span className="flex items-center gap-1">

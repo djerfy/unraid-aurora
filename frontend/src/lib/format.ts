@@ -1,6 +1,18 @@
 const STORAGE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"];
 const MEMORY_UNITS = ["B", "KiB", "MiB", "GiB", "TiB"];
 
+// Formatters are pure helpers used outside React too. The language provider
+// updates this module variable so dates and relative times follow the UI.
+let formatLocale: "en" | "fr" = "en";
+
+export function setFormatLocale(locale: string): void {
+  formatLocale = locale === "fr" ? "fr" : "en";
+}
+
+function localeTag(): string {
+  return formatLocale === "fr" ? "fr-FR" : "en-US";
+}
+
 /**
  * Storage sizes use decimal units, like Unraid and drive vendors. Memory uses
  * binary units because that is how DIMMs and Docker limits are reported.
@@ -32,7 +44,7 @@ export function formatPercent(value: number, digits = 0): string {
 }
 
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US").format(Math.round(value));
+  return new Intl.NumberFormat(localeTag()).format(Math.round(value));
 }
 
 export function formatUptime(seconds: number): string {
@@ -59,33 +71,36 @@ export function formatDuration(seconds: number): string {
 
 export function relativeTime(input: string | number | Date): string {
   const date = input instanceof Date ? input : new Date(input);
-  if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "never";
+  if (Number.isNaN(date.getTime()) || date.getTime() <= 0) {
+    return formatLocale === "fr" ? "jamais" : "never";
+  }
   const diff = Date.now() - date.getTime();
   const abs = Math.abs(diff);
   const minute = 60_000;
   const hour = 3_600_000;
   const day = 86_400_000;
+  const french = formatLocale === "fr";
 
-  if (abs < 45_000) return "just now";
+  if (abs < 45_000) return french ? "à l'instant" : "just now";
   if (abs < hour) {
     const n = Math.round(abs / minute);
-    return `${n} min ago`;
+    return french ? `il y a ${n} min` : `${n} min ago`;
   }
   if (abs < day) {
     const n = Math.round(abs / hour);
-    return `${n}h ago`;
+    return french ? `il y a ${n} h` : `${n}h ago`;
   }
   if (abs < 7 * day) {
     const n = Math.round(abs / day);
-    return `${n}d ago`;
+    return french ? `il y a ${n} j` : `${n}d ago`;
   }
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return date.toLocaleDateString(localeTag(), { month: "short", day: "numeric" });
 }
 
 export function formatDateTime(input: string | number | Date): string {
   const date = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "—";
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(localeTag(), {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -93,10 +108,16 @@ export function formatDateTime(input: string | number | Date): string {
   });
 }
 
+export function formatShortDate(input: string | number | Date): string {
+  const date = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(date.getTime()) || date.getTime() <= 0) return "—";
+  return date.toLocaleDateString(localeTag(), { month: "short", day: "numeric" });
+}
+
 export function formatClock(input: string | number | Date): string {
   const date = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return date.toLocaleTimeString(localeTag(), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 export function greeting(): string {

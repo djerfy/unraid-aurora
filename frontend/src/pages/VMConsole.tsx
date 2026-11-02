@@ -4,6 +4,7 @@ import { Keyboard, Monitor, RefreshCw, X } from "lucide-react";
 import { useApp } from "../app/AppDataProvider";
 import { VMConsolePanel, type VMConsoleHandle, type ConsoleStatus } from "../components/vms/VMConsolePanel";
 import { Badge, Button } from "../components/ui/primitives";
+import { useI18n } from "../i18n";
 
 const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
   connecting: "warning",
@@ -13,6 +14,7 @@ const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
 };
 
 export function VMConsolePage() {
+  const { t } = useI18n();
   const { id } = useParams();
   const { snapshot } = useApp();
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
@@ -24,9 +26,9 @@ export function VMConsolePage() {
     <div className="flex h-dvh w-screen flex-col bg-[#08090d]">
       <header className="flex flex-wrap items-center gap-3 border-b border-[#1f2230] px-4 py-2.5">
         <Monitor className="size-4 text-[#ff8a6b]" />
-        <span className="font-mono text-[11.5px] text-[#c7cbd6]">{vm?.name ?? "Virtual machine"}</span>
+        <span className="font-mono text-[11.5px] text-[#c7cbd6]">{vm?.name ?? t("Virtual machine")}</span>
         <Badge tone={TONE[status]} dot pulse={status === "connecting"}>
-          {status}
+          {t(status)}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
           <Button
@@ -45,7 +47,7 @@ export function VMConsolePage() {
             onClick={() => setToken((value) => value + 1)}
             className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
           >
-            Reconnect
+            {t("Reconnect")}
           </Button>
           <Button
             size="sm"
@@ -54,13 +56,13 @@ export function VMConsolePage() {
             onClick={() => window.close()}
             className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
           >
-            Close window
+            {t("Close window")}
           </Button>
         </div>
       </header>
       {vm && vm.consoleProtocol && !vm.consoleKeyboard ? (
         <div className="border-b border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] px-4 py-2 text-[10.5px] text-[var(--warning)]">
-          This virtual machine has no keyboard device defined. Add one in the VM settings.
+          {t("This virtual machine has no keyboard device defined. Add one in the VM settings.")}
         </div>
       ) : null}
       {vm ? (
@@ -73,7 +75,7 @@ export function VMConsolePage() {
         />
       ) : (
         <div className="grid flex-1 place-items-center px-6 text-center text-[12px] text-[#8b93a7]">
-          Virtual machine not found. Close this window and open the console from the VM page.
+          {t("Virtual machine not found. Close this window and open the console from the VM page.")}
         </div>
       )}
     </div>

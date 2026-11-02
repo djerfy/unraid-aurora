@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, FolderPlus, Plus, Save, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { Container, ContainerConfig, ContainerEnv, ContainerVolume } from "../../lib/types";
+import { useI18n } from "../../i18n";
 import { EntityIcon, containerIconURL } from "../ui/entity-icon";
 import { Modal } from "../ui/overlays";
 import { Badge, Button, IconButton, Switch } from "../ui/primitives";
@@ -25,6 +26,7 @@ export function ContainerSettingsModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const { toast } = useToast();
   const [draft, setDraft] = useState<ContainerConfig | null>(null);
   const [error, setError] = useState("");
@@ -60,8 +62,8 @@ export function ContainerSettingsModal({
     onSuccess: () => {
       toast({
         kind: "success",
-        title: "Container updated",
-        description: `${container?.name} was recreated with the new settings.`,
+        title: t("Container updated"),
+        description: t("{name} was recreated with the new settings.", { name: container?.name ?? "" }),
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       void queryClient.invalidateQueries({ queryKey: ["container-config", container?.id] });
@@ -69,7 +71,7 @@ export function ContainerSettingsModal({
     },
     onError: (err: Error) => {
       setError(err.message);
-      toast({ kind: "error", title: "Update failed", description: err.message });
+      toast({ kind: "error", title: t("Update failed"), description: err.message });
     },
   });
 
@@ -92,7 +94,7 @@ export function ContainerSettingsModal({
 
   const submit = () => {
     if (!draft) return;
-    const validation = validateContainerFields(draft);
+    const validation = validateContainerFields(draft, t);
     if (validation) {
       setError(validation);
       return;
@@ -104,13 +106,13 @@ export function ContainerSettingsModal({
     <Modal
       open={Boolean(container)}
       onClose={onClose}
-      title={`Settings · ${container.name}`}
-      description="Recreate this container with new paths, ports, environment variables and restart policy."
+      title={t("Settings · {name}", { name: container.name })}
+      description={t("Recreate this container with new paths, ports, environment variables and restart policy.")}
       size="xl"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={save.isPending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             variant="primary"
@@ -119,7 +121,7 @@ export function ContainerSettingsModal({
             disabled={!draft}
             onClick={submit}
           >
-            Apply & recreate
+            {t("Apply & recreate")}
           </Button>
         </>
       }
@@ -152,25 +154,24 @@ export function ContainerSettingsModal({
           <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3 text-[10.5px] leading-relaxed text-muted">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-[var(--warning)]" />
             <span>
-              Applying changes stops and recreates the container. Its current ID and uptime reset. Only the
-              paths listed below are kept; other bind mounts are removed.
+              {t("Applying changes stops and recreates the container. Its current ID and uptime reset. Only the paths listed below are kept; other bind mounts are removed.")}
             </span>
           </div>
 
           {/* Paths ------------------------------------------------------- */}
           <section>
             <SectionHeader
-              title="Paths"
-              hint="Bind mounts, host path to container path"
+              title={t("Paths")}
+              hint={t("Bind mounts, host path to container path")}
               onAdd={() =>
                 update({
                   volumes: [...draft.volumes, { source: "", destination: "", readOnly: false }],
                 })
               }
-              addLabel="Add path"
+              addLabel={t("Add path")}
             />
             {draft.volumes.length === 0 ? (
-              <EmptyLine icon={<FolderPlus className="size-3.5" />} text="No bind mounts configured." />
+              <EmptyLine icon={<FolderPlus className="size-3.5" />} text={t("No bind mounts configured.")} />
             ) : (
               <div className="space-y-2">
                 {draft.volumes.map((volume, index) => (
@@ -179,26 +180,26 @@ export function ContainerSettingsModal({
                       value={volume.source}
                       onChange={(event) => updateVolume(index, { source: event.target.value })}
                       placeholder="/mnt/user/appdata/plex"
-                      aria-label="Host path"
+                      aria-label={t("Host path")}
                       className="h-9 min-w-0 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                     />
                     <input
                       value={volume.destination}
                       onChange={(event) => updateVolume(index, { destination: event.target.value })}
                       placeholder="/config"
-                      aria-label="Container path"
+                      aria-label={t("Container path")}
                       className="h-9 min-w-0 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                     />
                     <div className="flex items-center gap-1.5 text-[10px] text-muted">
                       <Switch
                         checked={volume.readOnly}
                         onChange={(value) => updateVolume(index, { readOnly: value })}
-                        label="Read only"
+                        label={t("Read only")}
                       />
                       <span className="hidden w-8 sm:inline">{volume.readOnly ? "ro" : "rw"}</span>
                     </div>
                     <IconButton
-                      label="Remove path"
+                      label={t("Remove path")}
                       size="sm"
                       onClick={() => update({ volumes: draft.volumes.filter((_, i) => i !== index) })}
                     >
@@ -213,19 +214,19 @@ export function ContainerSettingsModal({
           {/* Ports ------------------------------------------------------- */}
           <section>
             <SectionHeader
-              title="Ports"
-              hint="Published host ports"
+              title={t("Ports")}
+              hint={t("Published host ports")}
               onAdd={() => update({ ports: [...draft.ports, { host: 0, container: 0, protocol: "tcp" }] })}
-              addLabel="Add port"
+              addLabel={t("Add port")}
             />
             {draft.ports.length === 0 ? (
-              <EmptyLine icon={<Plus className="size-3.5" />} text="No published ports." />
+              <EmptyLine icon={<Plus className="size-3.5" />} text={t("No published ports.")} />
             ) : (
               <div className="space-y-2">
                 {draft.ports.map((port, index) => (
                   <div key={index} className="grid grid-cols-[1fr_1fr_110px_auto] items-center gap-2">
                     <NumberField
-                      label="Host port"
+                      label={t("Host port")}
                       value={port.host}
                       onChange={(value) =>
                         update({
@@ -234,7 +235,7 @@ export function ContainerSettingsModal({
                       }
                     />
                     <NumberField
-                      label="Container port"
+                      label={t("Container port")}
                       value={port.container}
                       onChange={(value) =>
                         update({
@@ -244,7 +245,7 @@ export function ContainerSettingsModal({
                     />
                     <select
                       value={port.protocol}
-                      aria-label="Protocol"
+                      aria-label={t("Protocol")}
                       onChange={(event) =>
                         update({
                           ports: draft.ports.map((item, i) =>
@@ -261,7 +262,7 @@ export function ContainerSettingsModal({
                       ))}
                     </select>
                     <IconButton
-                      label="Remove port"
+                      label={t("Remove port")}
                       size="sm"
                       onClick={() => update({ ports: draft.ports.filter((_, i) => i !== index) })}
                     >
@@ -276,13 +277,13 @@ export function ContainerSettingsModal({
           {/* Environment ------------------------------------------------- */}
           <section>
             <SectionHeader
-              title="Environment"
-              hint="Variables passed to the container"
+              title={t("Environment")}
+              hint={t("Variables passed to the container")}
               onAdd={() => update({ env: [...draft.env, { key: "", value: "" }] })}
-              addLabel="Add variable"
+              addLabel={t("Add variable")}
             />
             {draft.env.length === 0 ? (
-              <EmptyLine icon={<Plus className="size-3.5" />} text="No environment variables." />
+              <EmptyLine icon={<Plus className="size-3.5" />} text={t("No environment variables.")} />
             ) : (
               <div className="space-y-2">
                 {draft.env.map((entry, index) => (
@@ -291,18 +292,18 @@ export function ContainerSettingsModal({
                       value={entry.key}
                       onChange={(event) => updateEnv(index, { key: event.target.value.toUpperCase() })}
                       placeholder="PUID"
-                      aria-label="Variable name"
+                      aria-label={t("Variable name")}
                       className="h-9 min-w-0 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] uppercase text-ink outline-none transition focus:border-[var(--accent-line)]"
                     />
                     <input
                       value={entry.value}
                       onChange={(event) => updateEnv(index, { value: event.target.value })}
                       placeholder="99"
-                      aria-label="Variable value"
+                      aria-label={t("Variable value")}
                       className="h-9 min-w-0 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                     />
                     <IconButton
-                      label="Remove variable"
+                      label={t("Remove variable")}
                       size="sm"
                       onClick={() => update({ env: draft.env.filter((_, i) => i !== index) })}
                     >
@@ -315,10 +316,10 @@ export function ContainerSettingsModal({
           </section>
 
           <section>
-            <SectionHeader title="Restart policy" hint="Docker restart behaviour" />
+            <SectionHeader title={t("Restart policy")} hint={t("Docker restart behaviour")} />
             <select
               value={draft.restartPolicy}
-              aria-label="Restart policy"
+              aria-label={t("Restart policy")}
               onChange={(event) => update({ restartPolicy: event.target.value })}
               className="h-9 w-56 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11.5px] text-soft outline-none focus:border-[var(--accent-line)]"
             >

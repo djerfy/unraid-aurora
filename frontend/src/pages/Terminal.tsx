@@ -7,12 +7,14 @@ import { ExternalLink, RefreshCw, ShieldCheck, SquareTerminal } from "lucide-rea
 import { Badge, Button, cn } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 
 type Connection = "connecting" | "connected" | "closed" | "error";
 
 export function TerminalPage() {
   const { snapshot, session } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [params] = useSearchParams();
   const popout = params.get("popout") === "1";
   const hostRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,7 @@ export function TerminalPage() {
           dot
           pulse={connection === "connecting"}
         >
-          {connection}
+          {t(connection)}
         </Badge>
         <div className="ml-auto flex items-center gap-2">
           {!popout ? (
@@ -154,7 +156,7 @@ export function TerminalPage() {
               onClick={openWindow}
               className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
             >
-              New window
+              {t("New window")}
             </Button>
           ) : null}
           <Button
@@ -163,18 +165,18 @@ export function TerminalPage() {
             icon={<RefreshCw className="size-3" />}
             onClick={() => {
               setGeneration((value) => value + 1);
-              toast({ kind: "info", title: "Reconnecting terminal" });
+              toast({ kind: "info", title: t("Reconnecting terminal") });
             }}
             className="border-[#2a2e3b] bg-[#11141c] text-[#c7cbd6] hover:border-[#3a4050] hover:bg-[#181c26]"
           >
-            Reconnect
+            {t("Reconnect")}
           </Button>
         </div>
       </div>
       <div ref={hostRef} className="min-h-0 w-full flex-1 px-2 py-2" />
       <div className="flex items-center gap-2 border-t border-[#1f2230] bg-[#08090d] px-4 py-2 font-mono text-[9px] text-[#5f6678]">
         <ShieldCheck className="size-3 text-[#3ddc97]" />
-        Commands execute as root on the Unraid host. Keep this session private.
+        {t("Commands execute as root on the Unraid host. Keep this session private.")}
       </div>
     </div>
   );

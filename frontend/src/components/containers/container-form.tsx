@@ -103,13 +103,21 @@ export type ContainerFields = {
   env: ContainerEnv[];
 };
 
-export function validateContainerFields(fields: ContainerFields): string {
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
+// Validation runs outside a component, so callers inject the active translator.
+const identityTranslate: Translate = (key) => key;
+
+export function validateContainerFields(
+  fields: ContainerFields,
+  t: Translate = identityTranslate,
+): string {
   for (const volume of fields.volumes) {
     if (!volume.source.trim() || !volume.destination.trim()) {
-      return "Every path needs both a host source and a container destination.";
+      return t("Every path needs both a host source and a container destination.");
     }
     if (!volume.destination.startsWith("/")) {
-      return `Container path “${volume.destination}” must be absolute.`;
+      return t("Container path “{path}” must be absolute.", { path: volume.destination });
     }
   }
   for (const port of fields.ports) {
@@ -121,12 +129,12 @@ export function validateContainerFields(fields: ContainerFields): string {
       port.container < 1 ||
       port.container > 65535
     ) {
-      return "Ports must be integers between 1 and 65535.";
+      return t("Ports must be integers between 1 and 65535.");
     }
   }
   for (const entry of fields.env) {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(entry.key)) {
-      return `Environment variable “${entry.key}” has an invalid name.`;
+      return t("Environment variable “{name}” has an invalid name.", { name: entry.key });
     }
   }
   return "";

@@ -30,6 +30,7 @@ import {
 import { useApp } from "../app/AppDataProvider";
 import { useTheme, type Accent, type ThemeMode } from "../app/ThemeProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -54,6 +55,7 @@ export function SettingsPage() {
   const { snapshot, session, refresh } = useApp();
   const theme = useTheme();
   const { toast } = useToast();
+  const { t, setLocale } = useI18n();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [section, setSection] = useState("appearance");
@@ -86,10 +88,10 @@ export function SettingsPage() {
       await api.saveSettings(settings);
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       setSaved(true);
-      toast({ kind: "success", title: "Settings saved", description: "Your preferences are now active." });
+      toast({ kind: "success", title: t("Settings saved"), description: t("Your preferences are now active.") });
       window.setTimeout(() => setSaved(false), 2400);
     } catch (error) {
-      toast({ kind: "error", title: "Could not save settings", description: (error as Error).message });
+      toast({ kind: "error", title: t("Could not save settings"), description: (error as Error).message });
     } finally {
       setSaving(false);
     }
@@ -99,7 +101,8 @@ export function SettingsPage() {
     setDraft(snapshot.settings);
     theme.setTheme(snapshot.settings.theme as ThemeMode);
     theme.setAccent(snapshot.settings.accent as Accent);
-    toast({ kind: "info", title: "Changes discarded" });
+    setLocale(snapshot.settings.language === "fr" ? "fr" : "en");
+    toast({ kind: "info", title: t("Changes discarded") });
   };
 
   const signOut = async () => {
@@ -112,19 +115,19 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Settings"
-        description="Make Aurora yours, tune how often it syncs, and review the connection to this server."
+        eyebrow={t("System")}
+        title={t("Settings")}
+        description={t("Make Aurora yours, tune how often it syncs, and review the connection to this server.")}
         meta={
           <>
             <Badge tone="neutral">Unraid {snapshot.system.version}</Badge>
-            <Badge tone="success" dot>Authenticated</Badge>
+            <Badge tone="success" dot>{t("Authenticated")}</Badge>
           </>
         }
         actions={
           <>
             <Button variant="secondary" icon={<RotateCcw className="size-3.5" />} onClick={reset} disabled={!dirty}>
-              Reset
+              {t("Reset")}
             </Button>
             <Button
               variant="primary"
@@ -133,7 +136,7 @@ export function SettingsPage() {
               disabled={!dirty || saving}
               onClick={() => void save()}
             >
-              {saved ? "Saved" : "Save changes"}
+              {saved ? t("Saved") : t("Save changes")}
             </Button>
           </>
         }
@@ -157,17 +160,17 @@ export function SettingsPage() {
                   )}
                 >
                   <Icon className={cn("size-4", section === item.id ? "text-[var(--accent)]" : "text-subtle")} />
-                  {item.label}
+                  {t(item.label)}
                 </button>
               );
             })}
           </nav>
           <div className="mt-3 hidden rounded-xl border border-line px-3 py-3 lg:block">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Connected to</p>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Connected to")}</p>
             <p className="mt-1.5 text-[12px] font-medium text-ink">{snapshot.system.name}</p>
             <p className="font-mono text-[9.5px] text-subtle">{snapshot.system.hostname} · {snapshot.system.version}</p>
             <Button size="sm" variant="ghost" className="mt-2 h-7 px-2 text-[10px]" onClick={refresh}>
-              Re-sync now
+              {t("Re-sync now")}
             </Button>
           </div>
         </aside>
@@ -176,7 +179,7 @@ export function SettingsPage() {
           {section === "appearance" ? (
             <>
               <Card className="card-pad">
-                <CardTitle title="Theme" description="Aurora adapts every surface, chart and control to your preference." />
+                <CardTitle title={t("Theme")} description={t("Aurora adapts every surface, chart and control to your preference.")} />
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                   {([
                     { value: "dark", label: "Midnight", icon: Moon, hint: "Deep graphite" },
@@ -218,10 +221,10 @@ export function SettingsPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Icon className="size-3.5 text-muted" />
-                          <span className="text-[12px] font-medium text-ink">{option.label}</span>
+                          <span className="text-[12px] font-medium text-ink">{t(option.label)}</span>
                           {active ? <Check className="ml-auto size-3.5 text-[var(--accent)]" /> : null}
                         </div>
-                        <p className="mt-0.5 text-[10px] text-subtle">{option.hint}</p>
+                        <p className="mt-0.5 text-[10px] text-subtle">{t(option.hint)}</p>
                       </button>
                     );
                   })}
@@ -229,7 +232,7 @@ export function SettingsPage() {
               </Card>
 
               <Card className="card-pad">
-                <CardTitle title="Accent" description="One colour drives highlights, charts and focus states." />
+                <CardTitle title={t("Accent")} description={t("One colour drives highlights, charts and focus states.")} />
                 <div className="mt-4 flex flex-wrap gap-2.5">
                   {ACCENTS.map((accent) => (
                     <button
@@ -247,7 +250,7 @@ export function SettingsPage() {
                         className="size-4 rounded-full border border-white/20"
                         style={{ background: `linear-gradient(135deg, ${accent.color}, ${accent.secondary})` }}
                       />
-                      <span className="text-[11.5px] font-medium text-soft">{accent.label}</span>
+                      <span className="text-[11.5px] font-medium text-soft">{t(accent.label)}</span>
                       {settings.accent === accent.value ? <Check className="size-3 text-[var(--accent)]" /> : null}
                     </button>
                   ))}
@@ -255,30 +258,30 @@ export function SettingsPage() {
 
                 <div className="my-5 h-px bg-line" />
 
-                <SettingsRow label="Density" description="Compact reduces padding and row height across the interface.">
+                <SettingsRow label={t("Density")} description={t("Compact reduces padding and row height across the interface.")}>
                   <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
-                    {["comfortable", "compact"].map((value) => (
+                    {(["comfortable", "compact"] as const).map((value) => (
                       <button
                         key={value}
                         type="button"
                         onClick={() => {
                           update("density", value);
-                          theme.setDensity(value as "comfortable" | "compact");
+                          theme.setDensity(value);
                         }}
                         className={cn(
                           "rounded-md px-3 py-1 text-[11px] font-medium capitalize transition",
                           settings.density === value ? "bg-[var(--surface)] text-ink shadow-sm" : "text-muted hover:text-ink",
                         )}
                       >
-                        {value}
+                        {t(value === "comfortable" ? "Comfortable" : "Compact")}
                       </button>
                     ))}
                   </div>
                 </SettingsRow>
 
-                <SettingsRow label="Temperature unit" description="Used for disks, CPU and sensors.">
+                <SettingsRow label={t("Temperature unit")} description={t("Used for disks, CPU and sensors.")}>
                   <Select
-                    ariaLabel="Temperature unit"
+                    ariaLabel={t("Temperature unit")}
                     value={settings.temperatureUnit}
                     onChange={(value) => update("temperatureUnit", value)}
                     options={[
@@ -293,40 +296,42 @@ export function SettingsPage() {
 
           {section === "general" ? (
             <Card className="card-pad">
-              <CardTitle title="General" description="Server identity, refresh cadence and language." />
+              <CardTitle title={t("General")} description={t("Server identity, refresh cadence and language.")} />
               <div className="mt-2 divide-y divide-line">
-                <SettingsRow label="Server display name" description="Shown in the sidebar and page titles.">
+                <SettingsRow label={t("Server display name")} description={t("Shown in the sidebar and page titles.")}>
                   <input
                     value={settings.serverName}
                     onChange={(event) => update("serverName", event.target.value)}
                     className="h-9 w-52 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[12px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                   />
                 </SettingsRow>
-                <SettingsRow label="Refresh interval" description="How often widgets re-sync with the server.">
+                <SettingsRow label={t("Refresh interval")} description={t("How often widgets re-sync with the server.")}>
                   <Select
-                    ariaLabel="Refresh interval"
+                    ariaLabel={t("Refresh interval")}
                     value={String(settings.refreshInterval)}
                     onChange={(value) => update("refreshInterval", Number(value))}
-                    options={[2, 5, 10, 30, 60].map((value) => ({ value: String(value), label: `${value} seconds` }))}
+                    options={[2, 5, 10, 30, 60].map((value) => ({ value: String(value), label: t("{count} seconds", { count: value }) }))}
                   />
                 </SettingsRow>
-                <SettingsRow label="Language" description="Interface language for Aurora.">
+                <SettingsRow label={t("Language")} description={t("Interface language for Aurora.")}>
                   <Select
-                    ariaLabel="Language"
+                    ariaLabel={t("Language")}
                     value={settings.language}
-                    onChange={(value) => update("language", value)}
+                    onChange={(value) => {
+                      update("language", value);
+                      setLocale(value === "fr" ? "fr" : "en");
+                    }}
                     options={[
-                      { value: "en", label: "English" },
-                      { value: "fr", label: "Français" },
-                      { value: "de", label: "Deutsch" },
+                      { value: "en", label: t("English") },
+                      { value: "fr", label: t("Français") },
                     ]}
                   />
                 </SettingsRow>
-                <SettingsRow label="Automatic updates" description="Allow Aurora to surface and apply plugin updates.">
-                  <Switch checked={settings.autoUpdate} onChange={(value) => update("autoUpdate", value)} label="Automatic updates" />
+                <SettingsRow label={t("Automatic updates")} description={t("Allow Aurora to surface and apply plugin updates.")}>
+                  <Switch checked={settings.autoUpdate} onChange={(value) => update("autoUpdate", value)} label={t("Automatic updates")} />
                 </SettingsRow>
-                <SettingsRow label="Anonymous telemetry" description="Share crash reports and feature usage. Off by default.">
-                  <Switch checked={settings.telemetry} onChange={(value) => update("telemetry", value)} label="Anonymous telemetry" />
+                <SettingsRow label={t("Anonymous telemetry")} description={t("Share crash reports and feature usage. Off by default.")}>
+                  <Switch checked={settings.telemetry} onChange={(value) => update("telemetry", value)} label={t("Anonymous telemetry")} />
                 </SettingsRow>
               </div>
             </Card>
@@ -334,19 +339,18 @@ export function SettingsPage() {
 
           {section === "notifications" ? (
             <Card className="card-pad">
-              <CardTitle title="Notifications" description="Choose which channels receive alerts from your server." />
+              <CardTitle title={t("Notifications")} description={t("Choose which channels receive alerts from your server.")} />
               <div className="mt-2 divide-y divide-line">
-                <SettingsRow label="Email alerts" description="Send warnings and alerts to the address configured in Unraid.">
-                  <Switch checked={settings.emailAlerts} onChange={(value) => update("emailAlerts", value)} label="Email alerts" />
+                <SettingsRow label={t("Email alerts")} description={t("Send warnings and alerts to the address configured in Unraid.")}>
+                  <Switch checked={settings.emailAlerts} onChange={(value) => update("emailAlerts", value)} label={t("Email alerts")} />
                 </SettingsRow>
-                <SettingsRow label="Push notifications" description="Browser and mobile push through Unraid Connect agents.">
-                  <Switch checked={settings.pushAlerts} onChange={(value) => update("pushAlerts", value)} label="Push notifications" />
+                <SettingsRow label={t("Push notifications")} description={t("Browser and mobile push through Unraid Connect agents.")}>
+                  <Switch checked={settings.pushAlerts} onChange={(value) => update("pushAlerts", value)} label={t("Push notifications")} />
                 </SettingsRow>
               </div>
               <div className="mt-3 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
                 <Bell className="mt-0.5 size-3.5 shrink-0 text-subtle" />
-                Delivery agents are configured on the Unraid side. Aurora mirrors the settings and shows the
-                resulting in-app inbox.
+                {t("Delivery agents are configured on the Unraid side. Aurora mirrors the settings and shows the resulting in-app inbox.")}
               </div>
             </Card>
           ) : null}
@@ -354,26 +358,27 @@ export function SettingsPage() {
           {section === "security" ? (
             <>
               <Card className="card-pad">
-                <CardTitle title="Session" description="How this browser is authenticated against Aurora." />
+                <CardTitle title={t("Session")} description={t("How this browser is authenticated against Aurora.")} />
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <InfoBlock label="Account" value={session?.user ?? "admin"} icon={<KeyRound className="size-3.5" />} />
-                  <InfoBlock label="Authentication" value="Native · /etc/shadow" tone="success" />
-                  <InfoBlock label="Session store" value="HMAC-SHA256 · HttpOnly" icon={<ShieldCheck className="size-3.5" />} />
-                  <InfoBlock label="CSRF protection" value="Custom header + origin check" />
+                  <InfoBlock label={t("Account")} value={session?.user ?? "admin"} icon={<KeyRound className="size-3.5" />} />
+                  <InfoBlock label={t("Authentication")} value="Native · /etc/shadow" tone="success" />
+                  <InfoBlock label={t("Session store")} value="HMAC-SHA256 · HttpOnly" icon={<ShieldCheck className="size-3.5" />} />
+                  <InfoBlock label={t("CSRF protection")} value={t("Custom header + origin check")} />
                 </div>
                 <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
                   <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
-                  Only the host <code className="code-chip">root</code> account can sign in, matching the Unraid
-                  webGUI. Credentials are validated against the local shadow database and are never stored by Aurora.
+                  {t("Only the host")}{" "}
+                  <code className="code-chip">root</code>{" "}
+                  {t("account can sign in, matching the Unraid webGUI. Credentials are validated against the local shadow database and are never stored by Aurora.")}
                 </div>
               </Card>
 
               <Card className="card-pad">
-                <CardTitle title="Access" description="End the current session on this device." />
+                <CardTitle title={t("Access")} description={t("End the current session on this device.")} />
                 <div className="mt-3 flex items-center justify-between gap-4">
-                  <p className="text-[11px] text-muted">You will be returned to the sign-in screen.</p>
+                  <p className="text-[11px] text-muted">{t("You will be returned to the sign-in screen.")}</p>
                   <Button variant="danger" icon={<LogOut className="size-3.5" />} onClick={() => void signOut()}>
-                    Sign out
+                    {t("Sign out")}
                   </Button>
                 </div>
               </Card>
@@ -391,26 +396,25 @@ export function SettingsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-[16px] font-semibold text-ink">Aurora</h2>
                       <Badge tone="accent">v{__APP_VERSION__}</Badge>
-                      <Badge tone="success" dot>live host</Badge>
+                      <Badge tone="success" dot>{t("live host")}</Badge>
                     </div>
                     <p className="mt-1 max-w-xl text-[11.5px] leading-relaxed text-muted">
-                      An independent, opinionated control plane for Unraid. Built in Go with a React front end —
-                      designed to make homelab infrastructure feel calm and precise.
+                      {t("An independent, opinionated control plane for Unraid. Built in Go with a React front end — designed to make homelab infrastructure feel calm and precise.")}
                     </p>
                   </div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <InfoBlock label="Unraid" value={snapshot.system.version} />
-                  <InfoBlock label="Kernel" value={snapshot.system.kernel} />
-                  <InfoBlock label="Uptime" value={formatUptime(snapshot.system.uptime)} />
-                  <InfoBlock label="Board" value={snapshot.system.board} />
-                  <InfoBlock label="Memory" value={formatMemory(snapshot.system.memory.total)} icon={<Cpu className="size-3.5" />} />
-                  <InfoBlock label="License" value={snapshot.system.license || "Unknown"} />
+                  <InfoBlock label={t("Kernel")} value={snapshot.system.kernel} />
+                  <InfoBlock label={t("Uptime")} value={formatUptime(snapshot.system.uptime)} />
+                  <InfoBlock label={t("Board")} value={snapshot.system.board} />
+                  <InfoBlock label={t("Memory")} value={formatMemory(snapshot.system.memory.total)} icon={<Cpu className="size-3.5" />} />
+                  <InfoBlock label={t("License")} value={snapshot.system.license || t("Unknown")} />
                 </div>
               </Card>
 
               <Card className="card-pad">
-                <CardTitle title="Credits" description="Aurora stands on the shoulders of the Unraid community." />
+                <CardTitle title={t("Credits")} description={t("Aurora stands on the shoulders of the Unraid community.")} />
                 <div className="mt-3 space-y-2">
                   {[
                     { label: "Unraid webGUI", href: "https://github.com/unraid/webgui", description: "Original PHP interface and state contracts" },
@@ -426,15 +430,15 @@ export function SettingsPage() {
                     >
                       <ExternalLink className="size-3.5 text-subtle" />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[11.5px] font-medium text-soft">{link.label}</span>
-                        <span className="block truncate text-[9.5px] text-subtle">{link.description}</span>
+                        <span className="block text-[11.5px] font-medium text-soft">{t(link.label)}</span>
+                        <span className="block truncate text-[9.5px] text-subtle">{t(link.description)}</span>
                       </span>
                       <span className="text-[10px] text-subtle">↗</span>
                     </a>
                   ))}
                 </div>
                 <p className="mt-4 border-t border-line pt-3 text-[9.5px] leading-relaxed text-subtle">
-                  Aurora is not affiliated with Lime Technology. Unraid is a trademark of Lime Technology, Inc.
+                  {t("Aurora is not affiliated with Lime Technology. Unraid is a trademark of Lime Technology, Inc.")}
                 </p>
               </Card>
             </>

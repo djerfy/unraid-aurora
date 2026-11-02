@@ -40,10 +40,12 @@ import { useToast } from "../app/ToastProvider";
 import { useAction } from "../lib/useAction";
 import { api } from "../lib/api";
 import { formatBytes, formatMemory, formatUptime, hexToRgba, relativeTime } from "../lib/format";
+import { useI18n } from "../i18n";
 import type { VM } from "../lib/types";
 
 export function VMsPage() {
   const { snapshot, refresh } = useApp();
+  const { t } = useI18n();
   const action = useAction();
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
@@ -55,12 +57,12 @@ export function VMsPage() {
     onSuccess: (_result, variables) => {
       toast({
         kind: "success",
-        title: variables.enabled ? "Autostart enabled" : "Autostart disabled",
+        title: variables.enabled ? t("Autostart enabled") : t("Autostart disabled"),
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     },
     onError: (error: Error) => {
-      toast({ kind: "error", title: "Autostart update failed", description: error.message });
+      toast({ kind: "error", title: t("Autostart update failed"), description: error.message });
     },
   });
   const [view, setView] = useState<"grid" | "list">(() => {
@@ -99,36 +101,38 @@ export function VMsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Infrastructure"
-        title="Virtual machines"
-        description="KVM workloads with passthrough GPUs, live utilisation and direct lifecycle controls."
+        eyebrow={t("Infrastructure")}
+        title={t("Virtual machines")}
+        description={t(
+          "KVM workloads with passthrough GPUs, live utilisation and direct lifecycle controls.",
+        )}
         meta={
           <>
-            <Badge tone="success" dot pulse>{running.length} running</Badge>
-            <Badge tone="neutral">{vms.length - running.length} stopped</Badge>
-            <span className="chip">{totalVcpu} vCPUs allocated</span>
+            <Badge tone="success" dot pulse>{t("{count} running", { count: running.length })}</Badge>
+            <Badge tone="neutral">{t("{count} stopped", { count: vms.length - running.length })}</Badge>
+            <span className="chip">{t("{count} vCPUs allocated", { count: totalVcpu })}</span>
           </>
         }
         actions={
           <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-            Refresh
+            {t("Refresh")}
           </Button>
         }
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Metric label="Machines" value={String(vms.length)} hint={`${running.length} active now`} icon={<Monitor className="size-4" />} />
-        <Metric label="vCPU allocated" value={String(totalVcpu)} hint="across all machines" icon={<Cpu className="size-4" />} />
-        <Metric label="Memory allocated" value={formatMemory(totalMemory)} hint={`of ${formatMemory(snapshot.system.memory.total)}`} icon={<MemoryStick className="size-4" />} />
-        <Metric label="GPU passthrough" value={String(vms.filter((vm) => vm.primaryGpu).length)} hint="dedicated devices" icon={<Gauge className="size-4" />} />
+        <Metric label={t("Machines")} value={String(vms.length)} hint={t("{count} active now", { count: running.length })} icon={<Monitor className="size-4" />} />
+        <Metric label={t("vCPU allocated")} value={String(totalVcpu)} hint={t("across all machines")} icon={<Cpu className="size-4" />} />
+        <Metric label={t("Memory allocated")} value={formatMemory(totalMemory)} hint={t("of {total}", { total: formatMemory(snapshot.system.memory.total) })} icon={<MemoryStick className="size-4" />} />
+        <Metric label={t("GPU passthrough")} value={String(vms.filter((vm) => vm.primaryGpu).length)} hint={t("dedicated devices")} icon={<Gauge className="size-4" />} />
       </div>
 
       {vms.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Monitor className="size-5" />}
-            title="No virtual machines yet"
-            description="Create a VM from an ISO or a community template to get started."
+            title={t("No virtual machines yet")}
+            description={t("Create a VM from an ISO or a community template to get started.")}
           />
         </Card>
       ) : (
@@ -138,7 +142,7 @@ export function VMsPage() {
               <button
                 type="button"
                 onClick={() => setView("grid")}
-                aria-label="Grid view"
+                aria-label={t("Grid view")}
                 className={cn("grid size-7 place-items-center rounded-md transition", view === "grid" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
               >
                 <LayoutGrid className="size-3.5" />
@@ -146,7 +150,7 @@ export function VMsPage() {
               <button
                 type="button"
                 onClick={() => setView("list")}
-                aria-label="List view"
+                aria-label={t("List view")}
                 className={cn("grid size-7 place-items-center rounded-md transition", view === "list" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
               >
                 <List className="size-3.5" />
@@ -168,13 +172,13 @@ export function VMsPage() {
           ) : (
             <Card>
               <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
-                <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Machine</span>
-                <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">State</span>
-                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">vCPUs</span>
-                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">Memory</span>
-                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">CPU</span>
-                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">RAM</span>
-                <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">Actions</span>
+                <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Machine")}</span>
+                <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
+                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("vCPUs")}</span>
+                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
+                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("CPU")}</span>
+                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("RAM")}</span>
+                <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
               </div>
               <div className="divide-y divide-line/60">
                 {vms.map((vm) => (
@@ -199,42 +203,42 @@ export function VMsPage() {
               <Gauge className="size-3.5" />
             </span>
             <div>
-              <h2 className="text-[13px] font-semibold text-ink">Hypervisor</h2>
-              <p className="mt-0.5 text-[10.5px] text-subtle">KVM · libvirt · {vms.length} defined machines</p>
+              <h2 className="text-[13px] font-semibold text-ink">{t("Hypervisor")}</h2>
+              <p className="mt-0.5 text-[10.5px] text-subtle">{t("KVM · libvirt · {count} defined machines", { count: vms.length })}</p>
             </div>
           </div>
-          <Badge tone="success" dot>KVM active</Badge>
+          <Badge tone="success" dot>{t("KVM active")}</Badge>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-muted">vCPU overcommit</span>
+              <span className="text-muted">{t("vCPU overcommit")}</span>
               <span className="num text-soft">{totalVcpu} / {snapshot.system.cpu.threads}</span>
             </div>
             <Progress value={Math.min(100, (totalVcpu / Math.max(1, snapshot.system.cpu.threads)) * 100)} height={5} className="mt-2" />
-            <p className="mt-1.5 text-[9.5px] text-subtle">threads assigned to guests</p>
+            <p className="mt-1.5 text-[9.5px] text-subtle">{t("threads assigned to guests")}</p>
           </div>
           <div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-muted">Memory allocation</span>
+              <span className="text-muted">{t("Memory allocation")}</span>
               <span className="num text-soft">{formatMemory(totalMemory)} / {formatMemory(snapshot.system.memory.total)}</span>
             </div>
             <Progress value={Math.min(100, (totalMemory / Math.max(1, snapshot.system.memory.total)) * 100)} height={5} tone="var(--info)" className="mt-2" />
-            <p className="mt-1.5 text-[9.5px] text-subtle">reserved for virtual machines</p>
+            <p className="mt-1.5 text-[9.5px] text-subtle">{t("reserved for virtual machines")}</p>
           </div>
           <div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-muted">Autostart</span>
+              <span className="text-muted">{t("Autostart")}</span>
               <span className="num text-soft">{vms.filter((vm) => vm.autostart).length} / {vms.length}</span>
             </div>
             <Progress value={(vms.filter((vm) => vm.autostart).length / Math.max(1, vms.length)) * 100} height={5} tone="var(--success)" className="mt-2" />
-            <p className="mt-1.5 text-[9.5px] text-subtle">machines started with the array</p>
+            <p className="mt-1.5 text-[9.5px] text-subtle">{t("machines started with the array")}</p>
           </div>
           <div>
             <div className="flex items-center justify-between text-[10px]">
-              <span className="text-muted">Passthrough</span>
-              <span className="num text-soft">{vms.filter((vm) => vm.primaryGpu).length} GPUs</span>
+              <span className="text-muted">{t("Passthrough")}</span>
+              <span className="num text-soft">{t("{count} GPUs", { count: vms.filter((vm) => vm.primaryGpu).length })}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {vms.filter((vm) => vm.primaryGpu).map((vm) => (
@@ -254,7 +258,7 @@ export function VMsPage() {
           selected ? (
             <span className="flex items-center gap-2">
               <Badge tone={selected.state === "running" ? "success" : selected.state === "paused" ? "warning" : "neutral"} dot>
-                {selected.state}
+                {t(selected.state)}
               </Badge>
               {selected.os}
             </span>
@@ -273,24 +277,24 @@ export function VMsPage() {
                     target: selected.name,
                     success:
                       selected.state === "running"
-                        ? `${selected.name} suspended`
+                        ? t("{name} suspended", { name: selected.name })
                         : selected.state === "paused"
-                          ? `${selected.name} resumed`
-                          : `${selected.name} started`,
+                          ? t("{name} resumed", { name: selected.name })
+                          : t("{name} started", { name: selected.name }),
                   })
                 }
               >
-                {selected.state === "running" ? "Suspend" : selected.state === "paused" ? "Resume" : "Start"}
+                {selected.state === "running" ? t("Suspend") : selected.state === "paused" ? t("Resume") : t("Start")}
               </Button>
               {selected.state !== "stopped" ? (
                 <Button
                   variant="danger"
                   className="flex-1"
                   onClick={() =>
-                    action.mutate({ kind: "vm.stop", target: selected.name, success: `${selected.name} is shutting down` })
+                    action.mutate({ kind: "vm.stop", target: selected.name, success: t("{name} is shutting down", { name: selected.name }) })
                   }
                 >
-                  Shut down
+                  {t("Shut down")}
                 </Button>
               ) : null}
               <Button
@@ -300,7 +304,7 @@ export function VMsPage() {
                 disabled={selected.state !== "running" || !selected.consoleWebSocket}
                 onClick={() => setConsoleVm(selected)}
               >
-                Console
+                {t("Console")}
               </Button>
             </div>
           ) : null
@@ -309,29 +313,29 @@ export function VMsPage() {
         {selected ? (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
-              <Info label="Operating system" value={selected.os} />
-              <Info label="Machine type" value={selected.machine} />
-              <Info label="vCPUs" value={String(selected.vcpus)} />
-              <Info label="Memory" value={formatMemory(selected.memory)} />
-              <Info label="IP address" value={selected.ip || "—"} />
-              <Info label="Uptime" value={selected.state === "running" ? formatUptime(selected.uptime) : "—"} />
-              <Info label="Last started" value={relativeTime(selected.lastStarted)} />
-              <Info label="Primary GPU" value={selected.primaryGpu || "virtual"} className="col-span-2" />
+              <Info label={t("Operating system")} value={selected.os} />
+              <Info label={t("Machine type")} value={selected.machine} />
+              <Info label={t("vCPUs")} value={String(selected.vcpus)} />
+              <Info label={t("Memory")} value={formatMemory(selected.memory)} />
+              <Info label={t("IP address")} value={selected.ip || "—"} />
+              <Info label={t("Uptime")} value={selected.state === "running" ? formatUptime(selected.uptime) : "—"} />
+              <Info label={t("Last started")} value={relativeTime(selected.lastStarted)} />
+              <Info label={t("Primary GPU")} value={selected.primaryGpu || t("virtual")} className="col-span-2" />
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
               <span>
-                <span className="block text-[11px] font-medium text-soft">Start with the array</span>
-                <span className="block text-[9.5px] text-subtle">libvirt autostart</span>
+                <span className="block text-[11px] font-medium text-soft">{t("Start with the array")}</span>
+                <span className="block text-[9.5px] text-subtle">{t("libvirt autostart")}</span>
               </span>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="secondary" icon={<FileCode2 className="size-3" />} onClick={() => setXmlVm(selected)}>
-                  XML
+                  {t("XML")}
                 </Button>
                 <Switch
                   checked={selected.autostart}
                   onChange={(enabled) => autostart.mutate({ id: selected.id, enabled })}
-                  label="Autostart virtual machine"
+                  label={t("Autostart virtual machine")}
                   disabled={autostart.isPending}
                 />
               </div>
@@ -339,14 +343,14 @@ export function VMsPage() {
 
             <div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted">CPU utilisation</span>
+                <span className="text-muted">{t("CPU utilisation")}</span>
                 <span className="num text-soft">{selected.cpuUsage.toFixed(1)}%</span>
               </div>
               <Progress value={selected.cpuUsage} height={5} className="mt-2" />
             </div>
             <div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted">Memory utilisation</span>
+                <span className="text-muted">{t("Memory utilisation")}</span>
                 <span className="num text-soft">{selected.memoryUsage.toFixed(0)}%</span>
               </div>
               <Progress value={selected.memoryUsage} height={5} className="mt-2" tone="var(--info)" />
@@ -354,7 +358,7 @@ export function VMsPage() {
 
             <div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted">Virtual disk</span>
+                <span className="text-muted">{t("Virtual disk")}</span>
                 <span className="num text-soft">
                   {formatBytes(selected.diskUsed)} / {formatBytes(selected.diskSize)}
                 </span>
@@ -363,8 +367,9 @@ export function VMsPage() {
             </div>
 
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/60 p-3 text-[10.5px] leading-relaxed text-muted">
-              Virtual machines run under libvirt/KVM. Changes to hardware, boot order and passthrough devices
-              require a graceful shutdown.
+              {t(
+                "Virtual machines run under libvirt/KVM. Changes to hardware, boot order and passthrough devices require a graceful shutdown.",
+              )}
             </div>
           </div>
         ) : null}
@@ -383,6 +388,7 @@ export function VMsPage() {
 }
 
 function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
+  const { t } = useI18n();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const query = useQuery({
@@ -396,7 +402,7 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
     if (!query.data) return;
     await navigator.clipboard.writeText(query.data.xml);
     setCopied(true);
-    toast({ kind: "info", title: "XML copied" });
+    toast({ kind: "info", title: t("XML copied") });
     window.setTimeout(() => setCopied(false), 1600);
   };
 
@@ -404,22 +410,22 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
     <Modal
       open={Boolean(vm)}
       onClose={onClose}
-      title={`XML · ${vm?.name ?? ""}`}
-      description="Read-only libvirt domain definition, like the XML view of the official VM editor."
+      title={t("XML · {name}", { name: vm?.name ?? "" })}
+      description={t("Read-only libvirt domain definition, like the XML view of the official VM editor.")}
       size="xl"
       footer={
         <>
           <Button variant="secondary" icon={copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} onClick={() => void copy()} disabled={!query.data}>
-            {copied ? "Copied" : "Copy XML"}
+            {copied ? t("Copied") : t("Copy XML")}
           </Button>
           <Button variant="secondary" onClick={onClose}>
-            Close
+            {t("Close")}
           </Button>
         </>
       }
     >
       {query.isLoading ? (
-        <p className="text-[11px] text-muted">Loading domain XML…</p>
+        <p className="text-[11px] text-muted">{t("Loading domain XML…")}</p>
       ) : query.isError ? (
         <p className="text-[11px] text-[var(--danger)]">{(query.error as Error).message}</p>
       ) : (
@@ -432,6 +438,7 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
 }
 
 function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
+  const { t } = useI18n();
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
@@ -458,27 +465,27 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
           </span>
         </button>
         <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot pulse={running}>
-          {vm.state}
+          {t(vm.state)}
         </Badge>
       </div>
 
       <div className="relative mt-4 grid grid-cols-3 gap-2">
-        <Spec icon={<Cpu className="size-3" />} label="vCPU" value={String(vm.vcpus)} />
-        <Spec icon={<MemoryStick className="size-3" />} label="RAM" value={formatMemory(vm.memory)} />
-        <Spec icon={<HardDrive className="size-3" />} label="Disk" value={formatBytes(vm.diskSize)} />
+        <Spec icon={<Cpu className="size-3" />} label={t("vCPU")} value={String(vm.vcpus)} />
+        <Spec icon={<MemoryStick className="size-3" />} label={t("RAM")} value={formatMemory(vm.memory)} />
+        <Spec icon={<HardDrive className="size-3" />} label={t("Disk")} value={formatBytes(vm.diskSize)} />
       </div>
 
       <div className="relative mt-4 space-y-3">
         <div>
           <div className="flex items-center justify-between text-[9.5px]">
-            <span className="text-subtle">CPU</span>
+            <span className="text-subtle">{t("CPU")}</span>
             <span className="num text-soft">{running ? `${vm.cpuUsage.toFixed(1)}%` : "—"}</span>
           </div>
           <Progress value={vm.cpuUsage} height={4} className="mt-1.5" />
         </div>
         <div>
           <div className="flex items-center justify-between text-[9.5px]">
-            <span className="text-subtle">Memory</span>
+            <span className="text-subtle">{t("Memory")}</span>
             <span className="num text-soft">{running ? `${vm.memoryUsage.toFixed(0)}%` : "—"}</span>
           </div>
           <Progress value={vm.memoryUsage} height={4} className="mt-1.5" tone="var(--info)" />
@@ -493,13 +500,13 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
 
       <div className="relative mt-4 flex items-center gap-1 border-t border-line pt-3">
         <Button size="sm" variant="ghost" onClick={onOpen} className="mr-auto px-2 text-[11px]">
-          Details
+          {t("Details")}
         </Button>
         <button
           type="button"
           disabled={!running || !vm.consoleWebSocket}
           onClick={onConsole}
-          title={running ? "Open console" : "Start the VM to open its console"}
+          title={running ? t("Open console") : t("Start the VM to open its console")}
           className="grid size-7 place-items-center rounded-md text-muted transition hover:bg-[var(--surface-3)] hover:text-ink disabled:opacity-30"
         >
           <Monitor className="size-3.5" />
@@ -511,10 +518,14 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
             action.mutate({
               kind: running ? "vm.pause" : vm.state === "paused" ? "vm.resume" : "vm.start",
               target: vm.name,
-              success: running ? `${vm.name} suspended` : vm.state === "paused" ? `${vm.name} resumed` : `${vm.name} started`,
+              success: running
+                ? t("{name} suspended", { name: vm.name })
+                : vm.state === "paused"
+                  ? t("{name} resumed", { name: vm.name })
+                  : t("{name} started", { name: vm.name }),
             })
           }
-          title={running ? "Suspend" : vm.state === "paused" ? "Resume" : "Start"}
+          title={running ? t("Suspend") : vm.state === "paused" ? t("Resume") : t("Start")}
           className="grid size-7 place-items-center rounded-md text-muted transition hover:bg-[var(--surface-3)] hover:text-ink disabled:opacity-40"
         >
           {running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
@@ -522,8 +533,8 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
         {vm.state !== "stopped" ? (
           <button
             type="button"
-            onClick={() => action.mutate({ kind: "vm.stop", target: vm.name, success: `${vm.name} is shutting down` })}
-            title="Shut down"
+            onClick={() => action.mutate({ kind: "vm.stop", target: vm.name, success: t("{name} is shutting down", { name: vm.name }) })}
+            title={t("Shut down")}
             className="grid size-7 place-items-center rounded-md text-muted transition hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
           >
             <Square className="size-3.5" />
@@ -535,7 +546,7 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
           <button
             type="button"
             onClick={() => window.open(`http://${vm.ip}`, "_blank", "noopener")}
-            title="Open in browser"
+            title={t("Open in browser")}
             className="grid size-7 place-items-center rounded-md text-muted transition hover:bg-[var(--surface-3)] hover:text-ink"
           >
             <Network className="size-3.5" />
@@ -549,6 +560,7 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
 }
 
 function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
+  const { t } = useI18n();
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
@@ -562,15 +574,15 @@ function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; on
         </span>
       </button>
       <span className="w-20 shrink-0">
-        <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot>{running ? "running" : vm.state}</Badge>
+        <Badge tone={running ? "success" : vm.state === "paused" ? "warning" : "neutral"} dot>{t(vm.state)}</Badge>
       </span>
-      <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{vm.vcpus} vCPU</span>
+      <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{t("{count} vCPU", { count: vm.vcpus })}</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(vm.memory)}</span>
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.cpuUsage.toFixed(0)}%` : "—"}</span>
       <span className="hidden w-16 text-right num text-[10px] text-muted md:block">{running ? `${vm.memoryUsage.toFixed(0)}%` : "—"}</span>
       <div className="flex w-[140px] shrink-0 items-center justify-end gap-1">
         <IconButton
-          label={running ? "Open console" : "Start the VM to open its console"}
+          label={running ? t("Open console") : t("Start the VM to open its console")}
           size="sm"
           disabled={!running || !vm.consoleWebSocket}
           onClick={onConsole}
@@ -578,14 +590,18 @@ function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; on
           <Monitor className="size-3.5" />
         </IconButton>
         <IconButton
-          label={running ? "Suspend" : vm.state === "paused" ? "Resume" : "Start"}
+          label={running ? t("Suspend") : vm.state === "paused" ? t("Resume") : t("Start")}
           size="sm"
           disabled={busy}
           onClick={() =>
             action.mutate({
               kind: running ? "vm.pause" : vm.state === "paused" ? "vm.resume" : "vm.start",
               target: vm.name,
-              success: running ? `${vm.name} suspended` : vm.state === "paused" ? `${vm.name} resumed` : `${vm.name} started`,
+              success: running
+                ? t("{name} suspended", { name: vm.name })
+                : vm.state === "paused"
+                  ? t("{name} resumed", { name: vm.name })
+                  : t("{name} started", { name: vm.name }),
             })
           }
         >
@@ -593,16 +609,16 @@ function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; on
         </IconButton>
         {vm.state !== "stopped" ? (
           <IconButton
-            label="Shut down"
+            label={t("Shut down")}
             size="sm"
-            onClick={() => action.mutate({ kind: "vm.stop", target: vm.name, success: `${vm.name} is shutting down` })}
+            onClick={() => action.mutate({ kind: "vm.stop", target: vm.name, success: t("{name} is shutting down", { name: vm.name }) })}
           >
             <Square className="size-3.5" />
           </IconButton>
         ) : (
           <span className="size-8" aria-hidden="true" />
         )}
-        <IconButton label="Details" size="sm" onClick={onOpen}>
+        <IconButton label={t("Details")} size="sm" onClick={onOpen}>
           <Monitor className="size-3.5" />
         </IconButton>
       </div>

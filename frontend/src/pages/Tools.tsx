@@ -4,6 +4,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { Badge, Button, Card } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatUptime } from "../lib/format";
 
@@ -23,6 +24,7 @@ const INCLUDED = [
 export function ToolsPage() {
   const { snapshot } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
 
   if (!snapshot) return null;
@@ -41,9 +43,13 @@ export function ToolsPage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast({ kind: "success", title: "Diagnostics downloaded", description: `${Math.round(blob.size / 1024)} KB archive.` });
+      toast({
+        kind: "success",
+        title: t("Diagnostics downloaded"),
+        description: t("{size} KB archive.", { size: Math.round(blob.size / 1024) }),
+      });
     } catch (error) {
-      toast({ kind: "error", title: "Diagnostics failed", description: (error as Error).message });
+      toast({ kind: "error", title: t("Diagnostics failed"), description: (error as Error).message });
     } finally {
       setBusy(false);
     }
@@ -52,14 +58,14 @@ export function ToolsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="System"
-        title="Tools"
-        description="Diagnostics and host information, mirroring the maintenance tools of the official webGUI."
+        eyebrow={t("System")}
+        title={t("Tools")}
+        description={t("Diagnostics and host information, mirroring the maintenance tools of the official webGUI.")}
         meta={
           <>
             <Badge tone="success" dot>Unraid {system.version}</Badge>
             <span className="chip font-mono">{system.hostname}</span>
-            <span className="chip">{formatUptime(system.uptime)} uptime</span>
+            <span className="chip">{formatUptime(system.uptime)} {t("uptime")}</span>
           </>
         }
       />
@@ -71,10 +77,10 @@ export function ToolsPage() {
               <FileArchive className="size-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-[14px] font-semibold text-ink">Diagnostics</h2>
+              <h2 className="text-[14px] font-semibold text-ink">{t("Diagnostics")}</h2>
               <p className="mt-1 text-[11px] leading-relaxed text-muted">
-                Build a zip archive with configuration, command output and log tails for troubleshooting,
-                like <span className="text-soft">Tools → Diagnostics</span> in Unraid.
+                {t("Build a zip archive with configuration, command output and log tails for troubleshooting, like")}{" "}
+                <span className="text-soft">{t("Tools → Diagnostics")}</span> {t("in Unraid.")}
               </p>
             </div>
           </div>
@@ -85,17 +91,17 @@ export function ToolsPage() {
               loading={busy}
               onClick={() => void download()}
             >
-              Download diagnostics
+              {t("Download diagnostics")}
             </Button>
-            <span className="text-[10px] text-subtle">Generated on demand, never stored on disk.</span>
+            <span className="text-[10px] text-subtle">{t("Generated on demand, never stored on disk.")}</span>
           </div>
           <div className="mt-5 border-t border-line pt-3">
-            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">Archive contents</p>
+            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Archive contents")}</p>
             <ul className="space-y-1">
               {INCLUDED.map((item) => (
                 <li key={item} className="flex items-start gap-2 text-[10.5px] text-muted">
                   <Wrench className="mt-0.5 size-3 shrink-0 text-subtle" />
-                  {item}
+                  {t(item)}
                 </li>
               ))}
             </ul>
@@ -106,32 +112,32 @@ export function ToolsPage() {
           <Card className="card-pad">
             <div className="flex items-center gap-2">
               <Server className="size-4 text-[var(--accent)]" />
-              <h2 className="text-[13px] font-semibold text-ink">Host</h2>
+              <h2 className="text-[13px] font-semibold text-ink">{t("Host")}</h2>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Field label="Hostname" value={system.hostname} />
-              <Field label="Unraid" value={system.version} />
-              <Field label="Kernel" value={system.kernel} />
-              <Field label="Motherboard" value={system.board} />
-              <Field label="CPU" value={`${system.cpu.brand} · ${system.cpu.cores}C/${system.cpu.threads}T`} className="col-span-2" />
-              <Field label="Memory" value={`${(system.memory.total / 1024 ** 3).toFixed(1)} GiB`} />
-              <Field label="Uptime" value={formatUptime(system.uptime)} />
-              <Field label="License" value={system.license || "—"} className="col-span-2" />
+              <Field label={t("Hostname")} value={system.hostname} />
+              <Field label={t("Unraid")} value={system.version} />
+              <Field label={t("Kernel")} value={system.kernel} />
+              <Field label={t("Motherboard")} value={system.board} />
+              <Field label={t("CPU")} value={`${system.cpu.brand} · ${system.cpu.cores}C/${system.cpu.threads}T`} className="col-span-2" />
+              <Field label={t("Memory")} value={`${(system.memory.total / 1024 ** 3).toFixed(1)} GiB`} />
+              <Field label={t("Uptime")} value={formatUptime(system.uptime)} />
+              <Field label={t("License")} value={system.license || "—"} className="col-span-2" />
             </div>
           </Card>
 
           <Card className="card-pad">
             <div className="flex items-center gap-2">
               <Activity className="size-4 text-[var(--success)]" />
-              <h2 className="text-[13px] font-semibold text-ink">Snapshot</h2>
+              <h2 className="text-[13px] font-semibold text-ink">{t("Snapshot")}</h2>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Field label="Containers" value={String(snapshot.containers.length)} />
-              <Field label="Virtual machines" value={String(snapshot.vms.length)} />
-              <Field label="Shares" value={String(snapshot.shares.length)} />
-              <Field label="Disks" value={String(snapshot.disks.length)} />
-              <Field label="Notifications" value={String(snapshot.notifications.length)} />
-              <Field label="Plugins" value={String(snapshot.plugins.length)} />
+              <Field label={t("Containers")} value={String(snapshot.containers.length)} />
+              <Field label={t("Virtual machines")} value={String(snapshot.vms.length)} />
+              <Field label={t("Shares")} value={String(snapshot.shares.length)} />
+              <Field label={t("Disks")} value={String(snapshot.disks.length)} />
+              <Field label={t("Notifications")} value={String(snapshot.notifications.length)} />
+              <Field label={t("Plugins")} value={String(snapshot.plugins.length)} />
             </div>
           </Card>
         </div>

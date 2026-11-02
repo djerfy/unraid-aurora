@@ -25,6 +25,7 @@ import { api } from "../../lib/api";
 import { relativeTime } from "../../lib/format";
 import { PAGE_META } from "./nav";
 import { Menu } from "../ui/overlays";
+import { useI18n } from "../../i18n";
 
 export function Topbar({
   onOpenCommand,
@@ -38,6 +39,7 @@ export function Topbar({
   const { snapshot, session, live } = useApp();
   const { resolvedTheme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { t } = useI18n();
   const action = useAction();
   const queryClient = useQueryClient();
   const meta = PAGE_META[location.pathname] ?? { title: "Aurora", section: "Overview" };
@@ -64,7 +66,7 @@ export function Topbar({
       queryClient.removeQueries({ queryKey: ["bootstrap"] });
       navigate("/login");
     } catch (error) {
-      toast({ kind: "error", title: "Sign out failed", description: (error as Error).message });
+      toast({ kind: "error", title: t("Sign out failed"), description: (error as Error).message });
     }
   };
 
@@ -73,7 +75,7 @@ export function Topbar({
       <button
         type="button"
         onClick={onOpenMobile}
-        aria-label="Open navigation"
+        aria-label={t("Open navigation")}
         className="grid size-9 place-items-center rounded-lg text-muted transition hover:bg-[var(--surface-3)] hover:text-ink lg:hidden"
       >
         <MenuIcon className="size-[18px]" />
@@ -85,9 +87,9 @@ export function Topbar({
           {snapshot?.system.name ?? "Vault"}
         </span>
         <ChevronRight className="size-3 text-subtle/70" />
-        <span className="truncate">{meta.section}</span>
+        <span className="truncate">{t(meta.section)}</span>
         <ChevronRight className="size-3 text-subtle/70" />
-        <span className="truncate font-medium text-soft">{meta.title}</span>
+        <span className="truncate font-medium text-soft">{t(meta.title)}</span>
       </div>
 
       <div className="flex-1" />
@@ -98,17 +100,17 @@ export function Topbar({
         className="hidden h-9 w-full max-w-[270px] items-center gap-2 rounded-[7px] border border-line bg-[var(--surface-2)]/80 px-3 text-left text-[12px] text-subtle transition hover:border-line-strong hover:bg-[var(--surface-2)] hover:text-muted sm:flex"
       >
         <Search className="size-3.5 shrink-0" />
-        <span className="flex-1 truncate">Search or jump to…</span>
+        <span className="flex-1 truncate">{t("Search or jump to…")}</span>
         <Kbd>⌘K</Kbd>
       </button>
 
       <div className="hidden items-center gap-1.5 rounded-full border border-line bg-[var(--surface-2)]/60 px-2.5 py-1 text-[10.5px] font-medium text-muted md:flex">
         <span className={cn("status-dot", live ? "live" : "danger")} />
-        {live ? "Live" : "Reconnecting"}
+        {live ? t("Live") : t("Reconnecting")}
       </div>
 
       <IconButton
-        label={resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        label={resolvedTheme === "dark" ? t("Switch to light theme") : t("Switch to dark theme")}
         onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         className="hidden sm:grid"
       >
@@ -117,7 +119,7 @@ export function Topbar({
 
       <div className="relative" ref={notifRef}>
         <IconButton
-          label="Notifications"
+          label={t("Notifications")}
           onClick={() => setNotifOpen((value) => !value)}
           className={cn(notifOpen && "bg-[var(--surface-3)] text-ink")}
         >
@@ -133,18 +135,18 @@ export function Topbar({
           <div className="animate-scale-in absolute right-0 top-[calc(100%+8px)] w-[360px] origin-top-right overflow-hidden rounded-2xl border border-line bg-[var(--surface)] shadow-[var(--shadow-pop)]">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <div>
-                <p className="text-[13px] font-semibold text-ink">Notifications</p>
+                <p className="text-[13px] font-semibold text-ink">{t("Notifications")}</p>
                 <p className="text-[10.5px] text-subtle">
-                  {unread.length > 0 ? `${unread.length} unread` : "You are all caught up"}
+                  {unread.length > 0 ? t("{count} unread", { count: unread.length }) : t("You are all caught up")}
                 </p>
               </div>
               {unread.length > 0 ? (
                 <button
                   type="button"
-                  onClick={() => action.mutate({ kind: "notification.ackall", success: "All notifications acknowledged" })}
+                  onClick={() => action.mutate({ kind: "notification.ackall", success: t("All notifications acknowledged") })}
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10.5px] font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)]"
                 >
-                  <CheckCheck className="size-3" /> Mark all
+                  <CheckCheck className="size-3" /> {t("Mark all")}
                 </button>
               ) : null}
             </div>
@@ -179,7 +181,7 @@ export function Topbar({
                 </button>
               ))}
               {notifications.length === 0 ? (
-                <p className="px-4 py-8 text-center text-xs text-muted">No notifications yet.</p>
+                <p className="px-4 py-8 text-center text-xs text-muted">{t("No notifications yet.")}</p>
               ) : null}
             </div>
             <button
@@ -190,7 +192,7 @@ export function Topbar({
               }}
               className="flex w-full items-center justify-center gap-1.5 bg-[var(--surface-2)]/60 py-2.5 text-[11px] font-medium text-muted transition hover:text-ink"
             >
-              View all notifications <ArrowRight className="size-3" />
+              {t("View all notifications")} <ArrowRight className="size-3" />
             </button>
           </div>
         ) : null}
@@ -210,12 +212,12 @@ export function Topbar({
         }
         items={[
           {
-            label: "Account settings",
+            label: t("Account settings"),
             icon: <Settings2 className="size-3.5" />,
             onSelect: () => navigate("/settings"),
           },
           {
-            label: "Documentation",
+            label: t("Documentation"),
             icon: <BookOpen className="size-3.5" />,
             onSelect: () => window.open("https://docs.unraid.net", "_blank", "noopener"),
           },
@@ -226,7 +228,7 @@ export function Topbar({
           },
           { label: "", separator: true },
           {
-            label: "Sign out",
+            label: t("Sign out"),
             icon: <LogOut className="size-3.5" />,
             danger: true,
             onSelect: () => void signOut(),

@@ -32,6 +32,7 @@ import {
 } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
+import { useI18n } from "../i18n";
 import {
   formatBytes,
   formatMemory,
@@ -45,6 +46,7 @@ import type { Disk } from "../lib/types";
 export function DashboardPage() {
   const { snapshot, metrics, history, live, refresh } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   if (!snapshot) return null;
@@ -73,20 +75,25 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Overview"
-        title={`${greeting()}.`}
-        description={`${system.name} is online. ${
+        eyebrow={t("Overview")}
+        title={`${t(greeting())}.`}
+        description={`${system.name} ${t("is online.")} ${
           issueCount > 0
-            ? `${issueCount} item${issueCount > 1 ? "s" : ""} deserve a quick look — nothing critical.`
-            : "Every subsystem is healthy and the array is protected."
+            ? t(
+                issueCount > 1
+                  ? "{count} items deserve a quick look — nothing critical."
+                  : "{count} item deserves a quick look — nothing critical.",
+                { count: issueCount },
+              )
+            : t("Every subsystem is healthy and the array is protected.")
         }`}
         meta={
           <>
             <Badge tone={live ? "success" : "neutral"} dot pulse={live}>
-              {live ? "Live telemetry" : "Connecting"}
+              {live ? t("Live telemetry") : t("Connecting")}
             </Badge>
             <span className="chip">
-              <Clock3 className="size-3" /> {formatUptime(system.uptime)} uptime
+              <Clock3 className="size-3" /> {formatUptime(system.uptime)} {t("uptime")}
             </span>
           </>
         }
@@ -97,17 +104,17 @@ export function DashboardPage() {
               icon={<RefreshCw className="size-3.5" />}
               onClick={() => {
                 refresh();
-                toast({ kind: "info", title: "Refreshing server data" });
+                toast({ kind: "info", title: t("Refreshing server data") });
               }}
             >
-              Sync
+              {t("Sync")}
             </Button>
             <Button
               variant="primary"
               icon={<HardDrive className="size-3.5" />}
               onClick={() => navigate("/storage")}
             >
-              Manage array
+              {t("Manage array")}
             </Button>
           </>
         }
@@ -117,7 +124,12 @@ export function DashboardPage() {
         <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--warning)_22%,transparent)] bg-[var(--warning-soft)] px-4 py-3 sm:flex-row sm:items-center">
           <AlertTriangle className="size-4 shrink-0 text-[var(--warning)]" />
           <div className="min-w-0 flex-1 text-[12px]">
-            <span className="font-semibold text-ink">{issueCount} items need attention.</span>{" "}
+            <span className="font-semibold text-ink">
+              {t(
+                issueCount > 1 ? "{count} items need attention." : "{count} item needs attention.",
+                { count: issueCount },
+              )}
+            </span>{" "}
             <span className="text-muted">{system.health.issues.join(" · ")}</span>
           </div>
           <button
@@ -125,7 +137,7 @@ export function DashboardPage() {
             onClick={() => navigate("/notifications")}
             className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[var(--warning)] transition hover:opacity-80"
           >
-            Review <ArrowRight className="size-3" />
+            {t("Review")} <ArrowRight className="size-3" />
           </button>
         </div>
       ) : null}
@@ -134,9 +146,9 @@ export function DashboardPage() {
         {/* Health ---------------------------------------------------------- */}
         <Card className="card-pad md:col-span-2 xl:col-span-4">
           <CardHeader
-            title="System health"
+            title={t("System health")}
             icon={<ShieldCheck className="size-4" />}
-            trailing={<Badge tone={system.health.status === "healthy" ? "success" : "warning"}>{system.health.status === "healthy" ? "Nominal" : "Attention"}</Badge>}
+            trailing={<Badge tone={system.health.status === "healthy" ? "success" : "warning"}>{system.health.status === "healthy" ? t("Nominal") : t("Attention")}</Badge>}
           />
           <div className="mt-4 flex items-start gap-5">
             <Ring value={system.health.score} size={118} stroke={8}>
@@ -147,7 +159,7 @@ export function DashboardPage() {
             </Ring>
             <div className="min-w-0 flex-1 pt-1">
               <p className="text-[13px] font-semibold text-ink">
-                {system.health.status === "healthy" ? "Everything is nominal" : "Operational, with notes"}
+                {system.health.status === "healthy" ? t("Everything is nominal") : t("Operational, with notes")}
               </p>
               <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
                 {system.board}
@@ -161,23 +173,23 @@ export function DashboardPage() {
                 ))}
                 {system.health.issues.length === 0 ? (
                   <div className="flex items-center gap-2 text-[11px] text-[var(--success)]">
-                    <CheckCircle2 className="size-3.5" /> No issues detected
+                    <CheckCircle2 className="size-3.5" /> {t("No issues detected")}
                   </div>
                 ) : null}
               </div>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-3.5">
-            <MiniStat label="Uptime" value={formatUptime(system.uptime)} />
-            <MiniStat label="Version" value={system.version} />
-            <MiniStat label="Package" value={`${Math.round(system.cpu.temp)}°C`} tone={system.cpu.temp > 75 ? "warning" : undefined} />
+            <MiniStat label={t("Uptime")} value={formatUptime(system.uptime)} />
+            <MiniStat label={t("Version")} value={system.version} />
+            <MiniStat label={t("Package")} value={`${Math.round(system.cpu.temp)}°C`} tone={system.cpu.temp > 75 ? "warning" : undefined} />
           </div>
         </Card>
 
         {/* CPU ------------------------------------------------------------- */}
         <Card className="card-pad md:col-span-2 xl:col-span-5">
           <CardHeader
-            title="Processor"
+            title={t("Processor")}
             icon={<Cpu className="size-4" />}
             trailing={<span className="chip">{system.cpu.cores}C / {system.cpu.threads}T</span>}
           />
@@ -188,13 +200,13 @@ export function DashboardPage() {
               </span>
               <span className="mb-1 text-sm text-muted">%</span>
               <span className="mb-1.5 ml-1 flex items-center gap-1 text-[11px] text-muted">
-                <span className="status-dot live" /> load
+                <span className="status-dot live" /> {t("load")}
               </span>
             </div>
             <div className="text-right">
               <p className="text-[11px] text-muted">{system.cpu.brand.replace(" 16-Core Processor", "")}</p>
               <p className="num mt-0.5 text-[10.5px] text-subtle">
-                {system.cpu.freqGhz.toFixed(2)} GHz · {(system.load[0] ?? 0).toFixed(2)} load
+                {system.cpu.freqGhz.toFixed(2)} GHz · {(system.load[0] ?? 0).toFixed(2)} {t("load")}
               </p>
             </div>
           </div>
@@ -211,16 +223,16 @@ export function DashboardPage() {
             <CoreMatrix values={metrics?.cores ?? system.cpu.perCore} />
           </div>
           <div className="mt-3 grid grid-cols-3 divide-x divide-line border-t border-line pt-3">
-            <MiniStat label="Temperature" value={`${Math.round(system.cpu.temp)}°C`} icon={<Thermometer className="size-3" />} />
-            <MiniStat label="Package power" value={`${Math.round(system.cpu.power)} W`} icon={<Zap className="size-3" />} />
-            <MiniStat label="Load 1m" value={(system.load[0] ?? 0).toFixed(2)} />
+            <MiniStat label={t("Temperature")} value={`${Math.round(system.cpu.temp)}°C`} icon={<Thermometer className="size-3" />} />
+            <MiniStat label={t("Package power")} value={`${Math.round(system.cpu.power)} W`} icon={<Zap className="size-3" />} />
+            <MiniStat label={t("Load 1m")} value={(system.load[0] ?? 0).toFixed(2)} />
           </div>
         </Card>
 
         {/* Memory ---------------------------------------------------------- */}
         <Card className="card-pad md:col-span-1 xl:col-span-3">
           <CardHeader
-            title="Memory"
+            title={t("Memory")}
             icon={<MemoryStick className="size-4" />}
             trailing={<span className="chip">{formatMemory(system.memory.total)}</span>}
           />
@@ -228,14 +240,14 @@ export function DashboardPage() {
             <Ring value={memory} size={108} stroke={7}>
               <div className="text-center">
                 <p className="num text-[23px] font-semibold leading-none text-ink">{Math.round(memory)}%</p>
-                <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">used</p>
+                <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">{t("used")}</p>
               </div>
             </Ring>
           </div>
           <div className="mt-4 space-y-2">
-            <UsageLegend color="var(--accent)" label="Applications" value={formatMemory(system.memory.used)} />
-            <UsageLegend color="var(--info)" label="Cache" value={formatMemory(system.memory.cached)} />
-            <UsageLegend color="var(--surface-3)" label="Free" value={formatMemory(Math.max(0, system.memory.free))} />
+            <UsageLegend color="var(--accent)" label={t("Applications")} value={formatMemory(system.memory.used)} />
+            <UsageLegend color="var(--info)" label={t("Cache")} value={formatMemory(system.memory.cached)} />
+            <UsageLegend color="var(--surface-3)" label={t("Free")} value={formatMemory(Math.max(0, system.memory.free))} />
           </div>
           <p className="mt-3 border-t border-line pt-2.5 text-[9.5px] text-subtle">
             {system.memory.type} · {system.memory.speed}
@@ -245,21 +257,21 @@ export function DashboardPage() {
         {/* Array ------------------------------------------------------------ */}
         <Card className="card-pad md:col-span-2 xl:col-span-5">
           <CardHeader
-            title="Array"
+            title={t("Array")}
             icon={<HardDrive className="size-4" />}
             trailing={
               <div className="flex items-center gap-1.5">
                 <Badge tone={array.state === "STARTED" ? "success" : "neutral"} dot>
-                  {array.state === "STARTED" ? "Started" : array.state}
+                  {array.state === "STARTED" ? t("Started") : array.state}
                 </Badge>
                 <Badge tone={array.status === "protected" ? "violet" : "warning"}>
-                  {array.status === "protected" ? "Protected" : "Unprotected"}
+                  {array.status === "protected" ? t("Protected") : t("Unprotected")}
                 </Badge>
               </div>
             }
             action={
               <button type="button" onClick={() => navigate("/storage")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
-                Manage
+                {t("Manage")}
               </button>
             }
           />
@@ -270,7 +282,9 @@ export function DashboardPage() {
                 <span className="ml-1.5 text-[13px] font-normal text-muted">/ {formatBytes(array.total)}</span>
               </p>
               <p className="mt-1.5 text-[10.5px] text-subtle">
-                {formatBytes(array.free)} free · {array.disks} data disks · {pools.length} {pools.length === 1 ? "pool" : "pools"}
+                {formatBytes(array.free)} {t("free")} ·{" "}
+                {t(array.disks === 1 ? "{count} data disk" : "{count} data disks", { count: array.disks })} ·{" "}
+                {pools.length} {pools.length === 1 ? t("pool") : t("pools")}
               </p>
             </div>
             <span className="num text-sm text-soft">{array.usage.toFixed(1)}%</span>
@@ -288,7 +302,7 @@ export function DashboardPage() {
                       : `color-mix(in srgb, var(--accent) ${86 - index * 7}%, var(--surface-3))`,
                     label: `${disk.name}: ${formatBytes(disk.used)}`,
                   })),
-                { value: Math.max(1, array.free), color: "var(--surface-3)", label: "Free" },
+                { value: Math.max(1, array.free), color: "var(--surface-3)", label: t("Free") },
               ]}
             />
           </div>
@@ -307,14 +321,14 @@ export function DashboardPage() {
             <div className="flex items-center justify-between text-[10.5px]">
               <span className="flex items-center gap-1.5 font-medium text-soft">
                 <span className={cn("status-dot", array.parity.paused ? "warning" : "live")} />
-                {array.parity.paused ? "Parity check paused" : array.parity.running ? "Parity check running" : "Parity check idle"}
+                {array.parity.paused ? t("Parity check paused") : array.parity.running ? t("Parity check running") : t("Parity check idle")}
               </span>
               <span className="num text-muted">{array.parity.progress.toFixed(1)}%</span>
             </div>
             <Progress value={array.parity.progress} height={4} className="mt-2" />
             <div className="mt-1.5 flex justify-between font-mono text-[9px] text-subtle">
               <span>{formatSpeed(array.parity.speed)}</span>
-              <span>{array.parity.errors} sync errors</span>
+              <span>{t(array.parity.errors === 1 ? "{count} sync error" : "{count} sync errors", { count: array.parity.errors })}</span>
             </div>
           </div>
         </Card>
@@ -322,33 +336,33 @@ export function DashboardPage() {
         {/* Network ---------------------------------------------------------- */}
         <Card className="card-pad md:col-span-1 xl:col-span-4">
           <CardHeader
-            title="Network"
+            title={t("Network")}
             icon={<NetworkIcon className="size-4" />}
             trailing={<span className="chip">br0 · 2.5 GbE</span>}
             action={
               <button type="button" onClick={() => navigate("/network")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
-                Details
+                {t("Details")}
               </button>
             }
           />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div>
               <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
-                <ArrowDownToLine className="size-3 text-[var(--info)]" /> Down
+                <ArrowDownToLine className="size-3 text-[var(--info)]" /> {t("Down")}
               </p>
               <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(metrics?.netRx ?? 0)}</p>
             </div>
             <div>
               <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
-                <ArrowUpFromLine className="size-3 text-[var(--violet)]" /> Up
+                <ArrowUpFromLine className="size-3 text-[var(--violet)]" /> {t("Up")}
               </p>
               <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(metrics?.netTx ?? 0)}</p>
             </div>
           </div>
           <AreaChart
             series={[
-              { values: netRx, color: "var(--info)", label: "Down" },
-              { values: netTx, color: "var(--violet)", label: "Up" },
+              { values: netRx, color: "var(--info)", label: t("Down") },
+              { values: netTx, color: "var(--violet)", label: t("Up") },
             ]}
             timestamps={timestamps}
             height={76}
@@ -359,7 +373,11 @@ export function DashboardPage() {
           <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[10px] text-subtle">
             <span className="font-mono">{network.interfaces[0]?.ip ?? "192.168.1.10"}</span>
             <span className="flex items-center gap-1">
-              <span className="status-dot" /> {network.wireGuard.peers.filter((p) => p.online).length} VPN peers
+              <span className="status-dot" />{" "}
+              {t(
+                network.wireGuard.peers.filter((p) => p.online).length === 1 ? "{count} VPN peer" : "{count} VPN peers",
+                { count: network.wireGuard.peers.filter((p) => p.online).length },
+              )}
             </span>
           </div>
         </Card>
@@ -367,9 +385,9 @@ export function DashboardPage() {
         {/* UPS ------------------------------------------------------------- */}
         <Card className="card-pad md:col-span-1 xl:col-span-3">
           <CardHeader
-            title="UPS"
+            title={t("UPS")}
             icon={<BatteryCharging className="size-4" />}
-            trailing={<Badge tone={ups.onBattery ? "warning" : "success"} dot>{ups.onBattery ? "On battery" : "Online"}</Badge>}
+            trailing={<Badge tone={ups.onBattery ? "warning" : "success"} dot>{ups.onBattery ? t("On battery") : t("Online")}</Badge>}
           />
           {ups.present ? (
             <>
@@ -377,19 +395,19 @@ export function DashboardPage() {
                 <Ring value={ups.battery} size={92} stroke={7}>
                   <div className="text-center">
                     <p className="num text-[20px] font-semibold leading-none text-ink">{Math.round(ups.battery)}%</p>
-                    <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-subtle">battery</p>
+                    <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-subtle">{t("battery")}</p>
                   </div>
                 </Ring>
                 <div className="min-w-0 flex-1">
                   <p className="num text-[22px] font-semibold leading-none text-ink">{formatRuntime(ups.runtime)}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-subtle">runtime left</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-subtle">{t("runtime left")}</p>
                   <div className="mt-3 space-y-1.5 text-[11px]">
                     <div className="flex justify-between">
-                      <span className="text-muted">Load</span>
+                      <span className="text-muted">{t("Load")}</span>
                       <span className="num text-soft">{ups.load}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted">Input</span>
+                      <span className="text-muted">{t("Input")}</span>
                       <span className="num text-soft">{ups.inputVoltage.toFixed(0)} V</span>
                     </div>
                   </div>
@@ -398,24 +416,30 @@ export function DashboardPage() {
               <p className="mt-3 truncate border-t border-line pt-2.5 text-[9.5px] text-subtle">{ups.model}</p>
             </>
           ) : (
-            <p className="py-10 text-center text-xs text-muted">No UPS detected.</p>
+            <p className="py-10 text-center text-xs text-muted">{t("No UPS detected.")}</p>
           )}
         </Card>
 
         {/* Containers ------------------------------------------------------- */}
         <Card className="card-pad md:col-span-2 xl:col-span-5">
           <CardHeader
-            title="Containers"
+            title={t("Containers")}
             icon={<Boxes className="size-4" />}
             trailing={
               <div className="flex items-center gap-1.5">
-                <Badge tone="success" dot>{runningContainers.length} running</Badge>
-                {updates > 0 ? <Badge tone="warning">{updates} updates</Badge> : null}
+                <Badge tone="success" dot>
+                  {t("{count} running", { count: runningContainers.length })}
+                </Badge>
+                {updates > 0 ? (
+                  <Badge tone="warning">
+                    {t(updates === 1 ? "{count} update" : "{count} updates", { count: updates })}
+                  </Badge>
+                ) : null}
               </div>
             }
             action={
               <button type="button" onClick={() => navigate("/docker")} className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-muted transition hover:text-ink">
-                All containers <ChevronRight className="size-3" />
+                {t("All containers")} <ChevronRight className="size-3" />
               </button>
             }
           />
@@ -457,12 +481,12 @@ export function DashboardPage() {
         {/* Shares ----------------------------------------------------------- */}
         <Card className="card-pad md:col-span-1 xl:col-span-4">
           <CardHeader
-            title="Shares"
+            title={t("Shares")}
             icon={<FolderTree className="size-4" />}
-            trailing={<span className="chip">{shares.length} mounted</span>}
+            trailing={<span className="chip">{t("{count} mounted", { count: shares.length })}</span>}
             action={
               <button type="button" onClick={() => navigate("/storage")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
-                Manage
+                {t("Manage")}
               </button>
             }
           />
@@ -480,19 +504,31 @@ export function DashboardPage() {
             ))}
           </div>
           <p className="mt-3.5 border-t border-line pt-2.5 text-[9.5px] text-subtle">
-            {formatBytes(shares.reduce((sum, share) => sum + share.used, 0))} allocated across {shares.length} shares
+            {t(
+              shares.length === 1
+                ? "{size} allocated across {count} share"
+                : "{size} allocated across {count} shares",
+              {
+                size: formatBytes(shares.reduce((sum, share) => sum + share.used, 0)),
+                count: shares.length,
+              },
+            )}
           </p>
         </Card>
 
         {/* Activity --------------------------------------------------------- */}
         <Card className="card-pad md:col-span-1 xl:col-span-3">
           <CardHeader
-            title="Activity"
+            title={t("Activity")}
             icon={<Clock3 className="size-4" />}
-            trailing={unread > 0 ? <Badge tone="accent">{unread} new</Badge> : null}
+            trailing={
+              unread > 0 ? (
+                <Badge tone="accent">{t("{count} new", { count: unread })}</Badge>
+              ) : null
+            }
             action={
               <button type="button" onClick={() => navigate("/notifications")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
-                Inbox
+                {t("Inbox")}
               </button>
             }
           />
@@ -595,10 +631,11 @@ function UsageLegend({ color, label, value }: { color: string; label: string; va
 }
 
 function DiskBay({ disk, cache = false }: { disk: Disk; cache?: boolean }) {
+  const { t } = useI18n();
   const used = disk.size > 0 ? (disk.used / disk.size) * 100 : 0;
   const color = disk.status === "standby" ? "var(--subtle)" : cache ? "var(--info)" : disk.type === "Parity" ? "var(--violet)" : "var(--accent)";
   return (
-    <div className="group/bay min-w-0 flex-1" title={`${disk.name} · ${disk.model} · ${formatBytes(disk.used)} used · ${disk.temp || "—"}°C`}>
+    <div className="group/bay min-w-0 flex-1" title={`${disk.name} · ${disk.model} · ${formatBytes(disk.used)} ${t("used")} · ${disk.temp || "—"}°C`}>
       <div className="relative h-9 overflow-hidden rounded-[4px] border border-line bg-[var(--surface-3)]/60">
         <div
           className="absolute inset-x-0 bottom-0 transition-all duration-700"

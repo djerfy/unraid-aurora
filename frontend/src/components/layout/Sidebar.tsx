@@ -18,6 +18,7 @@ import { useApp } from "../../app/AppDataProvider";
 import { useToast } from "../../app/ToastProvider";
 import { formatBytes, formatUptime } from "../../lib/format";
 import { api } from "../../lib/api";
+import { useI18n } from "../../i18n";
 
 export function Sidebar({
   collapsed,
@@ -30,6 +31,7 @@ export function Sidebar({
 }) {
   const { snapshot, session, live } = useApp();
   const { toast } = useToast();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const unread = snapshot?.notifications.filter((n) => !n.read).length ?? 0;
@@ -39,10 +41,10 @@ export function Sidebar({
       await api.logout();
       await queryClient.invalidateQueries({ queryKey: ["session"] });
       queryClient.removeQueries({ queryKey: ["bootstrap"] });
-      toast({ kind: "info", title: "Signed out", description: "Your session has been closed." });
+      toast({ kind: "info", title: t("Signed out"), description: t("Your session has been closed.") });
       navigate("/login");
     } catch (error) {
-      toast({ kind: "error", title: "Sign out failed", description: (error as Error).message });
+      toast({ kind: "error", title: t("Sign out failed"), description: (error as Error).message });
     }
   };
 
@@ -58,15 +60,15 @@ export function Sidebar({
           type="button"
           onClick={() => navigate("/")}
           className="shrink-0 rounded-lg text-left transition-opacity hover:opacity-80"
-          aria-label="Aurora home"
+          aria-label={t("Aurora home")}
         >
           <AuroraWordmark compact={collapsed} />
         </button>
         <button
           type="button"
           onClick={onToggle}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+          title={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
           className={cn(
             "grid shrink-0 place-items-center rounded-lg text-subtle transition hover:bg-[var(--surface-3)] hover:text-ink",
             collapsed ? "size-7" : "size-8",
@@ -81,8 +83,12 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => navigate("/settings")}
-            title={`${snapshot.system.name} · Unraid ${snapshot.system.version} · ${formatUptime(snapshot.system.uptime)} uptime`}
-            aria-label={`${snapshot.system.name}, online`}
+            title={t("{name} · Unraid {version} · {uptime} uptime", {
+              name: snapshot.system.name,
+              version: snapshot.system.version,
+              uptime: formatUptime(snapshot.system.uptime),
+            })}
+            aria-label={t("{name}, online", { name: snapshot.system.name })}
             className="mx-auto mt-4 grid size-10 place-items-center rounded-xl border border-line bg-[var(--surface-2)] transition hover:border-line-strong hover:bg-[var(--surface-3)]"
           >
             <span className={cn("status-dot", live ? "live" : "muted")} />
@@ -104,14 +110,14 @@ export function Sidebar({
               <span>Unraid {snapshot.system.version}</span>
               <span className="flex items-center gap-1">
                 <span className="size-1 rounded-full bg-[var(--success)]" />
-                {live ? "Live" : "Offline"}
+                {live ? t("Live") : t("Offline")}
               </span>
             </div>
             <div className="mt-2.5">
               <Progress value={snapshot.array.usage} height={3} />
               <div className="mt-1.5 flex justify-between font-mono text-[9px] text-subtle">
-                <span>{formatBytes(snapshot.array.used)} used</span>
-                <span>{formatBytes(snapshot.array.free)} free</span>
+                <span>{t("{used} used", { used: formatBytes(snapshot.array.used) })}</span>
+                <span>{t("{free} free", { free: formatBytes(snapshot.array.free) })}</span>
               </div>
             </div>
           </button>
@@ -126,7 +132,7 @@ export function Sidebar({
           return (
             <div key={group} className="mb-5 last:mb-0">
               {!collapsed ? (
-                <p className="mb-1.5 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-subtle">{group}</p>
+                <p className="mb-1.5 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-subtle">{t(group)}</p>
               ) : (
                 <div className="mx-auto mb-2 h-px w-6 bg-line" />
               )}
@@ -139,8 +145,8 @@ export function Sidebar({
                       key={item.to}
                       to={item.to}
                       end={item.to === "/"}
-                      title={collapsed ? item.label : undefined}
-                      aria-label={collapsed ? item.label : undefined}
+                      title={collapsed ? t(item.label) : undefined}
+                      aria-label={collapsed ? t(item.label) : undefined}
                       className={({ isActive }) =>
                         cn(
                           "group/nav relative flex w-full items-center rounded-[7px] py-2 text-[12.5px] font-medium transition-all duration-200",
@@ -160,7 +166,7 @@ export function Sidebar({
                             className={cn("size-[16px] shrink-0 transition-colors", isActive ? "text-[var(--accent)]" : "text-subtle group-hover/nav:text-muted")}
                             strokeWidth={1.8}
                           />
-                          {!collapsed ? <span className="flex-1 truncate">{item.label}</span> : null}
+                          {!collapsed ? <span className="flex-1 truncate">{t(item.label)}</span> : null}
                           {!collapsed && badge > 0 ? (
                             <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[var(--accent-soft)] px-1 text-[9.5px] font-semibold text-[var(--accent)]">
                               {badge}
@@ -190,20 +196,20 @@ export function Sidebar({
               className="mb-2.5 flex w-full items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-subtle transition hover:border-line-strong hover:text-muted"
             >
               <Command className="size-3" />
-              <span className="flex-1 text-left">Quick actions</span>
+              <span className="flex-1 text-left">{t("Quick actions")}</span>
               <kbd className="rounded border border-line bg-[var(--surface)] px-1 font-mono text-[9px]">⌘K</kbd>
             </button>
             <div className="flex items-center gap-2.5 rounded-xl p-1.5 hover:bg-[var(--surface-2)]">
               <EntityIcon src={userIconURL(session?.user ?? "root")} name={session?.user ?? "root"} size={30} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12px] font-medium text-ink">{session?.user ?? "root"}</p>
-                <p className="truncate text-[10px] text-subtle">Host administrator</p>
+                <p className="truncate text-[10px] text-subtle">{t("Host administrator")}</p>
               </div>
               <button
                 type="button"
                 onClick={signOut}
-                title="Sign out"
-                aria-label="Sign out"
+                title={t("Sign out")}
+                aria-label={t("Sign out")}
                 className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-3)] hover:text-[var(--danger)]"
               >
                 <LogOut className="size-3.5" />
@@ -217,8 +223,8 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onOpenCommand}
-                title="Quick actions (⌘K)"
-                aria-label="Quick actions"
+                title={t("Quick actions (⌘K)")}
+                aria-label={t("Quick actions")}
                 className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-2)] hover:text-ink"
               >
                 <Command className="size-3.5" />
@@ -226,8 +232,8 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={signOut}
-                title="Sign out"
-                aria-label="Sign out"
+                title={t("Sign out")}
+                aria-label={t("Sign out")}
                 className="grid size-7 place-items-center rounded-md text-subtle transition hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
               >
                 <LogOut className="size-3.5" />
@@ -250,6 +256,7 @@ export function MobileSidebar({
   onOpenCommand: () => void;
 }) {
   const { snapshot } = useApp();
+  const { t } = useI18n();
   const unread = snapshot?.notifications.filter((n) => !n.read).length ?? 0;
   if (!open) return null;
 
@@ -262,7 +269,7 @@ export function MobileSidebar({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t("Close menu")}
             className="grid size-8 place-items-center rounded-lg text-muted hover:bg-[var(--surface-3)]"
           >
             <ChevronLeft className="size-5" />
@@ -271,7 +278,7 @@ export function MobileSidebar({
         <div className="flex-1 overflow-y-auto px-3 py-4">
           {NAV_GROUPS.map((group) => (
             <div key={group} className="mb-5">
-              <p className="mb-1.5 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-subtle">{group}</p>
+              <p className="mb-1.5 px-2.5 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-subtle">{t(group)}</p>
               {NAV_ITEMS.filter((item) => item.group === group).map((item) => {
                 const Icon = item.icon;
                 const badge = item.badge === "notifications" ? unread : 0;
@@ -289,7 +296,7 @@ export function MobileSidebar({
                     }
                   >
                     <Icon className="size-4 text-subtle" />
-                    <span className="flex-1">{item.label}</span>
+                    <span className="flex-1">{t(item.label)}</span>
                     {badge > 0 ? (
                       <span className="grid h-4 min-w-4 place-items-center rounded-full bg-[var(--accent-soft)] px-1 text-[9px] text-[var(--accent)]">
                         {badge}
@@ -308,7 +315,7 @@ export function MobileSidebar({
             }}
             className="mt-1 flex w-full items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)] px-3 py-2 text-xs text-muted"
           >
-            <Command className="size-3.5" /> Quick actions
+            <Command className="size-3.5" /> {t("Quick actions")}
           </button>
         </div>
         <div className="border-t border-line p-4">

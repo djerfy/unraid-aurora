@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, FolderPlus, Plus, RefreshCw, Rocket, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { ContainerCreateOptions } from "../../lib/types";
+import { useI18n } from "../../i18n";
 import { useToast } from "../../app/ToastProvider";
 import { Modal } from "../ui/overlays";
 import { Button, IconButton, Switch } from "../ui/primitives";
@@ -36,6 +37,7 @@ const emptyOptions: ContainerCreateOptions = {
 
 export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const { toast } = useToast();
   const [draft, setDraft] = useState<ContainerCreateOptions>(emptyOptions);
   const [error, setError] = useState("");
@@ -67,15 +69,15 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
     onSuccess: () => {
       toast({
         kind: "success",
-        title: "Container created",
-        description: `${draft.name} was created and started.`,
+        title: t("Container created"),
+        description: t("{name} was created and started.", { name: draft.name }),
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       onClose();
     },
     onError: (err: Error) => {
       setError(err.message);
-      toast({ kind: "error", title: "Creation failed", description: err.message });
+      toast({ kind: "error", title: t("Creation failed"), description: err.message });
     },
   });
 
@@ -105,18 +107,18 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
 
   const submit = () => {
     if (!draft.name.trim()) {
-      setError("A container name is required.");
+      setError(t("A container name is required."));
       return;
     }
     if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(draft.name.trim())) {
-      setError("The name can only contain letters, digits, '_', '.' and '-'.");
+      setError(t("The name can only contain letters, digits, '_', '.' and '-'."));
       return;
     }
     if (!draft.image.trim()) {
-      setError("An image repository is required, for example linuxserver/plex:latest.");
+      setError(t("An image repository is required, for example linuxserver/plex:latest."));
       return;
     }
-    const validation = validateContainerFields(draft);
+    const validation = validateContainerFields(draft, t);
     if (validation) {
       setError(validation);
       return;
@@ -137,13 +139,13 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
     <Modal
       open={open}
       onClose={onClose}
-      title="New container"
-      description="Pull an image and create a container, mirroring the main options of the Unraid Add Container page."
+      title={t("New container")}
+      description={t("Pull an image and create a container, mirroring the main options of the Unraid Add Container page.")}
       size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={create.isPending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             variant="primary"
@@ -151,22 +153,22 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
             loading={create.isPending}
             onClick={submit}
           >
-            Create & start
+            {t("Create & start")}
           </Button>
         </>
       }
     >
       <div className="space-y-5">
         <section>
-          <SectionHeader title="Template" hint="Load an existing Unraid XML to recreate a container" />
+          <SectionHeader title={t("Template")} hint={t("Load an existing Unraid XML to recreate a container")} />
           <div className="flex items-center gap-2">
             <select
               value={templateID}
-              aria-label="Container template"
+              aria-label={t("Container template")}
               onChange={(event) => applyTemplate(event.target.value)}
               className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
             >
-              <option value="">Start from scratch</option>
+              <option value="">{t("Start from scratch")}</option>
               {(templates.data ?? []).map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name} · {template.image}
@@ -180,36 +182,35 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
               loading={templates.isFetching}
               onClick={() => void templates.refetch()}
             >
-              Reload
+              {t("Reload")}
             </Button>
           </div>
           <p className="mt-1.5 text-[9.5px] text-subtle">
-            Templates are read from the flash drive; loading one prefills every field and can be used to relaunch a
-            container after a failed creation.
+            {t("Templates are read from the flash drive; loading one prefills every field and can be used to relaunch a container after a failed creation.")}
           </p>
         </section>
 
         <section>
-          <SectionHeader title="Container" hint="Identity, image and network" />
+          <SectionHeader title={t("Container")} hint={t("Identity, image and network")} />
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Name</span>
-              <TextField label="Container name" value={draft.name} placeholder="plex" onChange={(value) => update({ name: value })} mono={false} />
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Name")}</span>
+              <TextField label={t("Container name")} value={draft.name} placeholder="plex" onChange={(value) => update({ name: value })} mono={false} />
             </label>
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Repository</span>
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Repository")}</span>
               <TextField
-                label="Repository"
+                label={t("Repository")}
                 value={draft.image}
                 placeholder="linuxserver/plex:latest"
                 onChange={(value) => update({ image: value })}
               />
             </label>
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Network</span>
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Network")}</span>
               <select
                 value={draft.networkMode}
-                aria-label="Network"
+                aria-label={t("Network")}
                 onChange={(event) => update({ networkMode: event.target.value })}
                 className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
               >
@@ -221,10 +222,10 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Restart policy</span>
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Restart policy")}</span>
               <select
                 value={draft.restartPolicy}
-                aria-label="Restart policy"
+                aria-label={t("Restart policy")}
                 onChange={(event) => update({ restartPolicy: event.target.value })}
                 className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
               >
@@ -236,18 +237,18 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Icon URL</span>
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Icon URL")}</span>
               <TextField
-                label="Icon URL"
+                label={t("Icon URL")}
                 value={draft.icon}
                 placeholder="https://…/icon.png"
                 onChange={(value) => update({ icon: value })}
               />
             </label>
             <label className="space-y-1">
-              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">Web UI</span>
+              <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Web UI")}</span>
               <TextField
-                label="Web UI"
+                label={t("Web UI")}
                 value={draft.webUi}
                 placeholder="http://[IP]:[PORT:32400]/"
                 onChange={(value) => update({ webUi: value })}
@@ -256,10 +257,10 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
           </div>
           <label className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
             <span>
-              <span className="block text-[11px] font-medium text-soft">Privileged mode</span>
-              <span className="block text-[9.5px] text-subtle">Grant the container full host device access.</span>
+              <span className="block text-[11px] font-medium text-soft">{t("Privileged mode")}</span>
+              <span className="block text-[9.5px] text-subtle">{t("Grant the container full host device access.")}</span>
             </span>
-            <Switch checked={draft.privileged} onChange={(value) => update({ privileged: value })} label="Privileged" />
+            <Switch checked={draft.privileged} onChange={(value) => update({ privileged: value })} label={t("Privileged")} />
           </label>
           {draft.image ? (
             <p className="mt-2 flex items-center gap-1.5 font-mono text-[9px] text-subtle">
@@ -271,19 +272,19 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
         {/* Paths --------------------------------------------------------- */}
         <section>
           <SectionHeader
-            title="Paths"
-            hint="Bind mounts, host path to container path"
+            title={t("Paths")}
+            hint={t("Bind mounts, host path to container path")}
             onAdd={() => update({ volumes: [...draft.volumes, { source: "", destination: "", readOnly: false }] })}
-            addLabel="Add path"
+            addLabel={t("Add path")}
           />
           {draft.volumes.length === 0 ? (
-            <EmptyLine icon={<FolderPlus className="size-3.5" />} text="No bind mounts configured." />
+            <EmptyLine icon={<FolderPlus className="size-3.5" />} text={t("No bind mounts configured.")} />
           ) : (
             <div className="space-y-2">
               {draft.volumes.map((volume, index) => (
                 <div key={index} className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-2">
                   <TextField
-                    label="Host path"
+                    label={t("Host path")}
                     value={volume.source}
                     placeholder="/mnt/user/appdata/plex"
                     onChange={(value) =>
@@ -293,7 +294,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                     }
                   />
                   <TextField
-                    label="Container path"
+                    label={t("Container path")}
                     value={volume.destination}
                     placeholder="/config"
                     onChange={(value) =>
@@ -310,12 +311,12 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                           volumes: draft.volumes.map((item, i) => (i === index ? { ...item, readOnly: value } : item)),
                         })
                       }
-                      label="Read only"
+                      label={t("Read only")}
                     />
                     <span className="hidden w-8 sm:inline">{volume.readOnly ? "ro" : "rw"}</span>
                   </div>
                   <IconButton
-                    label="Remove path"
+                    label={t("Remove path")}
                     size="sm"
                     onClick={() => update({ volumes: draft.volumes.filter((_, i) => i !== index) })}
                   >
@@ -330,19 +331,19 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
         {/* Ports --------------------------------------------------------- */}
         <section>
           <SectionHeader
-            title="Ports"
-            hint="Published host ports"
+            title={t("Ports")}
+            hint={t("Published host ports")}
             onAdd={() => update({ ports: [...draft.ports, { host: 0, container: 0, protocol: "tcp" }] })}
-            addLabel="Add port"
+            addLabel={t("Add port")}
           />
           {draft.ports.length === 0 ? (
-            <EmptyLine icon={<Plus className="size-3.5" />} text="No published ports." />
+            <EmptyLine icon={<Plus className="size-3.5" />} text={t("No published ports.")} />
           ) : (
             <div className="space-y-2">
               {draft.ports.map((port, index) => (
                 <div key={index} className="grid grid-cols-[1fr_1fr_110px_auto] items-center gap-2">
                   <NumberField
-                    label="Host port"
+                    label={t("Host port")}
                     value={port.host}
                     onChange={(value) =>
                       update({
@@ -351,7 +352,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                     }
                   />
                   <NumberField
-                    label="Container port"
+                    label={t("Container port")}
                     value={port.container}
                     onChange={(value) =>
                       update({
@@ -361,7 +362,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                   />
                   <select
                     value={port.protocol}
-                    aria-label="Protocol"
+                    aria-label={t("Protocol")}
                     onChange={(event) =>
                       update({
                         ports: draft.ports.map((item, i) =>
@@ -378,7 +379,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                     ))}
                   </select>
                   <IconButton
-                    label="Remove port"
+                    label={t("Remove port")}
                     size="sm"
                     onClick={() => update({ ports: draft.ports.filter((_, i) => i !== index) })}
                   >
@@ -393,19 +394,19 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
         {/* Environment --------------------------------------------------- */}
         <section>
           <SectionHeader
-            title="Environment"
-            hint="Variables passed to the container"
+            title={t("Environment")}
+            hint={t("Variables passed to the container")}
             onAdd={() => update({ env: [...draft.env, { key: "", value: "" }] })}
-            addLabel="Add variable"
+            addLabel={t("Add variable")}
           />
           {draft.env.length === 0 ? (
-            <EmptyLine icon={<Plus className="size-3.5" />} text="No environment variables." />
+            <EmptyLine icon={<Plus className="size-3.5" />} text={t("No environment variables.")} />
           ) : (
             <div className="space-y-2">
               {draft.env.map((entry, index) => (
                 <div key={index} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_auto] items-center gap-2">
                   <TextField
-                    label="Variable name"
+                    label={t("Variable name")}
                     value={entry.key}
                     placeholder="PUID"
                     className="uppercase"
@@ -416,7 +417,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                     }
                   />
                   <TextField
-                    label="Variable value"
+                    label={t("Variable value")}
                     value={entry.value}
                     placeholder="99"
                     onChange={(value) =>
@@ -426,7 +427,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
                     }
                   />
                   <IconButton
-                    label="Remove variable"
+                    label={t("Remove variable")}
                     size="sm"
                     onClick={() => update({ env: draft.env.filter((_, i) => i !== index) })}
                   >
