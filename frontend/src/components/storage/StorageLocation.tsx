@@ -70,7 +70,7 @@ function diskBrandModel(disk: Disk): string {
 }
 
 function diskPlacement(disk: Disk): string {
-  if (disk.type === "Parity") return disk.device || "—";
+  if (disk.type === "Parity") return disk.device ? `/dev/${disk.device}` : "—";
   const mount = disk.type === "Cache" ? `/mnt/${disk.pool || disk.name}` : `/mnt/${disk.name}`;
   return disk.device ? `${disk.device} → ${mount}` : mount;
 }
@@ -664,7 +664,6 @@ function ViewCard({
                 key={bay}
                 bay={bay}
                 disk={disk}
-                compact={vertical}
                 activeDrop={activeDrop}
                 dragActive={dragging === disk.name}
                 selected={selected === disk.name}
@@ -736,7 +735,6 @@ function ViewCard({
 function AssignedBay({
   bay,
   disk,
-  compact,
   activeDrop,
   dragActive,
   selected,
@@ -751,7 +749,6 @@ function AssignedBay({
 }: {
   bay: number;
   disk: Disk;
-  compact: boolean;
   activeDrop: boolean;
   dragActive: boolean;
   selected: boolean;
@@ -789,8 +786,7 @@ function AssignedBay({
         background: `linear-gradient(145deg, ${hexToRgba(color, 0.16)}, color-mix(in srgb, var(--surface-3) 55%, transparent))`,
       }}
       className={cn(
-        "flex cursor-grab flex-col justify-between rounded-xl border p-2.5 text-left transition active:cursor-grabbing",
-        compact ? "min-h-[68px]" : "min-h-[94px]",
+        "flex min-h-[108px] cursor-grab flex-col justify-between rounded-xl border p-2.5 text-left transition active:cursor-grabbing",
         selected && "ring-1 ring-[var(--accent-line)]",
         activeDrop && "ring-2 ring-[var(--accent-line)]",
         dragActive && "opacity-50",
@@ -826,14 +822,21 @@ function AssignedBay({
         </span>
       </div>
       <div className="mt-1 min-w-0">
-        <p className="truncate text-[11px] font-semibold text-ink">{disk.name}</p>
-        {!compact ? <p className="truncate text-[8.5px] text-subtle">{diskBrandModel(disk)}</p> : null}
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-[11px] font-semibold text-ink">{disk.name}</p>
+          <Badge tone={tone}>{t(disk.type)}</Badge>
+        </div>
+        <p className="truncate text-[8.5px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
+        <p className="truncate font-mono text-[8px] text-subtle" title={disk.serial || undefined}>
+          S/N {disk.serial || "—"}
+        </p>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        <Badge tone={tone}>{t(disk.type)}</Badge>
-        <span className="text-[8.5px] text-subtle">{formatBytes(disk.size)}</span>
-        <span className="ml-auto text-[8.5px] text-subtle">{disk.temp ? `${disk.temp}°C` : "—"}</span>
-      </div>
+      <p
+        className="mt-1 truncate text-[8.5px] text-subtle"
+        title={`${formatBytes(disk.size)} · ${diskPlacement(disk)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}
+      >
+        {formatBytes(disk.size)} · {diskPlacement(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
+      </p>
     </div>
   );
 }

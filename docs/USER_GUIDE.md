@@ -142,8 +142,9 @@ disk assignments.
 - **Auto-place** fills the views in creation order, in parity → data → cache order, following each
   disk's Unraid position.
 - **Reset layout** clears every slot while keeping the views.
-- Each bay shows the disk name, brand/model, type, size and temperature; the info button opens the
-  existing disk drawer with SMART and I/O details.
+- Each assigned bay shows the same identity block as the disk list: name/type, brand + model,
+  serial, size, device/mount and temperature; the info button opens the existing disk drawer with
+  SMART and I/O details.
 - **Disks to place** shows, per drive: brand + model, serial number, size, mapped device/mount point
   and temperature.
 - The layout is stored server-side in `$AURORA_DATA_DIR/storage-layout.json` and reloads with the page.
