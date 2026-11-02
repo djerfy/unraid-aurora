@@ -1,6 +1,7 @@
 const docker: Record<string, string> = {
   "Up {time}": "Depuis {time}",
   "Mounts": "Montages",
+  "No mounts": "Aucun montage",
   "Infrastructure": "Infrastructure",
   "Containers": "Conteneurs",
   "Every Docker workload on the server, with live resource usage and one-click lifecycle controls.":

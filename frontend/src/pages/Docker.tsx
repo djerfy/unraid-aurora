@@ -4,11 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownToLine,
   Boxes,
+  Cable,
   Check,
   CloudDownload,
   Copy,
+  ChevronDown,
   Cpu,
   ExternalLink,
+  HardDrive,
   Info as InfoIcon,
   List,
   MemoryStick,
@@ -462,6 +465,36 @@ export function DockerPage() {
   );
 }
 
+function CardSection({
+  icon,
+  label,
+  summary,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  summary: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 py-2 text-left transition hover:text-ink"
+      >
+        <span className="text-subtle">{icon}</span>
+        <span className="text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{label}</span>
+        <span className="ml-auto text-[9px] text-subtle">{summary}</span>
+        <ChevronDown className={cn("size-3 text-subtle transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? <div className="pb-2.5">{children}</div> : null}
+    </div>
+  );
+}
+
 function ContainerCard({
   container,
   onOpen,
@@ -581,49 +614,70 @@ function ContainerCard({
         </div>
       </div>
 
-      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
-        {ports.slice(0, 3).map((port) => (
-          <span key={`${port.host}-${port.protocol}`} className="chip font-mono text-[9.5px]">
-            {port.host}:{port.container}/{port.protocol}
-          </span>
-        ))}
-        {ports.length > 3 ? <span className="text-[9.5px] text-subtle">+{ports.length - 3}</span> : null}
-        {ports.length === 0 ? <span className="text-[9.5px] text-subtle">{t("No published ports")}</span> : null}
-      </div>
-
-      <div className="relative mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
-        <span className="flex items-center gap-1">
-          <Network className="size-3" /> {container.network || "—"}
-        </span>
-        <span className="font-mono">{container.ip || t("No address")}</span>
-      </div>
-
-      {mounts.length > 0 ? (
-        <div className="relative mt-3 space-y-1 border-t border-line pt-3">
-          <p className="text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Mounts")}</p>
-          {mounts.map((mount) => (
-            <div
-              key={`${mount.source}-${mount.destination}`}
-              className="flex min-w-0 items-center gap-1.5"
-              title={`${mount.source} → ${mount.destination} (${mount.readOnly ? "ro" : "rw"})`}
-            >
-              <span className="min-w-0 flex-1 truncate font-mono text-[9px] text-subtle">{mount.source}</span>
-              <span className="shrink-0 text-[9px] text-subtle">→</span>
-              <span className="shrink-0 font-mono text-[9px] text-muted">{mount.destination}</span>
-              <span
-                className={cn(
-                  "shrink-0 rounded border px-1 py-px font-mono text-[7.5px] uppercase tracking-wide",
-                  mount.readOnly
-                    ? "border-[color-mix(in_srgb,var(--warning)_28%,transparent)] bg-[var(--warning-soft)] text-[var(--warning)]"
-                    : "border-[color-mix(in_srgb,var(--success)_28%,transparent)] bg-[var(--success-soft)] text-[var(--success)]",
-                )}
-              >
-                {mount.readOnly ? "ro" : "rw"}
+      <div className="relative mt-3 divide-y divide-line/60 border-t border-line/60">
+        <CardSection
+          icon={<Cable className="size-3" />}
+          label={t("Published ports")}
+          summary={ports.length > 0 ? String(ports.length) : t("None")}
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            {ports.slice(0, 6).map((port) => (
+              <span key={`${port.host}-${port.container}-${port.protocol}`} className="chip font-mono text-[9.5px]">
+                {port.host}:{port.container}/{port.protocol}
               </span>
+            ))}
+            {ports.length > 6 ? <span className="text-[9.5px] text-subtle">+{ports.length - 6}</span> : null}
+            {ports.length === 0 ? <span className="text-[9.5px] text-subtle">{t("No published ports")}</span> : null}
+          </div>
+        </CardSection>
+
+        <CardSection
+          icon={<Network className="size-3" />}
+          label={t("Network")}
+          summary={container.network || "—"}
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9.5px] text-subtle">
+            <span className="flex items-center gap-1">
+              <Network className="size-3" /> {container.network || "—"}
+            </span>
+            <span className="font-mono">{container.ip || t("No address")}</span>
+          </div>
+        </CardSection>
+
+        <CardSection
+          icon={<HardDrive className="size-3" />}
+          label={t("Mounts")}
+          summary={mounts.length > 0 ? String(mounts.length) : t("None")}
+        >
+          {mounts.length === 0 ? (
+            <span className="text-[9.5px] text-subtle">{t("No mounts")}</span>
+          ) : (
+            <div className="space-y-1">
+              {mounts.map((mount) => (
+                <div
+                  key={`${mount.source}-${mount.destination}`}
+                  className="flex min-w-0 items-center gap-1.5"
+                  title={`${mount.source} → ${mount.destination} (${mount.readOnly ? "ro" : "rw"})`}
+                >
+                  <span className="min-w-0 flex-1 truncate font-mono text-[9px] text-subtle">{mount.source}</span>
+                  <span className="shrink-0 text-[9px] text-subtle">→</span>
+                  <span className="shrink-0 font-mono text-[9px] text-muted">{mount.destination}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded border px-1 py-px font-mono text-[7.5px] uppercase tracking-wide",
+                      mount.readOnly
+                        ? "border-[color-mix(in_srgb,var(--warning)_28%,transparent)] bg-[var(--warning-soft)] text-[var(--warning)]"
+                        : "border-[color-mix(in_srgb,var(--success)_28%,transparent)] bg-[var(--success-soft)] text-[var(--success)]",
+                    )}
+                  >
+                    {mount.readOnly ? "ro" : "rw"}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : null}
+          )}
+        </CardSection>
+      </div>
 
       <div className="relative mt-4 flex items-center justify-end gap-2 border-t border-line pt-3">
         <div className="flex items-center gap-1">

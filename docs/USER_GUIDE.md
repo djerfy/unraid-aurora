@@ -228,7 +228,7 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
   hover a row to see the full host → container mapping.
 - Filters: **All**, **Running**, **Stopped**, **Updates**.
 - Search covers name, image, network, IP and category.
-- Cards show a coloured halo, live CPU/RAM, ports, network/IP and uptime.
+- Cards show a coloured halo, live CPU/RAM, uptime, and collapsible sections for published ports, network/IP and mounts.
 
 ![Container list](screenshots/docker-list.png)
 
