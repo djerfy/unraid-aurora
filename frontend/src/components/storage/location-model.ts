@@ -5,17 +5,27 @@ export const ROW_HEIGHT = 24;
 export const GRID_GAP = 12;
 
 export type PanelKind = StorageView["kind"];
-export type PresetSize = "s" | "m" | "l";
-export type PanelSize = StorageView["size"];
 
-export const SIZE_PRESETS: Record<PanelKind, Record<PresetSize, { w: number; h: number }>> = {
-  tower: { s: { w: 4, h: 14 }, m: { w: 6, h: 20 }, l: { w: 9, h: 26 } },
-  server: { s: { w: 6, h: 10 }, m: { w: 9, h: 14 }, l: { w: 12, h: 18 } },
-  nas: { s: { w: 4, h: 10 }, m: { w: 6, h: 14 }, l: { w: 9, h: 18 } },
+// "tower" is the desktop chassis form factor; the UI labels it Desktop.
+const DEFAULT_DIMENSIONS: Record<PanelKind, { w: number; h: number }> = {
+  tower: { w: 6, h: 20 },
+  server: { w: 9, h: 14 },
+  nas: { w: 6, h: 14 },
 };
 
-export function panelDimensions(kind: PanelKind, size: PresetSize) {
-  return SIZE_PRESETS[kind][size];
+export function defaultDimensions(kind: PanelKind) {
+  return DEFAULT_DIMENSIONS[kind];
+}
+
+export function diskAccent(disk: Disk): string {
+  if (disk.type === "Parity") return "#9B7BFF";
+  if (disk.type === "Cache") return "#5AA9FF";
+  return "#3DDC97";
+}
+
+export function diskMediaKind(disk: Disk): "hdd" | "ssd" | "nvme" {
+  if (disk.media === "nvme" || disk.media === "ssd" || disk.media === "hdd") return disk.media;
+  return disk.rotational ? "hdd" : "ssd";
 }
 
 export function rectsOverlap(
@@ -60,19 +70,6 @@ export function diskBrandModel(disk: Disk): string {
   return disk.brand ? `${disk.brand} · ${model}` : model;
 }
 
-export function diskPlacement(disk: Disk): string {
-  if (disk.type === "Parity") return disk.device ? `/dev/${disk.device}` : "—";
-  const mount = disk.type === "Cache" ? `/mnt/${disk.pool || disk.name}` : `/mnt/${disk.name}`;
-  return disk.device ? `${disk.device} → ${mount}` : mount;
-}
-
-export function mediaLabel(disk: Disk): string {
-  if (disk.media === "nvme") return "NVMe";
-  if (disk.media === "ssd") return "SSD";
-  if (disk.media === "hdd") return "HDD";
-  return "";
-}
-
 export function defaultSection(kind: PanelKind, index = 1): StorageSection {
   const rows = kind === "tower" ? 4 : kind === "server" ? 2 : 1;
   const cols = kind === "tower" ? 2 : 4;
@@ -87,14 +84,14 @@ export function defaultSection(kind: PanelKind, index = 1): StorageSection {
   };
 }
 
-export function defaultView(kind: PanelKind, index: number, size: PresetSize = "m"): StorageView {
-  const dims = panelDimensions(kind, size);
-  const label = kind === "tower" ? "Tower" : kind === "server" ? "Server" : "NAS";
+export function defaultView(kind: PanelKind, index: number, label?: string): StorageView {
+  const dims = defaultDimensions(kind);
+  const fallbackLabel = kind === "tower" ? "Desktop" : kind === "server" ? "Server" : "NAS";
   return {
     id: `view-${Date.now()}-${index}`,
-    name: `${label} ${index}`,
+    name: `${label ?? fallbackLabel} ${index}`,
     kind,
-    size,
+    size: "custom",
     x: 0,
     y: 0,
     w: dims.w,

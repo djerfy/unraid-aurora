@@ -84,7 +84,7 @@ func defaultStorageSection(kind string) model.StorageSection {
 func defaultStorageView() model.StorageView {
 	w, h := panelDimensions("tower", "m")
 	return model.StorageView{
-		ID: "view-tower", Name: "Tower 1", Kind: "tower", Size: "m",
+		ID: "view-tower", Name: "Desktop 1", Kind: "tower", Size: "m",
 		X: 0, Y: 0, W: w, H: h,
 		Sections: []model.StorageSection{defaultStorageSection("tower")},
 	}

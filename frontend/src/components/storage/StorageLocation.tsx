@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   CheckCircle2,
+  ChevronDown,
   GripVertical,
   HardDrive,
   Info,
@@ -21,23 +22,21 @@ import { useI18n } from "../../i18n";
 import { useToast } from "../../app/ToastProvider";
 import { formatBytes, hexToRgba } from "../../lib/format";
 import { Badge, Button, Card, EmptyState, IconButton, InputBase, cn } from "../ui/primitives";
-import { Modal } from "../ui/overlays";
+import { Menu, Modal } from "../ui/overlays";
 import type { Disk, StorageLayout, StorageSection, StorageView } from "../../lib/types";
 import {
   BOARD_COLUMNS,
   GRID_GAP,
   ROW_HEIGHT,
+  defaultDimensions,
   defaultSection,
   defaultView,
+  diskAccent,
   diskBrandModel,
-  diskPlacement,
+  diskMediaKind,
   findFreeSpot,
-  mediaLabel,
-  panelDimensions,
   rectsOverlap,
   type PanelKind,
-  type PanelSize,
-  type PresetSize,
 } from "./location-model";
 
 const DISK_MIME = "application/x-aurora-disk";
@@ -55,8 +54,8 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function mediaTone(media: string): "neutral" | "info" | "violet" {
-  if (media === "nvme") return "violet";
+function mediaTone(media: string): "neutral" | "info" | "success" {
+  if (media === "nvme") return "success";
   if (media === "ssd") return "info";
   return "neutral";
 }
@@ -79,7 +78,7 @@ export function StorageLocation({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const physical = useMemo(() => disks.filter((disk) => disk.type !== "Flash"), [disks]);
-  const [views, setViews] = useState<StorageView[]>(() => [defaultView("tower", 1)]);
+  const [views, setViews] = useState<StorageView[]>(() => [defaultView("tower", 1, t("Desktop"))]);
   const [initialized, setInitialized] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [draggingDisk, setDraggingDisk] = useState<string | null>(null);
@@ -102,8 +101,7 @@ export function StorageLocation({
     const names = new Set(physical.map((disk) => disk.name));
     const next = layoutQuery.data.views.map((view) => {
       const kind: PanelKind = view.kind === "server" || view.kind === "nas" ? view.kind : "tower";
-      const size: PanelSize = view.size === "s" || view.size === "m" || view.size === "l" ? view.size : "custom";
-      const dims = panelDimensions(kind, size === "custom" ? "m" : size);
+      const dims = defaultDimensions(kind);
       const width = view.w >= 1 && view.w <= BOARD_COLUMNS ? view.w : dims.w;
       const height = view.h >= 1 && view.h <= 60 ? view.h : dims.h;
       const sections = (view.sections ?? []).map((section) => {
@@ -116,7 +114,6 @@ export function StorageLocation({
       return {
         ...view,
         kind,
-        size,
         w: width,
         h: height,
         x: Math.max(0, Math.min(BOARD_COLUMNS - width, view.x)),
@@ -124,7 +121,7 @@ export function StorageLocation({
         sections: sections.length > 0 ? sections : [defaultSection(kind)],
       };
     });
-    setViews(next.length > 0 ? next : [defaultView("tower", 1)]);
+    setViews(next.length > 0 ? next : [defaultView("tower", 1, t("Desktop"))]);
     setInitialized(true);
   }, [initialized, layoutQuery.data, physical]);
 
@@ -251,29 +248,16 @@ export function StorageLocation({
     persist(next);
   };
 
-  const changeSize = (viewId: string, size: PresetSize) => {
-    const view = views.find((candidate) => candidate.id === viewId);
-    if (!view || view.size === size) return;
-    const dims = panelDimensions(view.kind, size);
-    const spot = findFreeSpot(views, dims.w, dims.h, view.x, view.y, view.id);
-    if (!spot) {
-      toast({ kind: "warning", title: t("No free space for this size"), description: t("Move a panel first, then try again.") });
-      return;
-    }
-    persist(views.map((candidate) => (
-      candidate.id === viewId ? { ...candidate, size, ...spot, w: dims.w, h: dims.h } : candidate
-    )));
-  };
-
   const addView = (kind: PanelKind) => {
     const index = views.filter((view) => view.kind === kind).length + 1;
-    const dims = panelDimensions(kind, "m");
+    const dims = defaultDimensions(kind);
     const spot = findFreeSpot(views, dims.w, dims.h, 0, 0);
     if (!spot) {
       toast({ kind: "warning", title: t("No free space on the board"), description: t("Move or remove a panel first.") });
       return;
     }
-    const view = { ...defaultView(kind, index, "m"), ...spot };
+    const label = kind === "tower" ? t("Desktop") : kind === "server" ? t("Server") : t("NAS");
+    const view = { ...defaultView(kind, index, label), ...spot };
     persist([...views, view]);
   };
 
@@ -534,7 +518,6 @@ export function StorageLocation({
       stacked={stacked}
       onDragView={(event) => startViewDrag(event, view)}
       onRename={(name) => renameView(view.id, name)}
-      onChangeSize={(size) => changeSize(view.id, size)}
       onRemove={() => removeView(view.id)}
       onAddSection={() => openSectionEditor(view.id, null)}
       onEditSection={(section) => openSectionEditor(view.id, section)}
@@ -569,15 +552,21 @@ export function StorageLocation({
           <span className="text-subtle">{t("Visual layout only — Unraid disk assignments are unchanged.")}</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="secondary" icon={<PcCase className="size-3" />} onClick={() => addView("tower")}>
-            {t("Add tower")}
-          </Button>
-          <Button size="sm" variant="secondary" icon={<Server className="size-3" />} onClick={() => addView("server")}>
-            {t("Add server")}
-          </Button>
-          <Button size="sm" variant="secondary" icon={<Box className="size-3" />} onClick={() => addView("nas")}>
-            {t("Add NAS")}
-          </Button>
+          <Menu
+            align="start"
+            width="w-44"
+            trigger={
+              <Button size="sm" variant="secondary" icon={<Plus className="size-3" />}>
+                {t("Add")}
+                <ChevronDown className="size-3" />
+              </Button>
+            }
+            items={[
+              { label: t("Server"), icon: <Server className="size-3.5" />, onSelect: () => addView("server") },
+              { label: t("Desktop"), icon: <PcCase className="size-3.5" />, onSelect: () => addView("tower") },
+              { label: t("NAS"), icon: <Box className="size-3.5" />, onSelect: () => addView("nas") },
+            ]}
+          />
           <Button size="sm" variant="secondary" icon={<Sparkles className="size-3" />} onClick={autoArrange}>
             {t("Auto-arrange")}
           </Button>
@@ -721,7 +710,6 @@ function ChassisPanel({
   stacked,
   onDragView,
   onRename,
-  onChangeSize,
   onRemove,
   onAddSection,
   onEditSection,
@@ -752,7 +740,6 @@ function ChassisPanel({
   stacked: boolean;
   onDragView: (event: ReactPointerEvent<HTMLSpanElement>) => void;
   onRename: (name: string) => void;
-  onChangeSize: (size: PresetSize) => void;
   onRemove: () => void;
   onAddSection: () => void;
   onEditSection: (section: StorageSection) => void;
@@ -824,24 +811,6 @@ function ChassisPanel({
             aria-label={t("View name")}
             className="min-w-0 max-w-[150px] flex-1 rounded border-0 bg-transparent text-[11.5px] font-semibold text-ink outline-none focus:bg-[var(--surface-2)] focus:px-1 focus:py-0.5"
           />
-          <Badge tone={view.kind === "server" ? "info" : view.kind === "nas" ? "warning" : "violet"}>
-            {t(view.kind === "tower" ? "Tower" : view.kind === "server" ? "Server" : "NAS")}
-          </Badge>
-          <div className="flex items-center rounded-md border border-line bg-[var(--surface-2)] p-0.5">
-            {(["s", "m", "l"] as PresetSize[]).map((size) => (
-              <button
-                key={size}
-                type="button"
-                onClick={() => onChangeSize(size)}
-                className={cn(
-                  "grid size-5 place-items-center rounded text-[8.5px] font-semibold uppercase transition",
-                  view.size === size ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink",
-                )}
-              >
-                {size}
-              </button>
-            ))}
-          </div>
           <IconButton label={t("Add section")} size="sm" onClick={onAddSection}>
             <Plus className="size-3.5" />
           </IconButton>
@@ -1096,6 +1065,48 @@ function SectionBlock({
   );
 }
 
+function DriveArt({ media, className }: { media: "hdd" | "ssd" | "nvme"; className?: string }) {
+  if (media === "nvme") {
+    return (
+      <svg viewBox="0 0 80 36" aria-hidden="true" className={className} fill="none">
+        <rect x="3" y="12" width="74" height="14" rx="2" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.75)" strokeWidth="1.2" />
+        <rect x="9" y="16" width="9" height="6" rx="0.8" fill="rgba(232,192,92,0.85)" />
+        <rect x="22" y="16" width="5" height="6" rx="0.8" fill="rgba(232,192,92,0.5)" />
+        <path d="M59 12v14" stroke="rgba(224,232,242,0.45)" />
+        <rect x="64" y="16" width="8" height="2.5" rx="1" fill="rgba(255,255,255,0.5)" />
+        <rect x="64" y="20" width="5" height="2" rx="1" fill="rgba(255,255,255,0.3)" />
+        <path d="M4 13.5h72" stroke="rgba(255,255,255,0.4)" />
+        <path d="M29 12V8h22v4" stroke="rgba(224,232,242,0.55)" />
+      </svg>
+    );
+  }
+  if (media === "ssd") {
+    return (
+      <svg viewBox="0 0 80 80" aria-hidden="true" className={className} fill="none">
+        <rect x="8" y="24" width="64" height="36" rx="4" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.7)" strokeWidth="1.2" />
+        <path d="M9 28h62" stroke="rgba(255,255,255,0.38)" />
+        <rect x="15" y="32" width="27" height="20" rx="2" stroke="rgba(224,232,242,0.6)" />
+        <rect x="48" y="32" width="17" height="8" rx="1.5" fill="rgba(160,170,182,0.35)" stroke="rgba(224,232,242,0.5)" />
+        <rect x="48" y="44" width="17" height="8" rx="1.5" fill="rgba(160,170,182,0.24)" stroke="rgba(224,232,242,0.4)" />
+        <path d="M18 36h21M18 40h15M18 44h19" stroke="rgba(224,232,242,0.42)" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 80 80" aria-hidden="true" className={className} fill="none">
+      <rect x="7" y="20" width="66" height="46" rx="5" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.7)" strokeWidth="1.2" />
+      <path d="M8 25h64" stroke="rgba(255,255,255,0.38)" />
+      <circle cx="49" cy="42" r="15" stroke="rgba(224,232,242,0.75)" strokeWidth="1.2" />
+      <circle cx="49" cy="42" r="10" stroke="rgba(224,232,242,0.4)" />
+      <circle cx="49" cy="42" r="3.5" fill="rgba(224,232,242,0.6)" />
+      <path d="M21 60l13-14" stroke="rgba(224,232,242,0.65)" strokeWidth="1.4" />
+      <circle cx="20" cy="61" r="3.5" stroke="rgba(224,232,242,0.65)" />
+      <rect x="14" y="30" width="17" height="10" rx="1.5" stroke="rgba(224,232,242,0.5)" />
+      <path d="M16 34h13M16 37h9" stroke="rgba(224,232,242,0.35)" />
+    </svg>
+  );
+}
+
 function AssignedSlot({
   slot,
   disk,
@@ -1129,6 +1140,7 @@ function AssignedSlot({
 }) {
   const { t } = useI18n();
   const mismatch = Boolean(disk.media && sectionMedia !== "any" && disk.media !== sectionMedia);
+  const accent = diskAccent(disk);
   return (
     <div
       role="button"
@@ -1151,21 +1163,27 @@ function AssignedSlot({
         }
       }}
       style={{
-        borderColor: hexToRgba(disk.color || "#8a8f98", selected ? 0.75 : 0.4),
-        background: `linear-gradient(145deg, ${hexToRgba(disk.color || "#8a8f98", 0.16)}, color-mix(in srgb, var(--surface-3) 55%, transparent))`,
+        borderColor: hexToRgba(accent, selected ? 0.8 : 0.45),
+        background: `radial-gradient(130% 100% at 100% 50%, ${hexToRgba(accent, 0.22)}, transparent 64%), linear-gradient(150deg, ${hexToRgba(accent, 0.14)}, color-mix(in srgb, var(--surface-3) 68%, transparent))`,
       }}
       className={cn(
-        "flex min-h-[126px] cursor-grab flex-col justify-between rounded-lg border p-2 text-left transition active:cursor-grabbing",
+        "relative flex min-h-[80px] cursor-grab flex-col justify-between overflow-hidden rounded-lg border p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_18px_-12px_rgba(0,0,0,0.95)] transition active:cursor-grabbing",
         selected && "ring-1 ring-[var(--accent-line)]",
         activeDrop && "ring-2 ring-[var(--accent-line)]",
         dragging && "opacity-50",
       )}
       title={`${disk.name} · ${t("Drag to move")}`}
     >
-      <div className="flex items-center justify-between gap-1">
+      <span className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.07))]" />
+      <span className="pointer-events-none absolute inset-0 rounded-lg bg-[linear-gradient(155deg,rgba(255,255,255,0.12),transparent_42%)]" />
+      <DriveArt
+        media={diskMediaKind(disk)}
+        className="pointer-events-none absolute -right-1 top-1/2 h-[68px] w-[68px] -translate-y-1/2 opacity-70 drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)]"
+      />
+      <div className="relative z-10 flex items-center justify-between gap-1">
         <span className="font-mono text-[7.5px] uppercase tracking-[0.1em] text-subtle">{t("Bay {index}", { index: slot + 1 })}</span>
         <span className="flex items-center gap-1">
-          <span className="size-1.5 rounded-full" style={{ background: disk.color || "#8a8f98" }} />
+          <span className="size-1.5 rounded-full" style={{ background: accent }} />
           {mismatch ? <TriangleAlert className="size-2.5 text-[var(--warning)]" /> : null}
           <button type="button" aria-label={t("Disk details")} onClick={(event) => { event.stopPropagation(); onOpen(); }} className="text-subtle hover:text-ink">
             <Info className="size-2.5" />
@@ -1175,17 +1193,13 @@ function AssignedSlot({
           </button>
         </span>
       </div>
-      <div className="mt-0.5 min-w-0">
+      <div className="relative z-10 mt-0.5 min-w-0 pr-5">
         <p className="truncate text-[10px] font-semibold text-ink">{disk.name}</p>
-        <div className="mt-0.5 flex flex-wrap gap-1">
-          <Badge tone={disk.type === "Parity" ? "violet" : disk.type === "Cache" ? "info" : "neutral"}>{t(disk.type)}</Badge>
-          {disk.media ? <Badge tone={mediaTone(disk.media)}>{mediaLabel(disk)}</Badge> : null}
-        </div>
-        <p className="mt-0.5 truncate text-[7.5px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
+        <p className="truncate text-[7.5px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
         <p className="truncate font-mono text-[7.5px] text-subtle" title={disk.serial || undefined}>S/N {disk.serial || "—"}</p>
       </div>
-      <p className="mt-0.5 truncate text-[7.5px] text-subtle" title={`${formatBytes(disk.size)} · ${diskPlacement(disk)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
-        {formatBytes(disk.size)} · {diskPlacement(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
+      <p className="relative z-10 mt-0.5 truncate text-[7.5px] text-subtle" title={`${formatBytes(disk.size)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
+        {formatBytes(disk.size)} · {disk.temp ? `${disk.temp}°C` : "—"}
       </p>
     </div>
   );
@@ -1207,6 +1221,7 @@ function DiskCard({
   onDragEnd: () => void;
 }) {
   const { t } = useI18n();
+  const accent = diskAccent(disk);
   return (
     <div
       role="button"
@@ -1225,28 +1240,32 @@ function DiskCard({
           onSelect();
         }
       }}
+      style={{
+        borderColor: selected ? hexToRgba(accent, 0.8) : undefined,
+        background: `radial-gradient(120% 100% at 100% 50%, ${hexToRgba(accent, 0.16)}, transparent 60%), var(--surface-2)`,
+      }}
       className={cn(
-        "flex cursor-grab items-center gap-2 rounded-lg border bg-[var(--surface-2)]/45 p-2 transition active:cursor-grabbing",
-        selected ? "border-[var(--accent-line)] bg-[var(--accent-soft)]" : "border-line hover:border-line-strong hover:bg-[var(--surface-2)]",
+        "relative flex cursor-grab items-center gap-1.5 overflow-hidden rounded-lg border p-1.5 pl-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_6px_14px_-10px_rgba(0,0,0,0.9)] transition active:cursor-grabbing",
+        selected ? "border-[var(--accent-line)]" : "border-line hover:border-line-strong",
       )}
     >
-      <span className="h-14 w-1 shrink-0 rounded-full" style={{ background: disk.color || "#8a8f98" }} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1">
-          <p className="truncate text-[10.5px] font-medium text-ink">{disk.name}</p>
-          <Badge tone={disk.type === "Parity" ? "violet" : disk.type === "Cache" ? "info" : "neutral"}>{t(disk.type)}</Badge>
-          {disk.media ? <Badge tone={mediaTone(disk.media)}>{mediaLabel(disk)}</Badge> : null}
-        </div>
-        <p className="truncate text-[9px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
-        <p className="truncate font-mono text-[8px] text-subtle" title={disk.serial || undefined}>S/N {disk.serial || "—"}</p>
-        <p className="truncate text-[8px] text-subtle" title={`${formatBytes(disk.size)} · ${diskPlacement(disk)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
-          {formatBytes(disk.size)} · {diskPlacement(disk)} · {disk.temp ? `${disk.temp}°C` : "—"}
+      <span className="pointer-events-none absolute inset-0 rounded-lg bg-[linear-gradient(155deg,rgba(255,255,255,0.1),transparent_45%)]" />
+      <span className="absolute inset-y-1 left-0 w-1 rounded-full" style={{ background: accent }} />
+      <DriveArt
+        media={diskMediaKind(disk)}
+        className="pointer-events-none absolute right-7 top-1/2 h-11 w-11 -translate-y-1/2 opacity-55 drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)]"
+      />
+      <div className="relative z-10 min-w-0 flex-1 pl-1">
+        <p className="truncate text-[10.5px] font-medium text-ink">{disk.name}</p>
+        <p className="truncate text-[8.5px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
+        <p className="truncate font-mono text-[8px] text-subtle" title={`S/N ${disk.serial || "—"} · ${formatBytes(disk.size)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
+          S/N {disk.serial || "—"} · {formatBytes(disk.size)} · {disk.temp ? `${disk.temp}°C` : "—"}
         </p>
       </div>
-      <button type="button" aria-label={t("Disk details")} onClick={(event) => { event.stopPropagation(); onOpen(); }} className="text-subtle transition hover:text-ink">
+      <button type="button" aria-label={t("Disk details")} onClick={(event) => { event.stopPropagation(); onOpen(); }} className="relative z-10 text-subtle transition hover:text-ink">
         <Info className="size-3.5" />
       </button>
-      <GripVertical className="size-3.5 shrink-0 text-subtle" />
+      <GripVertical className="relative z-10 size-3.5 shrink-0 text-subtle" />
     </div>
   );
 }

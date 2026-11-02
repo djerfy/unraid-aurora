@@ -127,11 +127,10 @@ Storage is organised in tabs: **Array**, **Shares**, **Pools**, **Parity** and *
 Location is a visual canvas of the physical chassis. It is server-specific and never changes Unraid's
 disk assignments.
 
-- **Add tower**, **Add server** or **Add NAS** creates a 3D-style chassis panel.
+- The **Add** menu creates a **Server**, **Desktop** or **NAS** 3D-style chassis panel.
 - Panels snap to a **12-column grid**, cannot overlap, and can be dragged anywhere on the board.
-- Each panel has **S / M / L** presets, a rename field, a delete action and **Auto-arrange** support.
+- Each panel has a rename field, a delete action and **Auto-arrange** support.
 - Hover a panel to reveal its **edge and corner handles**, then drag to resize it freely on the grid.
-  A manual resize switches the panel to **custom** dimensions; picking S / M / L restores a preset.
 - Resizing never overlaps another panel: the drag stops at the first occupied cell.
 - On narrow screens the board becomes a stacked list while keeping saved positions.
 - Inside each chassis, add and reorder **horizontal sections** (Data, Cache, Parity, custom).
@@ -142,8 +141,9 @@ disk assignments.
 - **Auto-place** fills the sections in reading order, preferring disks matching the section media, then
   parity → data → cache.
 - **Reset layout** clears assignments but keeps panels and sections.
-- Each assigned bay and tray card shows: name/type, physical media, brand + model, serial, size,
-  device/mount and temperature. The info button opens the existing disk drawer.
+- Each assigned bay and tray card is compact and shows the essentials: name, brand + model, serial,
+  size and temperature. A drive illustration hints at the physical media (HDD, SSD or NVMe), and
+  the info button opens the existing disk drawer.
 - **Disks to place** contains every unassigned drive with the same identity details.
 - The v2 layout is stored in `$AURORA_CONFIG_DIR/storage-layout.json` (default
   `/boot/config/aurora`) and the previous column-based format is migrated automatically.

@@ -30,7 +30,7 @@ operational model and rebuilds the experience around it:
   like the original webGUI. There is no application password, no user database and no demo bypass.
 - **A deliberate visual language**: one accent, precise typography, restrained motion, dense but readable data.
 - **Bilingual interface**: English by default, with a full French translation selectable in Settings.
-- **Visual chassis map**: drag 3D tower/rack/NAS panels, group drives into labelled sections, and keep a server-side, visual-only location plan.
+- **Visual chassis map**: drag 3D server/desktop/NAS panels, group drives into labelled sections, and keep a server-side, visual-only location plan.
 - **Safe by default**: whitelisted actions, HMAC sessions, per-IP login throttling, CSRF header + origin
   checks, CSP and read-only mode.
 - **Live host only**: Aurora reads the real Unraid state (`/var/local/emhttp`) and real system services. If it
