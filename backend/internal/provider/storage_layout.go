@@ -16,7 +16,7 @@ const (
 	defaultStorageBays = 12
 	maxStorageBays     = 48
 	maxStorageViews    = 8
-	maxStorageColumns  = 3
+	maxStorageColumns  = 4
 )
 
 // storageLayoutFile also decodes the single-view format used before multiple

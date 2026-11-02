@@ -69,11 +69,28 @@ func TestStorageLayoutRejectsInvalidAssignments(t *testing.T) {
 		}},
 		{Columns: 2, Views: []model.StorageView{{ID: "nas", Name: "NAS", Orientation: "nas", Bays: 12}}},
 		{Columns: 2, Views: []model.StorageView{{ID: "bad", Name: "Bad", Orientation: "vertical", Column: 2}}},
-		{Columns: 4, Views: []model.StorageView{{ID: "a", Name: "A", Orientation: "vertical"}}},
+		{Columns: 5, Views: []model.StorageView{{ID: "a", Name: "A", Orientation: "vertical"}}},
 	}
 	for index, layout := range cases {
 		if err := live.SaveStorageLayout(context.Background(), layout); err == nil {
 			t.Fatalf("invalid layout %d was accepted", index)
 		}
+	}
+}
+
+func TestStorageLayoutAcceptsFourColumns(t *testing.T) {
+	live := &Live{dataDir: t.TempDir()}
+	layout := model.StorageLayout{Columns: 4, Views: []model.StorageView{{
+		ID: "rack", Name: "Rack", Orientation: "horizontal", Column: 3, Bays: 8,
+	}}}
+	if err := live.SaveStorageLayout(context.Background(), layout); err != nil {
+		t.Fatal(err)
+	}
+	got, err := live.StorageLayout(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Columns != 4 || got.Views[0].Column != 3 {
+		t.Fatalf("unexpected layout: %+v", got)
 	}
 }

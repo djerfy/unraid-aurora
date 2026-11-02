@@ -132,7 +132,7 @@ disk assignments.
 - Bay choices follow the form factor: tower 2–48 (including 2/4/6/10), server 8–48, NAS 1/2/4/6/8.
 - Each view can be renamed, switched between tower/server/NAS orientation, resized, moved between
   columns, or removed.
-- The **Columns** selector (1–3) defines the board width. Drag a view by its grip into a column or
+- The **Columns** selector (1–4) defines the board width. Drag a view by its grip into a column or
   above another view to place it exactly; the left/right arrows also move it between columns.
 - On narrow screens the board falls back to a single column, but the saved positions are retained.
   Views and column positions are stored in the layout file.

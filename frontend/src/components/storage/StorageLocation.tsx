@@ -253,7 +253,7 @@ export function StorageLocation({
   };
 
   const changeColumns = (nextColumns: number) => {
-    const clamped = Math.max(1, Math.min(3, nextColumns));
+    const clamped = Math.max(1, Math.min(4, nextColumns));
     persist(
       views.map((view) => ({ ...view, column: Math.min(view.column, clamped - 1) })),
       clamped,
@@ -339,7 +339,7 @@ export function StorageLocation({
               onChange={(event) => changeColumns(Number(event.target.value))}
               className="h-8 rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
             >
-              {[1, 2, 3].map((value) => (
+              {[1, 2, 3, 4].map((value) => (
                 <option key={value} value={value}>{value}</option>
               ))}
             </select>
@@ -375,7 +375,7 @@ export function StorageLocation({
         </p>
       ) : null}
 
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_310px]">
+      <div className={cn("grid gap-4", columns < 4 && "2xl:grid-cols-[minmax(0,1fr)_310px]")}>
         <div
           className={cn(
             "grid items-start gap-4",
@@ -383,7 +383,9 @@ export function StorageLocation({
               ? "grid-cols-1"
               : columns === 2
                 ? "grid-cols-1 lg:grid-cols-2"
-                : "grid-cols-1 lg:grid-cols-2 min-[2000px]:grid-cols-3",
+                : columns === 3
+                  ? "grid-cols-1 lg:grid-cols-3"
+                  : "grid-cols-1 md:grid-cols-2 xl:grid-cols-4",
           )}
         >
           {Array.from({ length: columns }, (_, column) => {
