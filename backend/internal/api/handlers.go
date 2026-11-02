@@ -1112,13 +1112,20 @@ func (s *Server) saveStorageLayout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
 		return
 	}
-	var body model.StorageLayout
+	// The client timestamp is informational; accepting the model directly would
+	// make an empty "updated":"" fail JSON decoding before validation.
+	var body struct {
+		Columns int                 `json:"columns"`
+		Views   []model.StorageView `json:"views"`
+		Updated any                 `json:"updated"`
+	}
 	if !s.decode(w, r, &body) {
 		return
 	}
 	ctx, cancel := s.serverContext()
 	defer cancel()
-	if err := s.provider.SaveStorageLayout(ctx, body); err != nil {
+	layout := model.StorageLayout{Columns: body.Columns, Views: body.Views}
+	if err := s.provider.SaveStorageLayout(ctx, layout); err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "invalid_layout", err.Error())
 		return
 	}

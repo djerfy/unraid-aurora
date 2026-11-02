@@ -30,6 +30,7 @@ import (
 type fakeProvider struct {
 	provider.Provider
 	settings model.Settings
+	layout   model.StorageLayout
 }
 
 func (f *fakeProvider) Name() string { return "live" }
@@ -68,6 +69,15 @@ func (f *fakeProvider) Settings(ctx context.Context) (model.Settings, error) {
 
 func (f *fakeProvider) SaveSettings(ctx context.Context, s model.Settings) error {
 	f.settings = s
+	return nil
+}
+
+func (f *fakeProvider) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
+	return f.layout, nil
+}
+
+func (f *fakeProvider) SaveStorageLayout(ctx context.Context, layout model.StorageLayout) error {
+	f.layout = layout
 	return nil
 }
 
@@ -353,5 +363,35 @@ func TestTerminalWebSocket(t *testing.T) {
 		if strings.Contains(string(data), "TERMINAL_OK") {
 			return
 		}
+	}
+}
+
+func TestSaveStorageLayoutIgnoresClientTimestamp(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	body := map[string]any{
+		"columns": 2,
+		"updated": "",
+		"views": []map[string]any{{
+			"id": "tower", "name": "Tower", "orientation": "vertical",
+			"column": 0, "bays": 8,
+			"assignments": map[string]int{"disk1": 0},
+		}},
+	}
+	resp = env.request(t, http.MethodPut, "/api/v1/storage-layout", body, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var layout model.StorageLayout
+	if err := json.NewDecoder(resp.Body).Decode(&layout); err != nil {
+		t.Fatal(err)
+	}
+	if layout.Columns != 2 || len(layout.Views) != 1 || layout.Views[0].Column != 0 {
+		t.Fatalf("unexpected layout: %+v", layout)
 	}
 }

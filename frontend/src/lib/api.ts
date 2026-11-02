@@ -322,11 +322,13 @@ export const api = {
   logs: (source: string, lines = 240) =>
     request<LogLineType[]>(`/api/v1/logs?source=${encodeURIComponent(source)}&lines=${lines}`),
   storageLayout: () => request<StorageLayout>("/api/v1/storage-layout"),
-  saveStorageLayout: (layout: StorageLayout) =>
-    request<StorageLayout>("/api/v1/storage-layout", {
+  saveStorageLayout: (layout: StorageLayout) => {
+    const { updated: _updated, ...body } = layout;
+    return request<StorageLayout>("/api/v1/storage-layout", {
       method: "PUT",
-      body: JSON.stringify(layout),
-    }),
+      body: JSON.stringify(body),
+    });
+  },
   saveSettings: (settings: Snapshot["settings"]) =>
     request<Snapshot["settings"]>("/api/v1/settings", {
       method: "PUT",
