@@ -641,42 +641,44 @@ export function StorageLocation({
           )}
         </div>
 
-        <Card className="p-3 2xl:sticky 2xl:top-24 2xl:self-start">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[11px] font-semibold text-ink">{t("Disks to place")}</h3>
-            <Badge tone={unplaced.length ? "neutral" : "success"}>{unplaced.length}</Badge>
-          </div>
-          <div className="mt-2">
-            <InputBase
-              value={query}
-              onChange={setQuery}
-              placeholder={t("Search disks…")}
-              icon={<Search className="size-3.5" />}
-            />
-          </div>
-          {unplacedAll.length === 0 ? (
-            <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-[var(--success-soft)] px-3 py-2.5 text-[10px] text-[var(--success)]">
-              <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
-              {t("All disks are placed")}
+        <div className="min-w-0 2xl:sticky 2xl:top-[72px] 2xl:self-start">
+          <Card className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[11px] font-semibold text-ink">{t("Disks to place")}</h3>
+              <Badge tone={unplaced.length ? "neutral" : "success"}>{unplaced.length}</Badge>
             </div>
-          ) : unplaced.length === 0 ? (
-            <p className="mt-3 text-[10px] text-subtle">{t("No disks match this search.")}</p>
-          ) : (
-            <div className="mt-2 max-h-[560px] space-y-1.5 overflow-y-auto pr-1">
-              {unplaced.map((disk) => (
-                <DiskCard
-                  key={disk.name}
-                  disk={disk}
-                  selected={selected === disk.name}
-                  onSelect={() => setSelected(selected === disk.name ? null : disk.name)}
-                  onOpen={() => onOpenDisk(disk)}
-                  onDragStart={() => setDraggingDisk(disk.name)}
-                  onDragEnd={() => setDraggingDisk(null)}
-                />
-              ))}
+            <div className="mt-2">
+              <InputBase
+                value={query}
+                onChange={setQuery}
+                placeholder={t("Search disks…")}
+                icon={<Search className="size-3.5" />}
+              />
             </div>
-          )}
-        </Card>
+            {unplacedAll.length === 0 ? (
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-line bg-[var(--success-soft)] px-3 py-2.5 text-[10px] text-[var(--success)]">
+                <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
+                {t("All disks are placed")}
+              </div>
+            ) : unplaced.length === 0 ? (
+              <p className="mt-3 text-[10px] text-subtle">{t("No disks match this search.")}</p>
+            ) : (
+              <div className="mt-2 max-h-[560px] space-y-1.5 overflow-y-auto pr-1">
+                {unplaced.map((disk) => (
+                  <DiskCard
+                    key={disk.name}
+                    disk={disk}
+                    selected={selected === disk.name}
+                    onSelect={() => setSelected(selected === disk.name ? null : disk.name)}
+                    onOpen={() => onOpenDisk(disk)}
+                    onDragStart={() => setDraggingDisk(disk.name)}
+                    onDragEnd={() => setDraggingDisk(null)}
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-[var(--surface-2)]/35 px-3 py-2 text-[9.5px] text-subtle">
