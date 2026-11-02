@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -1066,43 +1066,86 @@ function SectionBlock({
 }
 
 function DriveArt({ media, className }: { media: "hdd" | "ssd" | "nvme"; className?: string }) {
-  if (media === "nvme") {
-    return (
-      <svg viewBox="0 0 80 36" aria-hidden="true" className={className} fill="none">
-        <rect x="3" y="12" width="74" height="14" rx="2" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.75)" strokeWidth="1.2" />
-        <rect x="9" y="16" width="9" height="6" rx="0.8" fill="rgba(232,192,92,0.85)" />
-        <rect x="22" y="16" width="5" height="6" rx="0.8" fill="rgba(232,192,92,0.5)" />
-        <path d="M59 12v14" stroke="rgba(224,232,242,0.45)" />
-        <rect x="64" y="16" width="8" height="2.5" rx="1" fill="rgba(255,255,255,0.5)" />
-        <rect x="64" y="20" width="5" height="2" rx="1" fill="rgba(255,255,255,0.3)" />
-        <path d="M4 13.5h72" stroke="rgba(255,255,255,0.4)" />
-        <path d="M29 12V8h22v4" stroke="rgba(224,232,242,0.55)" />
-      </svg>
-    );
-  }
-  if (media === "ssd") {
-    return (
-      <svg viewBox="0 0 80 80" aria-hidden="true" className={className} fill="none">
-        <rect x="8" y="24" width="64" height="36" rx="4" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.7)" strokeWidth="1.2" />
-        <path d="M9 28h62" stroke="rgba(255,255,255,0.38)" />
-        <rect x="15" y="32" width="27" height="20" rx="2" stroke="rgba(224,232,242,0.6)" />
-        <rect x="48" y="32" width="17" height="8" rx="1.5" fill="rgba(160,170,182,0.35)" stroke="rgba(224,232,242,0.5)" />
-        <rect x="48" y="44" width="17" height="8" rx="1.5" fill="rgba(160,170,182,0.24)" stroke="rgba(224,232,242,0.4)" />
-        <path d="M18 36h21M18 40h15M18 44h19" stroke="rgba(224,232,242,0.42)" />
-      </svg>
-    );
-  }
+  const uid = useId().replace(/:/g, "");
+  const top = `drive-top-${uid}`;
+  const side = `drive-side-${uid}`;
+  const front = `drive-front-${uid}`;
+  const label = `drive-label-${uid}`;
+  const outline = "rgba(232,240,250,0.72)";
   return (
-    <svg viewBox="0 0 80 80" aria-hidden="true" className={className} fill="none">
-      <rect x="7" y="20" width="66" height="46" rx="5" fill="rgba(160,170,182,0.3)" stroke="rgba(224,232,242,0.7)" strokeWidth="1.2" />
-      <path d="M8 25h64" stroke="rgba(255,255,255,0.38)" />
-      <circle cx="49" cy="42" r="15" stroke="rgba(224,232,242,0.75)" strokeWidth="1.2" />
-      <circle cx="49" cy="42" r="10" stroke="rgba(224,232,242,0.4)" />
-      <circle cx="49" cy="42" r="3.5" fill="rgba(224,232,242,0.6)" />
-      <path d="M21 60l13-14" stroke="rgba(224,232,242,0.65)" strokeWidth="1.4" />
-      <circle cx="20" cy="61" r="3.5" stroke="rgba(224,232,242,0.65)" />
-      <rect x="14" y="30" width="17" height="10" rx="1.5" stroke="rgba(224,232,242,0.5)" />
-      <path d="M16 34h13M16 37h9" stroke="rgba(224,232,242,0.35)" />
+    <svg viewBox="0 0 100 80" aria-hidden="true" className={className} fill="none">
+      <defs>
+        <linearGradient id={top} x1="0" y1="0" x2="0.35" y2="1">
+          <stop stopColor="#9aa6b4" stopOpacity="0.85" />
+          <stop offset="1" stopColor="#4f5966" stopOpacity="0.55" />
+        </linearGradient>
+        <linearGradient id={side} x1="0" y1="0" x2="0" y2="1">
+          <stop stopColor="#66717f" stopOpacity="0.7" />
+          <stop offset="1" stopColor="#2b323c" stopOpacity="0.85" />
+        </linearGradient>
+        <linearGradient id={front} x1="0" y1="0" x2="0" y2="1">
+          <stop stopColor="#7f8b99" stopOpacity="0.75" />
+          <stop offset="1" stopColor="#3b434e" stopOpacity="0.8" />
+        </linearGradient>
+        <linearGradient id={label} x1="0" y1="0" x2="1" y2="1">
+          <stop stopColor="#dfe6ee" stopOpacity="0.7" />
+          <stop offset="1" stopColor="#9aa5b2" stopOpacity="0.35" />
+        </linearGradient>
+      </defs>
+      {media === "hdd" ? (
+        <>
+          <ellipse cx="54" cy="67" rx="36" ry="6" fill="rgba(0,0,0,0.34)" />
+          <path d="M12 30 L70 14 L94 27 L36 43 Z" fill={`url(#${top})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M12 30 L36 43 L36 63 L12 50 Z" fill={`url(#${front})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M36 43 L94 27 L94 47 L36 63 Z" fill={`url(#${side})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M18 33 L66 20 L86 27 L38 40 Z" fill={`url(#${label})`} stroke="rgba(255,255,255,0.5)" strokeWidth="0.7" />
+          <path d="M23 33 L58 23 M23 36 L54 26 M23 39 L47 29" stroke="rgba(32,38,46,0.5)" strokeWidth="0.9" strokeLinecap="round" />
+          <path d="M60 24 L69 21 L69 22 L60 25 Z" fill="rgba(32,38,46,0.55)" />
+          <path d="M61 23.5 L61.6 23.3 M63 23 L63.6 22.8 M65 22.6 L65.6 22.4 M67 22.1 L67.6 21.9" stroke="rgba(32,38,46,0.55)" strokeWidth="0.8" />
+          <path d="M17 29 L69 15" stroke="rgba(255,255,255,0.35)" strokeWidth="0.9" />
+          <circle cx="18" cy="29" r="1.3" fill="rgba(22,27,34,0.8)" stroke="rgba(240,246,252,0.5)" strokeWidth="0.6" />
+          <circle cx="68" cy="16" r="1.3" fill="rgba(22,27,34,0.8)" stroke="rgba(240,246,252,0.5)" strokeWidth="0.6" />
+          <circle cx="87" cy="26" r="1.3" fill="rgba(22,27,34,0.8)" stroke="rgba(240,246,252,0.5)" strokeWidth="0.6" />
+          <circle cx="38" cy="41" r="1.3" fill="rgba(22,27,34,0.8)" stroke="rgba(240,246,252,0.5)" strokeWidth="0.6" />
+          <path d="M16 36 L32 45 L32 56 L16 47 Z" fill="rgba(16,20,26,0.35)" stroke="rgba(240,246,252,0.22)" strokeWidth="0.7" />
+          <path d="M19 40 L29 45 M19 43 L29 48" stroke="rgba(240,246,252,0.28)" strokeWidth="0.7" />
+          <path d="M79 34 L90 31 L90 35 L79 38 Z" fill="rgba(10,13,18,0.55)" stroke="rgba(240,246,252,0.25)" strokeWidth="0.6" />
+          <path d="M79 39 L90 36 L90 39 L79 42 Z" fill="rgba(10,13,18,0.45)" stroke="rgba(240,246,252,0.2)" strokeWidth="0.6" />
+          <path d="M40 56 L70 49" stroke="rgba(240,246,252,0.2)" strokeWidth="0.8" />
+        </>
+      ) : media === "ssd" ? (
+        <>
+          <ellipse cx="52" cy="66" rx="35" ry="6" fill="rgba(0,0,0,0.32)" />
+          <path d="M10 32 L66 16 L90 29 L34 45 Z" fill={`url(#${top})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M10 32 L34 45 L34 60 L10 47 Z" fill={`url(#${front})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M34 45 L90 29 L90 44 L34 60 Z" fill={`url(#${side})`} stroke={outline} strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M18 33 L65 20 L81 27 L34 40 Z" fill={`url(#${label})`} stroke="rgba(255,255,255,0.35)" strokeWidth="0.7" />
+          <path d="M24 33 L59 23 M24 36 L55 26 M24 39 L50 29" stroke="rgba(30,36,44,0.45)" strokeWidth="1" strokeLinecap="round" />
+          <rect x="62" y="21" width="7" height="4" rx="1" transform="rotate(-16 62 21)" fill="rgba(42,49,58,0.5)" />
+          <circle cx="16" cy="32" r="1.3" fill="rgba(22,27,34,0.75)" stroke="rgba(240,246,252,0.45)" strokeWidth="0.6" />
+          <circle cx="65" cy="18" r="1.3" fill="rgba(22,27,34,0.75)" stroke="rgba(240,246,252,0.45)" strokeWidth="0.6" />
+          <circle cx="84" cy="27" r="1.3" fill="rgba(22,27,34,0.75)" stroke="rgba(240,246,252,0.45)" strokeWidth="0.6" />
+          <circle cx="36" cy="42" r="1.3" fill="rgba(22,27,34,0.75)" stroke="rgba(240,246,252,0.45)" strokeWidth="0.6" />
+          <path d="M14 39 L30 48 L30 55 L14 46 Z" fill="rgba(16,20,26,0.35)" stroke="rgba(240,246,252,0.25)" strokeWidth="0.7" />
+          <path d="M16 43 L27 49 M16 46 L27 52" stroke="rgba(231,190,92,0.7)" strokeWidth="1" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <ellipse cx="50" cy="60" rx="38" ry="5" fill="rgba(0,0,0,0.3)" />
+          <path d="M4 38 L74 21 L94 28 L24 45 Z" fill={`url(#${top})`} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
+          <path d="M4 38 L24 45 L24 48.5 L4 41.5 Z" fill={`url(#${front})`} stroke={outline} strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M24 45 L94 28 L94 31.5 L24 48.5 Z" fill={`url(#${side})`} stroke={outline} strokeWidth="0.9" strokeLinejoin="round" />
+          <path d="M4 39.2 L24 45.6 L24 47.2 L4 40.8 Z" fill="rgba(226,188,90,0.9)" />
+          <path d="M8 40.4 L8 42 M12 41.6 L12 43.2 M16 42.8 L16 44.4 M20 44 L20 45.6" stroke="rgba(20,24,28,0.7)" strokeWidth="0.7" />
+          <path d="M32 35 L52 29.5 L60 32.7 L40 38.2 Z" fill="rgba(18,24,21,0.85)" stroke="rgba(210,226,216,0.35)" strokeWidth="0.7" />
+          <path d="M63 26.5 L75 23.5 L81 26.5 L69 29.5 Z" fill="rgba(18,24,21,0.8)" stroke="rgba(210,226,216,0.3)" strokeWidth="0.7" />
+          <path d="M53.5 32.6 L59 31.2 L62.5 33 L57 34.4 Z" fill="rgba(18,24,21,0.75)" stroke="rgba(210,226,216,0.28)" strokeWidth="0.6" />
+          <path d="M33 34 L43 31.4 L48 33.5 L38 36.1 Z" fill="rgba(226,232,238,0.62)" />
+          <path d="M35 34.4 L41 32.8" stroke="rgba(40,46,54,0.5)" strokeWidth="0.6" />
+          <circle cx="87" cy="27.4" r="2.4" fill="rgba(8,11,9,0.92)" stroke="rgba(220,232,224,0.5)" strokeWidth="0.7" />
+          <path d="M10 38.5 L74 22" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
+        </>
+      )}
     </svg>
   );
 }
@@ -1167,18 +1210,18 @@ function AssignedSlot({
         background: `radial-gradient(130% 100% at 100% 50%, ${hexToRgba(accent, 0.22)}, transparent 64%), linear-gradient(150deg, ${hexToRgba(accent, 0.14)}, color-mix(in srgb, var(--surface-3) 68%, transparent))`,
       }}
       className={cn(
-        "relative flex min-h-[80px] cursor-grab flex-col justify-between overflow-hidden rounded-lg border p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_18px_-12px_rgba(0,0,0,0.95)] transition active:cursor-grabbing",
+        "@container relative flex min-h-[80px] cursor-grab flex-col justify-between overflow-hidden rounded-lg border p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_18px_-12px_rgba(0,0,0,0.95)] transition active:cursor-grabbing",
         selected && "ring-1 ring-[var(--accent-line)]",
         activeDrop && "ring-2 ring-[var(--accent-line)]",
         dragging && "opacity-50",
       )}
       title={`${disk.name} · ${t("Drag to move")}`}
     >
-      <span className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.07))]" />
+      <span className="pointer-events-none absolute inset-y-0 right-0 w-14 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.07))] @min-[170px]:w-20" />
       <span className="pointer-events-none absolute inset-0 rounded-lg bg-[linear-gradient(155deg,rgba(255,255,255,0.12),transparent_42%)]" />
       <DriveArt
         media={diskMediaKind(disk)}
-        className="pointer-events-none absolute -right-1 top-1/2 h-[68px] w-[68px] -translate-y-1/2 opacity-70 drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)]"
+        className="pointer-events-none absolute -right-1 top-1/2 h-10 w-10 -translate-y-1/2 opacity-55 drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)] @min-[170px]:h-16 @min-[170px]:w-16"
       />
       <div className="relative z-10 flex items-center justify-between gap-1">
         <span className="font-mono text-[7.5px] uppercase tracking-[0.1em] text-subtle">{t("Bay {index}", { index: slot + 1 })}</span>
@@ -1193,12 +1236,12 @@ function AssignedSlot({
           </button>
         </span>
       </div>
-      <div className="relative z-10 mt-0.5 min-w-0 pr-5">
+      <div className="relative z-10 mt-0.5 min-w-0 pr-7 @min-[170px]:pr-9">
         <p className="truncate text-[10px] font-semibold text-ink">{disk.name}</p>
         <p className="truncate text-[7.5px] text-muted" title={diskBrandModel(disk)}>{diskBrandModel(disk)}</p>
         <p className="truncate font-mono text-[7.5px] text-subtle" title={disk.serial || undefined}>S/N {disk.serial || "—"}</p>
       </div>
-      <p className="relative z-10 mt-0.5 truncate text-[7.5px] text-subtle" title={`${formatBytes(disk.size)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
+      <p className="relative z-10 mt-0.5 truncate pr-7 text-[7.5px] text-subtle @min-[170px]:pr-9" title={`${formatBytes(disk.size)} · ${disk.temp ? `${disk.temp}°C` : "—"}`}>
         {formatBytes(disk.size)} · {disk.temp ? `${disk.temp}°C` : "—"}
       </p>
     </div>
