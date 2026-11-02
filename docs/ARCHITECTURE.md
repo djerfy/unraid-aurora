@@ -91,7 +91,7 @@ Reads the same sources as the original webGUI:
 | VM inventory | `virsh list --all`, `virsh domstate`, `virsh dumpxml` (graphics websocket for the console) |
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |
-| UPS | `apcaccess status` |
+| UPS | `apcaccess status` (built-in) or `upsc` (NUT plugin) |
 | Logs | tails of `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` and `/var/log/parity.log` |
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
 | User icons | `/boot/config/plugins/dynamix/users/<name>.png` |

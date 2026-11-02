@@ -221,7 +221,7 @@ and prints the child PID before exiting.
 | Virtual machines | `virsh list --all`, `virsh domstate` |
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |
-| UPS | `apcaccess status` |
+| UPS | `apcaccess status` (built-in) or `upsc` (NUT plugin) |
 | Logs | `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` |
 | TLS | `/boot/config/ssl/certs/<server>_unraid_bundle.pem` |
 | Icons | Docker icon cache, `templates-user` XML, `dynamix.vm.manager/templates/images` |
@@ -237,7 +237,7 @@ notification folders. They are a convenience layer, not a replacement for `emhtt
 Browser ── React 19 SPA (embedded) ── /api/v1/* ── Go net/http
                                                │
                                       provider.Live ── /var/local/emhttp, procfs, sysfs,
-                                               │        Docker socket, libvirt, apcupsd
+                                               │        Docker socket, libvirt, apcupsd/NUT
                                                │
                                       metrics.Hub (SSE, 2 s)
 ```

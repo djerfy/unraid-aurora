@@ -768,39 +768,6 @@ func (l *Live) ParityHistory(ctx context.Context) ([]model.ParityCheck, error) {
 	return out, nil
 }
 
-func (l *Live) UPS(ctx context.Context) (model.UPS, error) {
-	outBytes, err := exec.CommandContext(ctx, "apcaccess", "status").Output()
-	if err != nil {
-		return model.UPS{Present: false}, nil
-	}
-	ups := model.UPS{Present: true}
-	for _, line := range strings.Split(string(outBytes), "\n") {
-		key, val, ok := strings.Cut(line, ":")
-		if !ok {
-			continue
-		}
-		key, val = strings.TrimSpace(key), strings.TrimSpace(val)
-		switch key {
-		case "MODEL":
-			ups.Model = val
-		case "STATUS":
-			ups.Status = val
-			ups.OnBattery = strings.Contains(val, "ONBATT")
-		case "BCHARGE":
-			ups.Battery = firstFloat(val)
-		case "LOADPCT":
-			ups.Load = firstFloat(val)
-		case "TIMELEFT":
-			ups.Runtime = int(firstFloat(val))
-		case "LINEV":
-			ups.InputVoltage = firstFloat(val)
-		case "OUTPUTV":
-			ups.OutputVoltage = firstFloat(val)
-		}
-	}
-	return ups, nil
-}
-
 func (l *Live) Settings(ctx context.Context) (model.Settings, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

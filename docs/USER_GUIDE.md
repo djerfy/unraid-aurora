@@ -81,7 +81,7 @@ The dashboard is the operational summary of the host:
 - **Array** state, capacity and protection.
 - **Network** throughput and interface state.
 - **Workloads**: running containers and VMs.
-- **UPS** state when `apcupsd` is present.
+- **UPS** state when the built-in `apcupsd` service or the NUT plugin is running.
 - **Recent notifications** and quick links to the relevant pages.
 
 All widgets refresh automatically (default 5 seconds, configurable in Settings) and are driven by
