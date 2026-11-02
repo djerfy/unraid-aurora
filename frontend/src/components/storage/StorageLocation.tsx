@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   GripVertical,
   HardDrive,
   Info,
@@ -230,6 +232,15 @@ export function StorageLocation({
     persist(views.filter((candidate) => candidate.id !== viewId));
   };
 
+  const moveView = (viewId: string, direction: -1 | 1) => {
+    const index = views.findIndex((view) => view.id === viewId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= views.length) return;
+    const next = [...views];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    persist(next);
+  };
+
   const autoPlace = () => {
     const priority: Record<string, number> = { Parity: 0, Data: 1, Cache: 2 };
     const slots: { viewId: string; bay: number }[] = [];
@@ -310,8 +321,8 @@ export function StorageLocation({
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="space-y-4">
-          {views.map((view) => (
+        <div className="flex flex-wrap items-start justify-center gap-4">
+          {views.map((view, index) => (
             <ViewCard
               key={view.id}
               view={view}
@@ -320,9 +331,13 @@ export function StorageLocation({
               selected={selected}
               overTarget={overTarget}
               canRemove={views.length > 1}
+              canMoveLeft={index > 0}
+              canMoveRight={index < views.length - 1}
               onRename={(name) => rename(view.id, name)}
               onChangeBays={(bays) => changeBays(view.id, bays)}
               onToggleOrientation={() => toggleOrientation(view.id)}
+              onMoveLeft={() => moveView(view.id, -1)}
+              onMoveRight={() => moveView(view.id, 1)}
               onRemove={() => removeView(view.id)}
               onPlace={(name, bay) => place(name, view.id, bay)}
               onSelect={(name) => setSelected(selected === name ? null : name)}
@@ -389,9 +404,13 @@ function ViewCard({
   selected,
   overTarget,
   canRemove,
+  canMoveLeft,
+  canMoveRight,
   onRename,
   onChangeBays,
   onToggleOrientation,
+  onMoveLeft,
+  onMoveRight,
   onRemove,
   onPlace,
   onSelect,
@@ -408,9 +427,13 @@ function ViewCard({
   selected: string | null;
   overTarget: DropTarget;
   canRemove: boolean;
+  canMoveLeft: boolean;
+  canMoveRight: boolean;
   onRename: (name: string) => void;
   onChangeBays: (bays: number) => void;
   onToggleOrientation: () => void;
+  onMoveLeft: () => void;
+  onMoveRight: () => void;
   onRemove: () => void;
   onPlace: (name: string, bay: number) => void;
   onSelect: (name: string) => void;
@@ -435,8 +458,8 @@ function ViewCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[26px] border border-line bg-[linear-gradient(145deg,var(--surface-2),var(--surface))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_80px_-50px_rgba(0,0,0,0.9)]",
-        vertical ? "mx-auto w-full max-w-[560px]" : nas ? "mx-auto w-full max-w-[820px]" : "w-full",
+        "relative min-w-0 flex-1 overflow-hidden rounded-[26px] border border-line bg-[linear-gradient(145deg,var(--surface-2),var(--surface))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_80px_-50px_rgba(0,0,0,0.9)]",
+        vertical ? "basis-[420px] max-w-[560px]" : nas ? "basis-[440px] max-w-[820px]" : "basis-[680px] max-w-full",
       )}
     >
       <div className="pointer-events-none absolute inset-y-5 left-2 w-1.5 rounded-full bg-[var(--surface-3)]" />
@@ -475,6 +498,12 @@ function ViewCard({
             </select>
           </label>
           <span className="text-[9.5px] text-subtle">{assigned}/{view.bays}</span>
+          <IconButton label={t("Move view left")} size="sm" disabled={!canMoveLeft} onClick={onMoveLeft}>
+            <ChevronLeft className="size-3.5" />
+          </IconButton>
+          <IconButton label={t("Move view right")} size="sm" disabled={!canMoveRight} onClick={onMoveRight}>
+            <ChevronRight className="size-3.5" />
+          </IconButton>
           {canRemove ? (
             <IconButton label={t("Remove view")} size="sm" onClick={onRemove}>
               <Trash2 className="size-3.5 text-subtle hover:text-[var(--danger)]" />
@@ -482,7 +511,10 @@ function ViewCard({
           ) : null}
         </div>
 
-        <div className={cn("mt-3", vertical ? "flex flex-col gap-1.5" : nas ? "grid grid-cols-2 gap-2 sm:grid-cols-4" : "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6")}>
+        <div
+          className={cn("mt-3", vertical ? "flex flex-col gap-1.5" : "grid gap-2")}
+          style={vertical ? undefined : { gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}
+        >
           {Array.from({ length: view.bays }, (_, bay) => {
             const disk = disks.get(bay);
             const activeDrop = overTarget?.viewId === view.id && overTarget.bay === bay;

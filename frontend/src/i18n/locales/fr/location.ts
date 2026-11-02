@@ -8,6 +8,8 @@ const location: Record<string, string> = {
   "Switch orientation": "Changer l'orientation",
   "View name": "Nom de la vue",
   "Remove view": "Supprimer la vue",
+  "Move view left": "Déplacer la vue à gauche",
+  "Move view right": "Déplacer la vue à droite",
   "Remove {name}? Its disks become unplaced.": "Supprimer {name} ? Ses disques redeviendront non placés.",
   "{count} views": "{count} vues",
   "Location": "Emplacement",

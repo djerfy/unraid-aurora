@@ -130,7 +130,10 @@ disk assignments.
 - **Add tower** creates a vertical PC-style case; **Add server** creates a horizontal rack-style case;
   **Add NAS** creates a compact desktop NAS.
 - Bay choices follow the form factor: tower 2–48 (including 2/4/6/10), server 8–48, NAS 1/2/4/6/8.
-- Each view can be renamed, switched between tower/server/NAS orientation, resized, or removed.
+- Each view can be renamed, switched between tower/server/NAS orientation, resized, moved left/right,
+  or removed.
+- Views flow side by side when the width allows (tower/NAS pair, or tower + rack on very wide screens);
+  otherwise they wrap below. The order is saved with the layout.
 - Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
 - Drag a placed disk to another bay or another view to move/swap disks; use the trash button to
   return one to the list.
