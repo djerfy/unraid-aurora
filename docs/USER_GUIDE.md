@@ -284,12 +284,26 @@ new container starts at zero and fills in on the next refresh.
 
 ![Container resource map](screenshots/container-map.png)
 
+### Network calls
+
+The **Network calls** tab lists the external sockets of a selected running container:
+
+- Choose a container in the selector; the view stays empty until one is selected.
+- Aurora enters the container network namespace with `nsenter` and reads `ss -tunap`.
+- Only public remote addresses are shown; loopback, private, link-local and listening sockets are hidden.
+- Each row shows the remote IP/port, optional country/city, process, protocol, state and local endpoint.
+- The same table is available in the container drawer opened from the list or the resource map.
+- The query refreshes every five seconds and is cached locally for the selected container.
+
+Country and city are optional: install `geoiplookup` and a GeoIP database on the host. Aurora never
+sends addresses to an external geolocation API.
+
 ### Details
 
 ![Container details](screenshots/docker-drawer.png)
 
 The drawer shows the real icon, state, image, repository/tag, category, restart policy, network, IP,
-uptime, memory, published ports and live container logs with reload/copy.
+uptime, memory, published ports, external network calls and live container logs with reload/copy.
 
 Actions: start, restart, stop, open WebUI, update image, edit settings, remove.
 
@@ -505,6 +519,7 @@ can itself be reverted.
 - **Automatic updates**, **anonymous telemetry**, **email alerts**, **push notifications**.
 - Session information: account, authentication, HMAC session store, CSRF protection.
 - About: Unraid version, kernel, uptime, board, memory, license.
+- The **System → About** page describes Aurora, the author (Djerfy), the public repository and the AGPL-3.0 license.
 
 ---
 

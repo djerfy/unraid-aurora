@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Cpu,
   ExternalLink,
+  Globe2,
   HardDrive,
   Info as InfoIcon,
   List,
@@ -32,6 +33,7 @@ import { ContainerCreateModal } from "../components/containers/ContainerCreate";
 import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/containers/ContainerUpdateModal";
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
 import { ContainerMap } from "../components/containers/ContainerMap";
+import { ContainerConnections } from "../components/containers/ContainerConnections";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
@@ -92,10 +94,11 @@ export function DockerPage() {
     }
   }, [view]);
 
-  const tab = params.get("tab") === "map" ? "map" : "containers";
+  const tabParam = params.get("tab");
+  const tab = tabParam === "map" ? "map" : tabParam === "connections" ? "connections" : "containers";
   const setTab = (value: string) => {
     const next = new URLSearchParams(params);
-    if (value === "map") next.set("tab", "map");
+    if (value === "map" || value === "connections") next.set("tab", value);
     else next.delete("tab");
     setParams(next, { replace: true });
   };
@@ -292,6 +295,7 @@ export function DockerPage() {
           items={[
             { value: "containers", label: t("Containers"), count: containers.length },
             { value: "map", label: t("Resource map"), icon: <Network className="size-3.5" />, count: running.length },
+            { value: "connections", label: t("Network calls"), icon: <Globe2 className="size-3.5" /> },
           ]}
           value={tab}
           onChange={setTab}
@@ -318,6 +322,8 @@ export function DockerPage() {
 
       {tab === "map" ? (
         <ContainerMap containers={running} onOpen={openContainer} />
+      ) : tab === "connections" ? (
+        <ContainerConnections containers={running} />
       ) : (
         <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -432,16 +438,18 @@ export function DockerPage() {
         </>
       )}
 
-      <ContainerDrawer
-        container={selected}
-        onClose={closeContainer}
-        onEdit={(container) => {
-          setEditing(container);
-          closeContainer();
-        }}
-        onUpdate={(container) => void runUpdates([container])}
-        busy={action.isPending && action.variables?.target === selected?.name}
-      />
+      {tab !== "connections" ? (
+        <ContainerDrawer
+          container={selected}
+          onClose={closeContainer}
+          onEdit={(container) => {
+            setEditing(container);
+            closeContainer();
+          }}
+          onUpdate={(container) => void runUpdates([container])}
+          busy={action.isPending && action.variables?.target === selected?.name}
+        />
+      ) : null}
 
       <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
 
@@ -1064,6 +1072,8 @@ function ContainerDrawer({
             </div>
           )}
         </div>
+
+        <ContainerConnections container={container} compact />
 
         <div>
           <div className="flex items-center justify-between">

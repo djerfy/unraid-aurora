@@ -94,6 +94,7 @@ Reads the same sources as the original webGUI:
 | Parity history | `/boot/config/parity-checks.log` |
 | UPS | `apcaccess status` (built-in) or `upsc` (NUT plugin) |
 | Logs | tails of `/var/log/syslog`, `/var/log/docker.log`, `/var/log/nginx/*.log`, `/var/log/libvirt/libvirtd.log`, `/var/log/maillog` and `/var/log/parity.log` |
+| Container sockets | `nsenter` into the container network namespace + `ss -tunap`; optional `geoiplookup` for country/city |
 | Container icons | `/var/lib/docker/unraid/images`, `/usr/local/emhttp/.../docker.manager/images`, user template XML |
 | User icons | `/boot/config/plugins/dynamix/users/<name>.png` |
 | GPUs | `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD): utilisation, VRAM, temperature, power, processes |
@@ -133,6 +134,7 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/pools` | Cache/boot pools |
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |
+| `GET` | `/api/v1/docker/containers/{id}/connections` | External sockets observed with `ss` |
 | `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
 | `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
 | `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |

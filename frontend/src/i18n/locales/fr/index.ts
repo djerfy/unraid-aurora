@@ -1,3 +1,4 @@
+import about from "./about";
 import balance from "./balance";
 import common from "./common";
 import console from "./console";
@@ -44,4 +45,5 @@ export const fr: Record<string, string> = {
   ...location,
   ...login,
   ...errors,
+  ...about,
 };

@@ -1,5 +1,13 @@
 export type Health = { status: string; score: number; issues: string[] };
 
+export type ServerHealth = {
+  status: string;
+  version: string;
+  provider: string;
+  uptime: number;
+  time: string;
+};
+
 export type CPUInfo = {
   brand: string;
   cores: number;
@@ -216,6 +224,25 @@ export type ContainerVolume = {
   source: string;
   destination: string;
   readOnly: boolean;
+};
+
+export type ContainerConnection = {
+  protocol: string;
+  state: string;
+  localAddress: string;
+  localPort: number;
+  remoteAddress: string;
+  remotePort: number;
+  process: string;
+  pid: number;
+  country: string;
+  city: string;
+};
+
+export type ContainerConnections = {
+  available: boolean;
+  reason?: string;
+  connections: ContainerConnection[];
 };
 
 export type ContainerMount = {

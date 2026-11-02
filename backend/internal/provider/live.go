@@ -80,6 +80,9 @@ type Live struct {
 
 	raplLast map[string]raplReading
 	raplAt   time.Time
+
+	geoMu    sync.Mutex
+	geoCache map[string]geoEntry
 }
 
 type cpuSample struct {

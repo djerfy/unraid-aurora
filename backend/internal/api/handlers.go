@@ -361,6 +361,17 @@ func (s *Server) containerLogs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) containerConnections(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.ContainerConnections(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "container_connections", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
 func (s *Server) containerIcon(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

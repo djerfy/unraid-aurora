@@ -235,7 +235,7 @@ export function ContainerMap({
         <span className="text-[10px] text-subtle">
           {t("Bubble size: {metric}", { metric: t(config.size) })}
         </span>
-        <span className="ml-auto text-[10px] text-subtle">{t("Click a bubble to open the container details.")}</span>
+        <span className="ml-auto text-[10px] text-subtle">{t("Click a bubble to open details and external network calls.")}</span>
       </div>
 
       <div

@@ -269,6 +269,25 @@ type Container struct {
 	RestartPolicy   string           `json:"restartPolicy"`
 }
 
+type ContainerConnection struct {
+	Protocol      string `json:"protocol"`
+	State         string `json:"state"`
+	LocalAddress  string `json:"localAddress"`
+	LocalPort     int    `json:"localPort"`
+	RemoteAddress string `json:"remoteAddress"`
+	RemotePort    int    `json:"remotePort"`
+	Process       string `json:"process"`
+	PID           int    `json:"pid"`
+	Country       string `json:"country"`
+	City          string `json:"city"`
+}
+
+type ContainerConnections struct {
+	Available   bool                  `json:"available"`
+	Reason      string                `json:"reason,omitempty"`
+	Connections []ContainerConnection `json:"connections"`
+}
+
 type ContainerMount struct {
 	Type        string `json:"type"`
 	Source      string `json:"source"`

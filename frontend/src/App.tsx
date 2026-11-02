@@ -20,6 +20,7 @@ import { ToolsPage } from "./pages/Tools";
 import { HistoryPage } from "./pages/History";
 import { BalancePage } from "./pages/Balance";
 import { SettingsPage } from "./pages/Settings";
+import { AboutPage } from "./pages/About";
 import { LoginPage } from "./pages/Login";
 import { NotFoundPage } from "./pages/NotFound";
 
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/balance" element={<BalancePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/about" element={<AboutPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

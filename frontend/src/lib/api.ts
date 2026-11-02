@@ -1,6 +1,7 @@
 import type {
   ActionKind,
   Container,
+  ContainerConnections,
   LogLine,
   SessionInfo,
   Snapshot,
@@ -71,6 +72,7 @@ async function readNDJSON<T>(body: ReadableStream<Uint8Array>, onEvent: (event: 
 
 export const api = {
   bootstrap: () => request<Snapshot>("/api/v1/bootstrap"),
+  serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
   session: () => request<SessionInfo>("/api/v1/auth/session"),
   login: (username: string, password: string) =>
     request<{ authenticated: boolean; user: string }>("/api/v1/auth/login", {
@@ -85,6 +87,8 @@ export const api = {
     }),
   containerLogs: (id: string, lines = 160) =>
     request<LogLine[]>(`/api/v1/docker/containers/${encodeURIComponent(id)}/logs?lines=${lines}`),
+  containerConnections: (id: string) =>
+    request<ContainerConnections>(`/api/v1/docker/containers/${encodeURIComponent(id)}/connections`),
   createUser: (options: import("./types").UserCreateOptions) =>
     request<{ ok: boolean }>("/api/v1/users", { method: "POST", body: JSON.stringify(options) }),
   updateUser: (name: string, description: string) =>

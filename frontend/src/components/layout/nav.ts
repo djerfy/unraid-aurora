@@ -5,6 +5,7 @@ import {
   Cpu,
   Gauge,
   HardDrive,
+  Info,
   History,
   MonitorPlay,
   Network,
@@ -43,6 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/tools", label: "Tools", icon: Wrench, group: "System" },
   { to: "/history", label: "History", icon: History, group: "System" },
   { to: "/settings", label: "Settings", icon: Settings2, group: "System" },
+  { to: "/about", label: "About", icon: Info, group: "System" },
 ];
 
 export const PAGE_META: Record<string, { title: string; section: string }> = {
@@ -61,4 +63,5 @@ export const PAGE_META: Record<string, { title: string; section: string }> = {
   "/tools": { title: "Tools", section: "System" },
   "/history": { title: "History", section: "System" },
   "/settings": { title: "Settings", section: "System" },
+  "/about": { title: "About", section: "System" },
 };

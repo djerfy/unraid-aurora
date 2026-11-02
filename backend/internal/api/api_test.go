@@ -55,6 +55,16 @@ func (f *fakeProvider) Snapshot(ctx context.Context) (model.Snapshot, error) {
 	}, nil
 }
 
+func (f *fakeProvider) ContainerConnections(ctx context.Context, id string) (model.ContainerConnections, error) {
+	return model.ContainerConnections{
+		Available: true,
+		Connections: []model.ContainerConnection{{
+			Protocol: "tcp", State: "ESTAB", RemoteAddress: "1.1.1.1", RemotePort: 443,
+			Process: "plex", PID: 42, Country: "AU", City: "Sydney",
+		}},
+	}, nil
+}
+
 func (f *fakeProvider) Metrics(ctx context.Context) (model.Metrics, error) {
 	return model.Metrics{CPU: 10, Cores: []float64{10}}, nil
 }
@@ -396,5 +406,26 @@ func TestSaveStorageLayoutIgnoresClientTimestamp(t *testing.T) {
 	}
 	if layout.Version != 2 || len(layout.Views) != 1 || layout.Views[0].Kind != "tower" {
 		t.Fatalf("unexpected layout: %+v", layout)
+	}
+}
+
+func TestContainerConnectionsEndpoint(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/docker/containers/abc/connections", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var out model.ContainerConnections
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.Available || len(out.Connections) != 1 || out.Connections[0].RemoteAddress != "1.1.1.1" {
+		t.Fatalf("unexpected connections: %+v", out)
 	}
 }
