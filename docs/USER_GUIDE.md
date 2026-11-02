@@ -130,10 +130,12 @@ disk assignments.
 - **Add tower** creates a vertical PC-style case; **Add server** creates a horizontal rack-style case;
   **Add NAS** creates a compact desktop NAS.
 - Bay choices follow the form factor: tower 2–48 (including 2/4/6/10), server 8–48, NAS 1/2/4/6/8.
-- Each view can be renamed, switched between tower/server/NAS orientation, resized, moved left/right,
-  or removed.
-- Views flow side by side when the width allows (tower/NAS pair, or tower + rack on very wide screens);
-  otherwise they wrap below. The order is saved with the layout.
+- Each view can be renamed, switched between tower/server/NAS orientation, resized, moved between
+  columns, or removed.
+- The **Columns** selector (1–3) defines the board width. Drag a view by its grip into a column or
+  above another view to place it exactly; the left/right arrows also move it between columns.
+- On narrow screens the board falls back to a single column, but the saved positions are retained.
+  Views and column positions are stored in the layout file.
 - Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
 - Drag a placed disk to another bay or another view to move/swap disks; use the trash button to
   return one to the list.

@@ -50,6 +50,7 @@ function createView(orientation: Orientation, index: number): StorageView {
     id,
     name: `${ORIENTATION_LABEL[orientation]} ${index}`,
     orientation,
+    column: 0,
     bays: orientation === "nas" ? 4 : 12,
     assignments: {},
   };
@@ -80,7 +81,10 @@ export function StorageLocation({
   const queryClient = useQueryClient();
   const physical = useMemo(() => disks.filter((disk) => disk.type !== "Flash"), [disks]);
   const [views, setViews] = useState<StorageView[]>(() => [createView("vertical", 1)]);
+  const [columns, setColumns] = useState(2);
   const [initialized, setInitialized] = useState(false);
+  const [draggingView, setDraggingView] = useState<string | null>(null);
+  const [viewDrop, setViewDrop] = useState<{ column: number; beforeId?: string } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [overTarget, setOverTarget] = useState<DropTarget>(null);
@@ -94,13 +98,18 @@ export function StorageLocation({
   useEffect(() => {
     if (!layoutQuery.data || initialized) return;
     const names = new Set(physical.map((disk) => disk.name));
-    const next = layoutQuery.data.views.map((view) => {
+    const nextColumns = layoutQuery.data.columns >= 1 && layoutQuery.data.columns <= 3
+      ? layoutQuery.data.columns
+      : 2;
+    const next = layoutQuery.data.views.map((view, index) => {
       const assignments: Assignments = {};
       for (const [name, bay] of Object.entries(view.assignments ?? {})) {
         if (names.has(name) && bay >= 0 && bay < view.bays) assignments[name] = bay;
       }
-      return { ...view, assignments };
+      const column = view.column >= 0 && view.column < nextColumns ? view.column : index % nextColumns;
+      return { ...view, column, assignments };
     });
+    setColumns(nextColumns);
     setViews(next.length > 0 ? next : [createView("vertical", 1)]);
     setInitialized(true);
   }, [initialized, layoutQuery.data, physical]);
@@ -158,9 +167,10 @@ export function StorageLocation({
   const placed = physical.length - unplacedAll.length;
   const empty = Math.max(0, totalBays - placed);
 
-  const persist = (next: StorageView[]) => {
+  const persist = (next: StorageView[], nextColumns = columns) => {
     setViews(next);
-    saveLayout.mutate({ views: next, updated: "" });
+    setColumns(nextColumns);
+    saveLayout.mutate({ columns: nextColumns, views: next, updated: "" });
   };
 
   const place = (name: string, viewId: string, bay: number) => {
@@ -222,7 +232,11 @@ export function StorageLocation({
 
   const addView = (orientation: Orientation) => {
     const count = views.filter((view) => view.orientation === orientation).length + 1;
-    persist([...views, createView(orientation, count)]);
+    const counts = Array.from({ length: columns }, (_, column) =>
+      views.filter((view) => view.column === column).length,
+    );
+    const column = counts.indexOf(Math.min(...counts));
+    persist([...views, { ...createView(orientation, count), column }]);
   };
 
   const removeView = (viewId: string) => {
@@ -232,13 +246,36 @@ export function StorageLocation({
     persist(views.filter((candidate) => candidate.id !== viewId));
   };
 
-  const moveView = (viewId: string, direction: -1 | 1) => {
-    const index = views.findIndex((view) => view.id === viewId);
-    const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= views.length) return;
-    const next = [...views];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    persist(next);
+  const changeColumns = (nextColumns: number) => {
+    const clamped = Math.max(1, Math.min(3, nextColumns));
+    persist(
+      views.map((view) => ({ ...view, column: Math.min(view.column, clamped - 1) })),
+      clamped,
+    );
+  };
+
+  const moveColumn = (viewId: string, direction: -1 | 1) => {
+    const view = views.find((candidate) => candidate.id === viewId);
+    if (!view) return;
+    const column = view.column + direction;
+    if (column < 0 || column >= columns) return;
+    persist([...views.filter((candidate) => candidate.id !== viewId), { ...view, column }]);
+  };
+
+  const moveViewTo = (viewId: string, column: number, beforeId?: string) => {
+    const moving = views.find((view) => view.id === viewId);
+    if (!moving) return;
+    const rest = views.filter((view) => view.id !== viewId);
+    const updated = { ...moving, column };
+    let index = rest.length;
+    if (beforeId) {
+      const before = rest.findIndex((view) => view.id === beforeId);
+      if (before >= 0) index = before;
+    }
+    rest.splice(index, 0, updated);
+    setDraggingView(null);
+    setViewDrop(null);
+    persist(rest);
   };
 
   const autoPlace = () => {
@@ -289,6 +326,18 @@ export function StorageLocation({
           <span className="text-subtle">{t("Visual layout only — Unraid disk assignments are unchanged.")}</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-[10px] text-subtle">
+            {t("Columns")}
+            <select
+              value={columns}
+              onChange={(event) => changeColumns(Number(event.target.value))}
+              className="h-8 rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+            >
+              {[1, 2, 3].map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
           <Button size="sm" variant="secondary" icon={<PcCase className="size-3" />} onClick={() => addView("vertical")}>
             {t("Add tower")}
           </Button>
@@ -320,35 +369,101 @@ export function StorageLocation({
         </p>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_310px]">
-        <div className="flex flex-wrap items-start justify-center gap-4">
-          {views.map((view, index) => (
-            <ViewCard
-              key={view.id}
-              view={view}
-              disks={diskByViewBay.get(view.id) ?? new Map()}
-              dragging={dragging}
-              selected={selected}
-              overTarget={overTarget}
-              canRemove={views.length > 1}
-              canMoveLeft={index > 0}
-              canMoveRight={index < views.length - 1}
-              onRename={(name) => rename(view.id, name)}
-              onChangeBays={(bays) => changeBays(view.id, bays)}
-              onToggleOrientation={() => toggleOrientation(view.id)}
-              onMoveLeft={() => moveView(view.id, -1)}
-              onMoveRight={() => moveView(view.id, 1)}
-              onRemove={() => removeView(view.id)}
-              onPlace={(name, bay) => place(name, view.id, bay)}
-              onSelect={(name) => setSelected(selected === name ? null : name)}
-              onRemoveDisk={(name) => unassign(name)}
-              onOpenDisk={onOpenDisk}
-              onDragStart={(name) => setDragging(name)}
-              onDragEnd={() => setDragging(null)}
-              onDragOver={(bay) => setOverTarget({ viewId: view.id, bay })}
-              onDragLeave={() => setOverTarget(null)}
-            />
-          ))}
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_310px]">
+        <div
+          className={cn(
+            "grid items-start gap-4",
+            columns === 1
+              ? "grid-cols-1"
+              : columns === 2
+                ? "grid-cols-1 lg:grid-cols-2"
+                : "grid-cols-1 lg:grid-cols-2 min-[2000px]:grid-cols-3",
+          )}
+        >
+          {Array.from({ length: columns }, (_, column) => {
+            const columnViews = views.filter((view) => view.column === column);
+            const columnActive = viewDrop?.column === column && !viewDrop.beforeId;
+            return (
+              <div
+                key={column}
+                onDragOver={(event) => {
+                  if (!event.dataTransfer.types.includes("text/plain")) return;
+                  event.preventDefault();
+                  setViewDrop({ column });
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const viewId = event.dataTransfer.getData("text/plain") || draggingView;
+                  if (viewId) moveViewTo(viewId, column);
+                }}
+                onDragLeave={() => setViewDrop(null)}
+                className={cn(
+                  "flex min-h-[180px] flex-col gap-4 rounded-xl border border-dashed p-1.5 transition",
+                  columnActive
+                    ? "border-[var(--accent-line)] bg-[var(--accent-soft)]/25"
+                    : "border-line/40",
+                )}
+              >
+                {columnViews.length === 0 ? (
+                  <p className="grid min-h-[164px] place-items-center px-3 text-center text-[10px] text-subtle">
+                    {t("Drop a view here")}
+                  </p>
+                ) : null}
+                {columnViews.map((view) => (
+                  <div
+                    key={view.id}
+                    onDragOver={(event) => {
+                      if (!event.dataTransfer.types.includes("text/plain")) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setViewDrop({ column, beforeId: view.id });
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const viewId = event.dataTransfer.getData("text/plain") || draggingView;
+                      if (viewId) moveViewTo(viewId, column, view.id);
+                    }}
+                    className="relative"
+                  >
+                    {viewDrop?.beforeId === view.id ? (
+                      <div className="absolute -top-2 left-2 right-2 h-0.5 rounded-full bg-[var(--accent)]" />
+                    ) : null}
+                    <ViewCard
+                      view={view}
+                      disks={diskByViewBay.get(view.id) ?? new Map()}
+                      dragging={dragging}
+                      selected={selected}
+                      overTarget={overTarget}
+                      viewDragging={draggingView === view.id}
+                      canRemove={views.length > 1}
+                      canMoveLeft={view.column > 0}
+                      canMoveRight={view.column < columns - 1}
+                      onRename={(name) => rename(view.id, name)}
+                      onChangeBays={(bays) => changeBays(view.id, bays)}
+                      onToggleOrientation={() => toggleOrientation(view.id)}
+                      onMoveLeft={() => moveColumn(view.id, -1)}
+                      onMoveRight={() => moveColumn(view.id, 1)}
+                      onRemove={() => removeView(view.id)}
+                      onViewDragStart={() => setDraggingView(view.id)}
+                      onViewDragEnd={() => {
+                        setDraggingView(null);
+                        setViewDrop(null);
+                      }}
+                      onPlace={(name, bay) => place(name, view.id, bay)}
+                      onSelect={(name) => setSelected(selected === name ? null : name)}
+                      onRemoveDisk={(name) => unassign(name)}
+                      onOpenDisk={onOpenDisk}
+                      onDragStart={(name) => setDragging(name)}
+                      onDragEnd={() => setDragging(null)}
+                      onDragOver={(bay) => setOverTarget({ viewId: view.id, bay })}
+                      onDragLeave={() => setOverTarget(null)}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
 
         <Card className="p-3 xl:sticky xl:top-24 xl:self-start">
@@ -403,6 +518,7 @@ function ViewCard({
   dragging,
   selected,
   overTarget,
+  viewDragging,
   canRemove,
   canMoveLeft,
   canMoveRight,
@@ -412,6 +528,8 @@ function ViewCard({
   onMoveLeft,
   onMoveRight,
   onRemove,
+  onViewDragStart,
+  onViewDragEnd,
   onPlace,
   onSelect,
   onRemoveDisk,
@@ -426,6 +544,7 @@ function ViewCard({
   dragging: string | null;
   selected: string | null;
   overTarget: DropTarget;
+  viewDragging: boolean;
   canRemove: boolean;
   canMoveLeft: boolean;
   canMoveRight: boolean;
@@ -435,6 +554,8 @@ function ViewCard({
   onMoveLeft: () => void;
   onMoveRight: () => void;
   onRemove: () => void;
+  onViewDragStart: () => void;
+  onViewDragEnd: () => void;
   onPlace: (name: string, bay: number) => void;
   onSelect: (name: string) => void;
   onRemoveDisk: (name: string) => void;
@@ -458,14 +579,28 @@ function ViewCard({
   return (
     <div
       className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-[26px] border border-line bg-[linear-gradient(145deg,var(--surface-2),var(--surface))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_80px_-50px_rgba(0,0,0,0.9)]",
-        vertical ? "basis-[420px] max-w-[560px]" : nas ? "basis-[440px] max-w-[820px]" : "basis-[680px] max-w-full",
+        "relative min-w-0 overflow-hidden rounded-[26px] border border-line bg-[linear-gradient(145deg,var(--surface-2),var(--surface))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_30px_80px_-50px_rgba(0,0,0,0.9)]",
+        vertical ? "mx-auto w-full max-w-[560px]" : nas ? "mx-auto w-full max-w-[820px]" : "w-full",
+        viewDragging && "opacity-50",
       )}
     >
       <div className="pointer-events-none absolute inset-y-5 left-2 w-1.5 rounded-full bg-[var(--surface-3)]" />
       <div className="pointer-events-none absolute inset-y-5 right-2 w-1.5 rounded-full bg-[var(--surface-3)]" />
       <div className="relative rounded-2xl border border-line bg-[var(--surface)]/60 p-4">
         <div className="flex flex-wrap items-center gap-2">
+          <span
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", view.id);
+              onViewDragStart();
+            }}
+            onDragEnd={onViewDragEnd}
+            title={t("Drag view")}
+            className="cursor-grab text-subtle transition hover:text-ink active:cursor-grabbing"
+          >
+            <GripVertical className="size-3.5" />
+          </span>
           <HardDrive className="size-3.5 text-[var(--accent)]" />
           <input
             value={name}

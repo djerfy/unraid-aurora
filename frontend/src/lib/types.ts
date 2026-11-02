@@ -561,11 +561,13 @@ export type StorageView = {
   id: string;
   name: string;
   orientation: "vertical" | "horizontal" | "nas";
+  column: number;
   bays: number;
   assignments: Record<string, number>;
 };
 
 export type StorageLayout = {
+  columns: number;
   views: StorageView[];
   updated: string;
 };

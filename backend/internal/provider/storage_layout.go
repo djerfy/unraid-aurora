@@ -16,11 +16,13 @@ const (
 	defaultStorageBays = 12
 	maxStorageBays     = 48
 	maxStorageViews    = 8
+	maxStorageColumns  = 3
 )
 
 // storageLayoutFile also decodes the single-view format used before multiple
 // chassis views existed.
 type storageLayoutFile struct {
+	Columns     int                 `json:"columns"`
 	Views       []model.StorageView `json:"views"`
 	Bays        int                 `json:"bays"`
 	Assignments map[string]int      `json:"assignments"`
@@ -32,6 +34,7 @@ func defaultStorageView() model.StorageView {
 		ID:          "view-tower",
 		Name:        "Tower 1",
 		Orientation: "vertical",
+		Column:      0,
 		Bays:        defaultStorageBays,
 		Assignments: map[string]int{},
 	}
@@ -68,7 +71,7 @@ func normalizeStorageViews(views []model.StorageView) []model.StorageView {
 // StorageLayout is a visual-only map from disk names to chassis bays. It never
 // changes Unraid's array configuration.
 func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
-	layout := model.StorageLayout{Views: []model.StorageView{defaultStorageView()}}
+	layout := model.StorageLayout{Columns: 2, Views: []model.StorageView{defaultStorageView()}}
 	if l.dataDir == "" {
 		return layout, nil
 	}
@@ -84,6 +87,11 @@ func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
 		return layout, fmt.Errorf("decode storage layout: %w", err)
 	}
 	layout.Updated = file.Updated
+	layout.Columns = file.Columns
+	if layout.Columns < 1 || layout.Columns > maxStorageColumns {
+		layout.Columns = 2
+	}
+	legacyMultiView := file.Columns == 0 && len(file.Views) > 1
 	layout.Views = normalizeStorageViews(file.Views)
 	if len(layout.Views) == 0 {
 		if file.Bays > 0 {
@@ -92,6 +100,7 @@ func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
 				ID:          "view-main",
 				Name:        "Main case",
 				Orientation: "horizontal",
+				Column:      0,
 				Bays:        file.Bays,
 				Assignments: file.Assignments,
 			}}
@@ -102,12 +111,22 @@ func (l *Live) StorageLayout(ctx context.Context) (model.StorageLayout, error) {
 			layout.Views = []model.StorageView{defaultStorageView()}
 		}
 	}
+	for index := range layout.Views {
+		if legacyMultiView {
+			layout.Views[index].Column = index % layout.Columns
+		} else if layout.Views[index].Column < 0 || layout.Views[index].Column >= layout.Columns {
+			layout.Views[index].Column = 0
+		}
+	}
 	return layout, nil
 }
 
 func (l *Live) SaveStorageLayout(ctx context.Context, layout model.StorageLayout) error {
 	if len(layout.Views) < 1 || len(layout.Views) > maxStorageViews {
 		return fmt.Errorf("views must be between 1 and %d", maxStorageViews)
+	}
+	if layout.Columns < 1 || layout.Columns > maxStorageColumns {
+		return fmt.Errorf("columns must be between 1 and %d", maxStorageColumns)
 	}
 	seenIDs := map[string]bool{}
 	seenDisks := map[string]bool{}
@@ -121,6 +140,9 @@ func (l *Live) SaveStorageLayout(ctx context.Context, layout model.StorageLayout
 		seenIDs[view.ID] = true
 		if view.Name == "" || len(view.Name) > 64 {
 			return fmt.Errorf("each view needs a name")
+		}
+		if view.Column < 0 || view.Column >= layout.Columns {
+			return fmt.Errorf("column %d is outside the board", view.Column)
 		}
 		if view.Orientation != "vertical" && view.Orientation != "horizontal" && view.Orientation != "nas" {
 			return fmt.Errorf("orientation must be vertical, horizontal or nas")

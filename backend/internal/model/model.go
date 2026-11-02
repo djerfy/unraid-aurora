@@ -625,11 +625,13 @@ type StorageView struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
 	Orientation string         `json:"orientation"`
+	Column      int            `json:"column"`
 	Bays        int            `json:"bays"`
 	Assignments map[string]int `json:"assignments"`
 }
 
 type StorageLayout struct {
+	Columns int           `json:"columns"`
 	Views   []StorageView `json:"views"`
 	Updated time.Time     `json:"updated"`
 }
