@@ -14,12 +14,13 @@ files and commands as the official webGUI.
 4. [Notifications](#4-notifications)
 5. [Storage](#5-storage)
    - [Array](#51-array)
-   - [Disks and SMART](#52-disks-and-smart)
-   - [Shares](#53-shares)
-   - [Pools](#54-pools)
-   - [Parity](#55-parity)
-   - [Mover](#56-mover)
-   - [Rebalancing](#57-rebalancing)
+   - [Location](#52-location)
+   - [Disks and SMART](#53-disks-and-smart)
+   - [Shares](#54-shares)
+   - [Pools](#55-pools)
+   - [Parity](#56-parity)
+   - [Mover](#57-mover)
+   - [Rebalancing](#58-rebalancing)
 6. [Containers](#6-containers)
 7. [Virtual machines](#7-virtual-machines)
 8. [Network](#8-network)
@@ -104,7 +105,7 @@ live SSE metrics.
 
 ![Storage overview](screenshots/storage.png)
 
-Storage is organised in tabs: **Array**, **Shares**, **Pools** and **Parity**.
+Storage is organised in tabs: **Array**, **Location**, **Shares**, **Pools** and **Parity**.
 
 ### 5.1 Array
 
@@ -119,7 +120,24 @@ Storage is organised in tabs: **Array**, **Shares**, **Pools** and **Parity**.
 - Spin up/down per disk, with live read/write throughput.
 - SMART warnings are surfaced on the disk row.
 
-### 5.2 Disks and SMART
+### 5.2 Location
+
+![Storage location](screenshots/storage-location.png)
+
+Location is a visual map of the physical chassis. It is server-specific and does not change Unraid's
+disk assignments.
+
+- The case shows a configurable number of HDD bays (8–48).
+- Drag a disk from **Disks to place** into a bay, or select a disk and click an empty bay.
+- Drag a placed disk to another bay to swap two disks; use the trash button to return one to the list.
+- **Auto-place** fills the bays in parity → data → cache order, following each disk's Unraid position.
+- **Reset layout** clears every slot.
+- Each bay shows the disk name, model, type, size and temperature; the info button opens the existing
+  disk drawer with SMART and I/O details.
+- The layout is stored server-side in `$AURORA_DATA_DIR/storage-layout.json` and reloads with the page.
+- The legend and LEDs use the same colours as the rest of Storage: parity, data, cache and disk health.
+
+### 5.3 Disks and SMART
 
 ![Disk SMART](screenshots/storage-smart.png)
 
@@ -134,7 +152,7 @@ Open a disk to see:
 
 If `smartctl` is missing or the disk is in standby, the drawer explains why data is unavailable.
 
-### 5.3 Shares
+### 5.4 Shares
 
 ![Shares](screenshots/storage-shares.png)
 
@@ -167,7 +185,7 @@ Every change is sent through the same emhttpd commands as the official webGUI. T
 configuration file is snapshotted before the command and recorded in **Historique**, so it can be
 reviewed or rolled back.
 
-### 5.4 Pools
+### 5.5 Pools
 
 ![Pools](screenshots/storage-pools.png)
 
@@ -175,7 +193,7 @@ reviewed or rolled back.
 - Cache/boot classification.
 - Pool membership is derived from the live disk inventory.
 
-### 5.5 Parity
+### 5.6 Parity
 
 ![Parity](screenshots/storage-parity.png)
 
@@ -183,7 +201,7 @@ reviewed or rolled back.
 - Start, pause, resume and cancel.
 - Historical checks with duration, speed, status and error count.
 
-### 5.6 Mover
+### 5.7 Mover
 
 ![Mover](screenshots/storage-mover.png)
 
@@ -195,7 +213,7 @@ reviewed or rolled back.
 - Runs started from Aurora capture the mover's own output, so the file list works even when Unraid's
   optional byte-progress setting is disabled; byte progress still follows `mover.ini`.
 
-### 5.7 Rebalancing
+### 5.8 Rebalancing
 
 ![Équilibrage](screenshots/balance.png)
 

@@ -1,0 +1,34 @@
+const location: Record<string, string> = {
+  "Location": "Emplacement",
+  "Drag a disk into a bay, or select a disk then click a bay.":
+    "Faites glisser un disque dans une baie, ou sélectionnez un disque puis cliquez sur une baie.",
+  "Visual layout only — Unraid disk assignments are unchanged.":
+    "Plan visuel uniquement — les affectations de disques Unraid ne sont pas modifiées.",
+  "Bays": "Baies",
+  "Auto-place": "Placer automatiquement",
+  "Reset layout": "Réinitialiser le plan",
+  "Could not save layout": "Impossible d'enregistrer le plan",
+  "Could not load layout": "Impossible de charger le plan",
+  "Retry": "Réessayer",
+  "No physical disks found": "Aucun disque physique trouvé",
+  "The location map becomes available when Unraid reports array or pool disks.":
+    "Le plan d'emplacement sera disponible dès qu'Unraid signalera des disques de grappe ou de pool.",
+  "This chassis has fewer bays than disks. Increase the bay count to place every disk.":
+    "Ce boîtier a moins de baies que de disques. Augmentez le nombre de baies pour tous les placer.",
+  "Front view": "Vue de face",
+  "{placed} placed · {empty} empty": "{placed} placés · {empty} libres",
+  "Bay {index}": "Baie {index}",
+  "Drop here": "Déposer ici",
+  "Empty": "Libre",
+  "Active": "Actif",
+  "Warning": "Avertissement",
+  "Disks to place": "Disques à placer",
+  "Search disks…": "Rechercher des disques…",
+  "All disks are placed": "Tous les disques sont placés",
+  "No disks match this search.": "Aucun disque ne correspond à cette recherche.",
+  "Drag to move": "Faites glisser pour déplacer",
+  "Disk details": "Détails du disque",
+  "Remove from bay": "Retirer de la baie",
+};
+
+export default location;

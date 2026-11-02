@@ -96,6 +96,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/logs", s.logs)
 	api.HandleFunc("GET /api/v1/settings", s.getSettings)
 	api.HandleFunc("PUT /api/v1/settings", s.putSettings)
+	api.HandleFunc("GET /api/v1/storage-layout", s.storageLayout)
+	api.HandleFunc("PUT /api/v1/storage-layout", s.saveStorageLayout)
 	api.HandleFunc("GET /api/v1/metrics/history", s.metricsHistory)
 	api.HandleFunc("GET /api/v1/events", s.events)
 	api.HandleFunc("GET /api/v1/tools/diagnostics", s.diagnostics)

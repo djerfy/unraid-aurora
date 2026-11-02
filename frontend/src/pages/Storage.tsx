@@ -25,6 +25,7 @@ import {
   Thermometer,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import { StorageLocation } from "../components/storage/StorageLocation";
 import { AreaChart, BarChart, Ring, SegmentBar } from "../components/ui/charts";
 import {
   Badge,
@@ -57,6 +58,7 @@ import type { Disk, MoverRun, Share, ShareConfig } from "../lib/types";
 
 const TABS = [
   { value: "array", label: "Array" },
+  { value: "location", label: "Location" },
   { value: "shares", label: "Shares" },
   { value: "pools", label: "Pools" },
   { value: "parity", label: "Parity" },
@@ -328,7 +330,9 @@ export function StoragePage() {
         ) : null}
       </div>
 
-      {tab === "array" ? (
+      {tab === "location" ? (
+        <StorageLocation disks={disks} onOpenDisk={setSelectedDisk} />
+      ) : tab === "array" ? (
         <div className="space-y-4">
           <MoverCard arrayRunning={array.state === "STARTED"} />
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[10.5px] text-subtle">

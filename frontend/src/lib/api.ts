@@ -4,6 +4,7 @@ import type {
   LogLine,
   SessionInfo,
   Snapshot,
+  StorageLayout,
   LogLine as LogLineType,
 } from "./types";
 
@@ -320,6 +321,12 @@ export const api = {
   stopMover: () => request<{ ok: boolean }>("/api/v1/mover/stop", { method: "POST", body: "{}" }),
   logs: (source: string, lines = 240) =>
     request<LogLineType[]>(`/api/v1/logs?source=${encodeURIComponent(source)}&lines=${lines}`),
+  storageLayout: () => request<StorageLayout>("/api/v1/storage-layout"),
+  saveStorageLayout: (layout: StorageLayout) =>
+    request<StorageLayout>("/api/v1/storage-layout", {
+      method: "PUT",
+      body: JSON.stringify(layout),
+    }),
   saveSettings: (settings: Snapshot["settings"]) =>
     request<Snapshot["settings"]>("/api/v1/settings", {
       method: "PUT",

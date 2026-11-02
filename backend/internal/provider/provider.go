@@ -53,6 +53,8 @@ type Provider interface {
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error
 	StopArray(ctx context.Context) error
+	StorageLayout(ctx context.Context) (model.StorageLayout, error)
+	SaveStorageLayout(ctx context.Context, layout model.StorageLayout) error
 	Mover(ctx context.Context) (model.MoverStatus, error)
 	StartMover(ctx context.Context) error
 	StopMover(ctx context.Context) error

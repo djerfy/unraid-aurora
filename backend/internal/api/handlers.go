@@ -1096,6 +1096,40 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, body)
 }
 
+func (s *Server) storageLayout(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	layout, err := s.provider.StorageLayout(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, layout)
+}
+
+func (s *Server) saveStorageLayout(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body model.StorageLayout
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.SaveStorageLayout(ctx, body); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_layout", err.Error())
+		return
+	}
+	layout, err := s.provider.StorageLayout(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, layout)
+}
+
 func (s *Server) metricsHistory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.hub.History())
 }

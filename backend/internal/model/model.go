@@ -620,6 +620,12 @@ type UPS struct {
 	OnBattery     bool    `json:"onBattery"`
 }
 
+type StorageLayout struct {
+	Bays        int            `json:"bays"`
+	Assignments map[string]int `json:"assignments"`
+	Updated     time.Time      `json:"updated"`
+}
+
 type Settings struct {
 	Theme           string `json:"theme"`
 	Accent          string `json:"accent"`

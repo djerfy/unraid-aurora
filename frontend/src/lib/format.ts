@@ -150,7 +150,7 @@ export function formatTemperature(celsius: number, unit = "celsius"): string {
 }
 
 export function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace("#", "");
+  const clean = String(hex ?? "").replace("#", "");
   const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
   const n = parseInt(full, 16);
   if (Number.isNaN(n)) return `rgba(255,255,255,${alpha})`;

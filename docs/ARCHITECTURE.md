@@ -99,6 +99,7 @@ Reads the same sources as the original webGUI:
 | Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_DATA_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `AURORA_DATA_DIR/settings.json` |
+| Storage location map | `AURORA_DATA_DIR/storage-layout.json` (visual bay assignments, never written to Unraid) |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
 | Configuration history | `AURORA_DATA_DIR/config-history/<id>/{meta.json,files/}` |
 | Balance history | `AURORA_DATA_DIR/balance-history.json` |
@@ -152,6 +153,8 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `POST` | `/api/v1/plugins/install` | Stream a plugin installation from a URL |
 | `DELETE` | `/api/v1/plugins/{name}` | Stream a plugin removal |
 | `GET` | `/api/v1/tools/diagnostics` | Download a diagnostics ZIP |
+| `GET` | `/api/v1/storage-layout` | Visual chassis bay assignments |
+| `PUT` | `/api/v1/storage-layout` | Save the visual chassis layout |
 | `GET` | `/api/v1/config-history` | Configuration snapshots |
 | `GET` | `/api/v1/config-history/{id}` | Snapshot detail with unified diff |
 | `POST` | `/api/v1/config-history/{id}/rollback` | Restore a snapshot |

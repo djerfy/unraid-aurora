@@ -556,6 +556,12 @@ export type UPS = {
   onBattery: boolean;
 };
 
+export type StorageLayout = {
+  bays: number;
+  assignments: Record<string, number>;
+  updated: string;
+};
+
 export type Settings = {
   theme: "dark" | "light" | "system" | string;
   accent: "ember" | "violet" | "cyan" | "emerald" | "amber" | string;

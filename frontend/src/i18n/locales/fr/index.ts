@@ -8,6 +8,7 @@ import errors from "./errors";
 import gpus from "./gpus";
 import history from "./history";
 import layout from "./layout";
+import location from "./location";
 import login from "./login";
 import logs from "./logs";
 import network from "./network";
@@ -40,6 +41,7 @@ export const fr: Record<string, string> = {
   ...history,
   ...balance,
   ...settings,
+  ...location,
   ...login,
   ...errors,
 };
