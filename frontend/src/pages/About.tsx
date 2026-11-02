@@ -73,7 +73,7 @@ export function AboutPage() {
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] xl:items-start">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] xl:items-stretch">
         <div className="space-y-4">
           <Card className="card-pad">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
@@ -166,7 +166,7 @@ export function AboutPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 xl:h-full xl:grid-rows-3">
           <Card className="card-pad">
             <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
               <Github className="size-3.5" /> {t("Project")}
@@ -189,7 +189,7 @@ export function AboutPage() {
               <UserRound className="size-3.5" /> {t("Author")}
             </h3>
             <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
-              {t("Designed and developed by Djerfy.")}
+              {t("Designed and developed by 🌱 DJΞRFY 🚀.")}
             </p>
             <div className="mt-3">
               <ExternalLink href={AUTHOR} icon={<Github className="size-3.5" />}>

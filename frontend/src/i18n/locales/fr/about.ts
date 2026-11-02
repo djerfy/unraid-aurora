@@ -23,7 +23,7 @@ const about: Record<string, string> = {
   "Issues and feature requests": "Tickets et demandes de fonctionnalités",
   "Latest release": "Dernière version",
   "Author": "Auteur",
-  "Designed and developed by Djerfy.": "Conçu et développé par Djerfy.",
+  "Designed and developed by 🌱 DJΞRFY 🚀.": "Conçu et développé par 🌱 DJΞRFY 🚀.",
   "License": "Licence",
   "Aurora is released under the GNU Affero General Public License v3.0.":
     "Aurora est publié sous la licence GNU Affero General Public License v3.0.",

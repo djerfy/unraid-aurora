@@ -519,7 +519,7 @@ can itself be reverted.
 - **Automatic updates**, **anonymous telemetry**, **email alerts**, **push notifications**.
 - Session information: account, authentication, HMAC session store, CSRF protection.
 - About: Unraid version, kernel, uptime, board, memory, license.
-- The **System → About** page describes Aurora, the author (Djerfy), the public repository and the AGPL-3.0 license.
+- The **System → About** page describes Aurora, the author (🌱 DJΞRFY 🚀), the public repository and the AGPL-3.0 license.
 
 ---
 
