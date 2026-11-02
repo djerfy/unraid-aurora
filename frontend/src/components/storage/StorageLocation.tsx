@@ -26,6 +26,8 @@ type Assignments = Record<string, number>;
 type Orientation = StorageView["orientation"];
 type DropTarget = { viewId: string; bay: number } | null;
 
+const MAX_COLUMNS = 4;
+
 const BAY_OPTIONS: Record<Orientation, number[]> = {
   vertical: [2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48],
   horizontal: [8, 12, 16, 20, 24, 32, 40, 48],
@@ -104,7 +106,7 @@ export function StorageLocation({
   useEffect(() => {
     if (!layoutQuery.data || initialized) return;
     const names = new Set(physical.map((disk) => disk.name));
-    const nextColumns = layoutQuery.data.columns >= 1 && layoutQuery.data.columns <= 3
+    const nextColumns = layoutQuery.data.columns >= 1 && layoutQuery.data.columns <= MAX_COLUMNS
       ? layoutQuery.data.columns
       : 2;
     const next = layoutQuery.data.views.map((view, index) => {
@@ -253,7 +255,7 @@ export function StorageLocation({
   };
 
   const changeColumns = (nextColumns: number) => {
-    const clamped = Math.max(1, Math.min(4, nextColumns));
+    const clamped = Math.max(1, Math.min(MAX_COLUMNS, nextColumns));
     persist(
       views.map((view) => ({ ...view, column: Math.min(view.column, clamped - 1) })),
       clamped,
@@ -339,7 +341,7 @@ export function StorageLocation({
               onChange={(event) => changeColumns(Number(event.target.value))}
               className="h-8 rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
             >
-              {[1, 2, 3, 4].map((value) => (
+              {Array.from({ length: MAX_COLUMNS }, (_, index) => index + 1).map((value) => (
                 <option key={value} value={value}>{value}</option>
               ))}
             </select>
