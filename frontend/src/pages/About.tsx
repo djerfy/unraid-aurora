@@ -166,8 +166,8 @@ export function AboutPage() {
           </Card>
         </div>
 
-        <div className="grid gap-4 xl:h-full xl:grid-rows-3">
-          <Card className="card-pad">
+        <div className="flex flex-col gap-4 xl:h-full">
+          <Card className="card-pad xl:flex-1">
             <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
               <Github className="size-3.5" /> {t("Project")}
             </h3>
