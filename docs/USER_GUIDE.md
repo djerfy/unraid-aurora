@@ -105,7 +105,7 @@ live SSE metrics.
 
 ![Storage overview](screenshots/storage.png)
 
-Storage is organised in tabs: **Array**, **Location**, **Shares**, **Pools** and **Parity**.
+Storage is organised in tabs: **Array**, **Shares**, **Pools**, **Parity** and **Location**.
 
 ### 5.1 Array
 

@@ -58,10 +58,10 @@ import type { Disk, MoverRun, Share, ShareConfig } from "../lib/types";
 
 const TABS = [
   { value: "array", label: "Array" },
-  { value: "location", label: "Location" },
   { value: "shares", label: "Shares" },
   { value: "pools", label: "Pools" },
   { value: "parity", label: "Parity" },
+  { value: "location", label: "Location" },
 ];
 
 const MOVER_PHASES = [
