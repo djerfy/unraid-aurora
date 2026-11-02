@@ -191,7 +191,7 @@ reviewed or rolled back.
 - Live phases: **Recherche → Calculs → Déplacement → Finalisation**.
 - Current share/action and file, global and per-share progress, throughput and ETA.
 - Files observed during the run (best effort, sampled from `mover.ini`).
-- Run history appears as soon as the mover exits, with duration, moved bytes and the file list.
+- A collapsible **Recent runs** list keeps the last **10** mover runs, with duration, moved bytes and the file list.
 
 ### 5.7 Rebalancing
 

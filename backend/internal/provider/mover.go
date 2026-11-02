@@ -14,6 +14,8 @@ import (
 	"aurora/internal/model"
 )
 
+const moverHistoryLimit = 10
+
 func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	status, err := l.readMoverStatus(ctx)
 	if err != nil {
@@ -125,8 +127,8 @@ func (l *Live) watchMover() {
 					run.Status = "completed"
 				}
 				l.moverHistory = append([]model.MoverRun{run}, l.moverHistory...)
-				if len(l.moverHistory) > 20 {
-					l.moverHistory = l.moverHistory[:20]
+				if len(l.moverHistory) > moverHistoryLimit {
+					l.moverHistory = l.moverHistory[:moverHistoryLimit]
 				}
 				l.moverActive = false
 				l.moverStopped = false
@@ -167,8 +169,8 @@ func (l *Live) loadMoverHistory() {
 		return
 	}
 	var history []model.MoverRun
-	if json.Unmarshal(raw, &history) == nil && len(history) > 20 {
-		history = history[:20]
+	if json.Unmarshal(raw, &history) == nil && len(history) > moverHistoryLimit {
+		history = history[:moverHistoryLimit]
 	}
 	l.moverHistory = history
 }

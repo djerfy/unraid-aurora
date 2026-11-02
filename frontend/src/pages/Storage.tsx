@@ -7,10 +7,12 @@ import {
   ArrowUpFromLine,
   CircleAlert,
   ArrowRightLeft,
+  ChevronDown,
   Database,
   FolderTree,
   Gauge,
   HardDrive,
+  History,
   Info,
   LockKeyhole,
   Pause,
@@ -1436,6 +1438,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [filesRun, setFilesRun] = useState<MoverRun | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const statusQuery = useQuery({
     queryKey: ["mover"],
     queryFn: api.mover,
@@ -1587,38 +1590,48 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
       )}
 
       {status?.history?.length ? (
-        <div className="mt-4 border-t border-line pt-3">
-          <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">
-            {t("Recent runs")}
-          </p>
-          <div className="space-y-1.5">
-            {status.history.slice(0, 6).map((run, index) => (
-              <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
-                <span className="text-muted">{formatDateTime(run.finished)}</span>
-                <span className="num text-subtle">{formatDuration(run.duration)} · {formatBytes(run.moved)}</span>
-                {run.files?.length ? (
-                  <button
-                    type="button"
-                    onClick={() => setFilesRun(run)}
-                    className="text-[10px] text-[var(--accent)] underline decoration-dotted underline-offset-2"
-                  >
-                    {run.files.length === 1
-                      ? t("{count} file", { count: run.files.length })
-                      : t("{count} files", { count: run.files.length })}
-                  </button>
-                ) : (
-                  <span className="text-[9.5px] text-subtle">{t("no file list")}</span>
-                )}
-                <Badge tone={run.status === "completed" ? "success" : "warning"}>
-                  {run.status === "completed"
-                    ? t("Completed")
-                    : run.status === "failed"
-                      ? t("Failed")
-                      : run.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
+        <div className="mt-4 border-t border-line">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen((value) => !value)}
+            aria-expanded={historyOpen}
+            className="flex w-full items-center gap-1.5 py-2.5 text-left transition hover:text-ink"
+          >
+            <History className="size-3 text-subtle" />
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Recent runs")}</span>
+            <span className="ml-auto text-[9.5px] text-subtle">{status.history.length}</span>
+            <ChevronDown className={cn("size-3 text-subtle transition-transform", historyOpen && "rotate-180")} />
+          </button>
+          {historyOpen ? (
+            <div className="space-y-1.5 pb-1">
+              {status.history.slice(0, 10).map((run, index) => (
+                <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                  <span className="text-muted">{formatDateTime(run.finished)}</span>
+                  <span className="num text-subtle">{formatDuration(run.duration)} · {formatBytes(run.moved)}</span>
+                  {run.files?.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setFilesRun(run)}
+                      className="text-[10px] text-[var(--accent)] underline decoration-dotted underline-offset-2"
+                    >
+                      {run.files.length === 1
+                        ? t("{count} file", { count: run.files.length })
+                        : t("{count} files", { count: run.files.length })}
+                    </button>
+                  ) : (
+                    <span className="text-[9.5px] text-subtle">{t("no file list")}</span>
+                  )}
+                  <Badge tone={run.status === "completed" ? "success" : "warning"}>
+                    {run.status === "completed"
+                      ? t("Completed")
+                      : run.status === "failed"
+                        ? t("Failed")
+                        : run.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
