@@ -234,6 +234,22 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
 
 ![Container list](screenshots/docker-list.png)
 
+### Resource map
+
+The **Resource map** tab turns the running containers into a live scatter map:
+
+- **Compute**: CPU on the X axis, memory on the Y axis, bubble size by memory.
+- **Network**: receive and transmit rates (bytes/s) on the axes.
+- **Disk I/O**: read and write rates (bytes/s) on the axes.
+- Bubble colour identifies the container (compute) or the metric family (network/disk).
+- **Top consumers** ranks the six busiest containers for the selected view.
+- Hovering a bubble shows all four dimensions; clicking it opens the container drawer.
+
+Rates are derived from Docker's cumulative counters between two polls, so the first sample of a
+new container starts at zero and fills in on the next refresh.
+
+![Container resource map](screenshots/container-map.png)
+
 ### Details
 
 ![Container details](screenshots/docker-drawer.png)

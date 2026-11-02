@@ -252,6 +252,12 @@ type Container struct {
 	MemoryLimit     uint64           `json:"memoryLimit"`
 	NetworkRx       uint64           `json:"networkRx"`
 	NetworkTx       uint64           `json:"networkTx"`
+	NetworkRxRate   uint64           `json:"networkRxRate"`
+	NetworkTxRate   uint64           `json:"networkTxRate"`
+	BlockRead       uint64           `json:"blockRead"`
+	BlockWrite      uint64           `json:"blockWrite"`
+	BlockReadRate   uint64           `json:"blockReadRate"`
+	BlockWriteRate  uint64           `json:"blockWriteRate"`
 	Color           string           `json:"color"`
 	Category        string           `json:"category"`
 	UpdateAvailable bool             `json:"updateAvailable"`

@@ -298,6 +298,12 @@ export type Container = {
   memoryLimit: number;
   networkRx: number;
   networkTx: number;
+  networkRxRate: number;
+  networkTxRate: number;
+  blockRead: number;
+  blockWrite: number;
+  blockReadRate: number;
+  blockWriteRate: number;
   color: string;
   category: string;
   updateAvailable: boolean;

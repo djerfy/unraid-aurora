@@ -31,6 +31,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { ContainerCreateModal } from "../components/containers/ContainerCreate";
 import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/containers/ContainerUpdateModal";
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
+import { ContainerMap } from "../components/containers/ContainerMap";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
@@ -90,6 +91,14 @@ export function DockerPage() {
       // Storage can be unavailable; the view still works for this session.
     }
   }, [view]);
+
+  const tab = params.get("tab") === "map" ? "map" : "containers";
+  const setTab = (value: string) => {
+    const next = new URLSearchParams(params);
+    if (value === "map") next.set("tab", "map");
+    else next.delete("tab");
+    setParams(next, { replace: true });
+  };
 
   const selectedName = params.get("container");
   const selected = snapshot?.containers.find((container) => container.name === selectedName) ?? null;
@@ -278,6 +287,17 @@ export function DockerPage() {
         }
       />
 
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Tabs
+          items={[
+            { value: "containers", label: t("Containers"), count: containers.length },
+            { value: "map", label: t("Resource map"), icon: <Network className="size-3.5" />, count: running.length },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+
       <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <MetricCard
           icon={<Boxes className="size-4" />}
@@ -296,6 +316,10 @@ export function DockerPage() {
         />
       </div>
 
+      {tab === "map" ? (
+        <ContainerMap containers={running} onOpen={openContainer} />
+      ) : (
+        <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Tabs
           size="md"
@@ -403,6 +427,9 @@ export function DockerPage() {
             ))}
           </div>
         </Card>
+      )}
+
+        </>
       )}
 
       <ContainerDrawer

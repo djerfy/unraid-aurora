@@ -76,12 +76,18 @@ func dockerStatusUptime(status string) int64 {
 }
 
 type cachedContainerStats struct {
-	at     time.Time
-	cpu    float64
-	memory uint64
-	limit  uint64
-	rx     uint64
-	tx     uint64
+	at        time.Time
+	cpu       float64
+	memory    uint64
+	limit     uint64
+	rx        uint64
+	tx        uint64
+	read      uint64
+	write     uint64
+	rxRate    uint64
+	txRate    uint64
+	readRate  uint64
+	writeRate uint64
 }
 
 type dockerContainerStats struct {
@@ -108,6 +114,12 @@ type dockerContainerStats struct {
 		RxBytes uint64 `json:"rx_bytes"`
 		TxBytes uint64 `json:"tx_bytes"`
 	} `json:"networks"`
+	BlkioStats struct {
+		IoServiceBytesRecursive []struct {
+			Op    string `json:"op"`
+			Value uint64 `json:"value"`
+		} `json:"io_service_bytes_recursive"`
+	} `json:"blkio_stats"`
 }
 
 func (l *Live) enrichContainerStats(ctx context.Context, containers []model.Container) {
@@ -152,6 +164,10 @@ func (l *Live) enrichContainerStats(ctx context.Context, containers []model.Cont
 		l.containerStats = map[string]cachedContainerStats{}
 	}
 	for id, stats := range fetched {
+		if previous, ok := cache[id]; ok {
+			stats = withContainerRates(previous, stats)
+		}
+		fetched[id] = stats
 		l.containerStats[id] = stats
 	}
 	merged := make(map[string]cachedContainerStats, len(cache)+len(fetched))
@@ -170,6 +186,12 @@ func (l *Live) enrichContainerStats(ctx context.Context, containers []model.Cont
 			containers[i].MemoryLimit = stats.limit
 			containers[i].NetworkRx = stats.rx
 			containers[i].NetworkTx = stats.tx
+			containers[i].NetworkRxRate = stats.rxRate
+			containers[i].NetworkTxRate = stats.txRate
+			containers[i].BlockRead = stats.read
+			containers[i].BlockWrite = stats.write
+			containers[i].BlockReadRate = stats.readRate
+			containers[i].BlockWriteRate = stats.writeRate
 		}
 	}
 }
@@ -239,6 +261,15 @@ func (l *Live) fetchContainerStats(ctx context.Context, id string) (cachedContai
 		rx += network.RxBytes
 		tx += network.TxBytes
 	}
+	var read, write uint64
+	for _, entry := range raw.BlkioStats.IoServiceBytesRecursive {
+		switch strings.ToLower(entry.Op) {
+		case "read":
+			read += entry.Value
+		case "write":
+			write += entry.Value
+		}
+	}
 	return cachedContainerStats{
 		at:     time.Now(),
 		cpu:    math.Round(cpu*10) / 10,
@@ -246,5 +277,26 @@ func (l *Live) fetchContainerStats(ctx context.Context, id string) (cachedContai
 		limit:  raw.MemoryStats.Limit,
 		rx:     rx,
 		tx:     tx,
+		read:   read,
+		write:  write,
 	}, nil
+}
+
+func withContainerRates(previous, current cachedContainerStats) cachedContainerStats {
+	elapsed := current.at.Sub(previous.at).Seconds()
+	if elapsed <= 0 {
+		return current
+	}
+	current.rxRate = counterRate(previous.rx, current.rx, elapsed)
+	current.txRate = counterRate(previous.tx, current.tx, elapsed)
+	current.readRate = counterRate(previous.read, current.read, elapsed)
+	current.writeRate = counterRate(previous.write, current.write, elapsed)
+	return current
+}
+
+func counterRate(previous, current uint64, elapsed float64) uint64 {
+	if elapsed <= 0 || current < previous {
+		return 0
+	}
+	return uint64(float64(current-previous) / elapsed)
 }

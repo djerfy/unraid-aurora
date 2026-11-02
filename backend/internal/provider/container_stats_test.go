@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 const statsFixture = `{
@@ -25,6 +26,13 @@ const statsFixture = `{
   },
   "networks": {
     "eth0": {"rx_bytes": 1200, "tx_bytes": 340}
+  },
+  "blkio_stats": {
+    "io_service_bytes_recursive": [
+      {"op": "Read", "value": 4096},
+      {"op": "Write", "value": 8192},
+      {"op": "Total", "value": 12288}
+    ]
   }
 }`
 
@@ -57,6 +65,28 @@ func TestFetchContainerStats(t *testing.T) {
 	}
 	if stats.rx != 1200 || stats.tx != 340 {
 		t.Fatalf("network = %d/%d", stats.rx, stats.tx)
+	}
+	if stats.read != 4096 || stats.write != 8192 {
+		t.Fatalf("block io = %d/%d", stats.read, stats.write)
+	}
+}
+
+func TestWithContainerRates(t *testing.T) {
+	start := time.Unix(100, 0)
+	got := withContainerRates(
+		cachedContainerStats{at: start, rx: 1000, tx: 2000, read: 3000, write: 4000},
+		cachedContainerStats{at: start.Add(2 * time.Second), rx: 1400, tx: 2400, read: 3000, write: 5000},
+	)
+	if got.rxRate != 200 || got.txRate != 200 || got.readRate != 0 || got.writeRate != 500 {
+		t.Fatalf("rates = %d/%d/%d/%d", got.rxRate, got.txRate, got.readRate, got.writeRate)
+	}
+
+	counter := withContainerRates(
+		cachedContainerStats{at: start, rx: 5000},
+		cachedContainerStats{at: start.Add(time.Second), rx: 10},
+	)
+	if counter.rxRate != 0 {
+		t.Fatalf("counter reset rate = %d, want 0", counter.rxRate)
 	}
 }
 
