@@ -429,3 +429,13 @@ func TestContainerConnectionsEndpoint(t *testing.T) {
 		t.Fatalf("unexpected connections: %+v", out)
 	}
 }
+
+func TestSecurityHeadersAllowGitHubAvatars(t *testing.T) {
+	env := newTestEnv(t, false)
+	resp := env.request(t, http.MethodGet, "/api/v1/health", nil, nil)
+	defer resp.Body.Close()
+	csp := resp.Header.Get("Content-Security-Policy")
+	if !strings.Contains(csp, "https://avatars.githubusercontent.com") {
+		t.Fatalf("CSP does not allow the GitHub avatar host: %q", csp)
+	}
+}

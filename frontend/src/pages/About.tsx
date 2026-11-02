@@ -188,9 +188,20 @@ export function AboutPage() {
             <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
               <UserRound className="size-3.5" /> {t("Author")}
             </h3>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
-              {t("Designed and developed by 🌱 DJΞRFY 🚀.")}
-            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <img
+                src="https://avatars.githubusercontent.com/u/2886596?v=4"
+                alt="DJΞRFY"
+                width={48}
+                height={48}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="size-12 shrink-0 rounded-full border border-line bg-[var(--surface-2)] object-cover"
+              />
+              <p className="text-[11.5px] leading-relaxed text-muted">
+                {t("Designed and developed by 🌱 DJΞRFY 🚀.")}
+              </p>
+            </div>
             <div className="mt-3">
               <ExternalLink href={AUTHOR} icon={<Github className="size-3.5" />}>
                 github.com/djerfy
