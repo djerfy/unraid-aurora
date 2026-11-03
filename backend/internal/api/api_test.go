@@ -128,7 +128,7 @@ func newTestEnv(t *testing.T, readOnly bool) *testEnv {
 		ReadOnly:   readOnly,
 	}
 	p := &fakeProvider{}
-	hub := metrics.NewHub(p)
+	hub := metrics.NewHub(p, "")
 	srv := New(cfg, p, hub, fakeAuth(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	server := httptest.NewServer(srv.Handler())
 	t.Cleanup(server.Close)

@@ -1,0 +1,18 @@
+{
+  "name": "Aurora for Unraid",
+  "short_name": "Aurora",
+  "description": "A modern, independent control plane for Unraid.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07080c",
+  "theme_color": "#07080c",
+  "icons": [
+    {
+      "src": "/aurora-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

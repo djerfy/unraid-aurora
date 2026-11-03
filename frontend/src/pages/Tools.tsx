@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, Download, FileArchive, Server, Wrench } from "lucide-react";
+import { Activity, Archive, Download, FileArchive, Server, Upload, Wrench } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Badge, Button, Card } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
@@ -26,6 +26,8 @@ export function ToolsPage() {
   const { toast } = useToast();
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
+  const [backupBusy, setBackupBusy] = useState<"flash" | "config" | null>(null);
+  const [importing, setImporting] = useState(false);
 
   if (!snapshot) return null;
   const system = snapshot.system;
@@ -52,6 +54,62 @@ export function ToolsPage() {
       toast({ kind: "error", title: t("Diagnostics failed"), description: (error as Error).message });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveBlob = async (response: Promise<Response>, filename: string) => {
+    const res = await response;
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    return blob.size;
+  };
+
+  const flashBackup = async () => {
+    setBackupBusy("flash");
+    try {
+      const size = await saveBlob(api.flashBackup(), "aurora-flash-backup.zip");
+      toast({ kind: "success", title: t("Flash backup downloaded"), description: t("{size} MB archive.", { size: (size / 1024 / 1024).toFixed(1) }) });
+    } catch (error) {
+      toast({ kind: "error", title: t("Flash backup failed"), description: (error as Error).message });
+    } finally {
+      setBackupBusy(null);
+    }
+  };
+
+  const exportConfig = async () => {
+    setBackupBusy("config");
+    try {
+      const size = await saveBlob(api.configExport(), "aurora-config.zip");
+      toast({ kind: "success", title: t("Aurora configuration exported"), description: t("{size} KB archive.", { size: Math.round(size / 1024) }) });
+    } catch (error) {
+      toast({ kind: "error", title: t("Configuration export failed"), description: (error as Error).message });
+    } finally {
+      setBackupBusy(null);
+    }
+  };
+
+  const importConfig = async (file: File) => {
+    if (!window.confirm(t("Import this Aurora configuration? The current settings, layout and histories will be replaced."))) return;
+    setImporting(true);
+    try {
+      const result = await api.configImport(file);
+      toast({
+        kind: "success",
+        title: t("Configuration imported"),
+        description: result.restartRequired ? t("Restart Aurora to apply the imported configuration.") : result.files.join(", "),
+      });
+    } catch (error) {
+      toast({ kind: "error", title: t("Configuration import failed"), description: (error as Error).message });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -142,6 +200,50 @@ export function ToolsPage() {
           </Card>
         </div>
       </div>
+      <Card className="card-pad mt-4">
+        <div className="flex items-center gap-2">
+          <Archive className="size-4 text-[var(--accent)]" />
+          <h2 className="text-[13px] font-semibold text-ink">{t("Backup and restore")}</h2>
+        </div>
+        <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
+          {t("Download the whole flash drive, export Aurora configuration, or restore a previous Aurora configuration archive.")}
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">
+            <p className="text-[11px] font-medium text-soft">{t("Flash drive")}</p>
+            <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Full /boot archive. It contains secrets such as WireGuard keys and credentials.")}</p>
+            <Button size="sm" variant="secondary" className="mt-3" icon={<Download className="size-3.5" />} loading={backupBusy === "flash"} onClick={() => void flashBackup()}>
+              {t("Download flash backup")}
+            </Button>
+          </div>
+          <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">
+            <p className="text-[11px] font-medium text-soft">{t("Aurora configuration")}</p>
+            <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Settings, storage layout, histories and audit log.")}</p>
+            <Button size="sm" variant="secondary" className="mt-3" icon={<Download className="size-3.5" />} loading={backupBusy === "config"} onClick={() => void exportConfig()}>
+              {t("Export configuration")}
+            </Button>
+          </div>
+          <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">
+            <p className="text-[11px] font-medium text-soft">{t("Restore configuration")}</p>
+            <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Import a previously exported Aurora archive. A restart is required.")}</p>
+            <label className="mt-3 inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-[var(--surface-2)] px-3 text-xs font-medium text-soft transition hover:border-line-strong hover:bg-[var(--surface-3)]">
+              <Upload className="size-3.5" /> {importing ? t("Importing…") : t("Import configuration")}
+              <input
+                type="file"
+                accept=".zip,application/zip"
+                className="hidden"
+                disabled={importing}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void importConfig(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      </Card>
+
     </>
   );
 }

@@ -3,6 +3,9 @@ package metrics
 
 import (
 	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -13,17 +16,21 @@ import (
 type Hub struct {
 	provider provider.Provider
 
-	mu      sync.RWMutex
-	latest  model.Metrics
-	history []model.MetricPoint
-	subs    map[chan model.Metrics]struct{}
+	mu          sync.RWMutex
+	latest      model.Metrics
+	history     []model.MetricPoint
+	archive     []model.MetricPoint
+	archivePath string
+	lastArchive time.Time
+	subs        map[chan model.Metrics]struct{}
 }
 
-func NewHub(p provider.Provider) *Hub {
+func NewHub(p provider.Provider, archivePath string) *Hub {
 	h := &Hub{
-		provider: p,
-		subs:     make(map[chan model.Metrics]struct{}),
+		provider: p, archivePath: archivePath,
+		subs: make(map[chan model.Metrics]struct{}),
 	}
+	h.loadArchive()
 	if history, err := p.History(context.Background()); err == nil {
 		h.history = history
 		if len(history) > 0 {
@@ -64,12 +71,21 @@ func (h *Hub) sample(ctx context.Context) {
 	}
 	h.mu.Lock()
 	h.latest = m
-	h.history = append(h.history, model.MetricPoint{
+	point := model.MetricPoint{
 		T: m.T, CPU: m.CPU, Memory: m.Memory, NetRx: m.NetRx,
 		NetTx: m.NetTx, DiskRead: m.DiskRead, DiskWrite: m.DiskWrite, Temp: m.Temp,
-	})
+	}
+	h.history = append(h.history, point)
 	if len(h.history) > 1800 {
 		h.history = h.history[len(h.history)-1800:]
+	}
+	if h.archivePath != "" && (h.lastArchive.IsZero() || time.Since(h.lastArchive) >= time.Minute) {
+		h.archive = append(h.archive, point)
+		if len(h.archive) > 44640 { // 31 days at one sample per minute.
+			h.archive = h.archive[len(h.archive)-44640:]
+		}
+		h.lastArchive = time.Now()
+		h.saveArchive()
 	}
 	subs := make([]chan model.Metrics, 0, len(h.subs))
 	for ch := range h.subs {
@@ -116,4 +132,50 @@ func (h *Hub) History() []model.MetricPoint {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return append([]model.MetricPoint(nil), h.history...)
+}
+
+func (h *Hub) HistoryRange(span time.Duration) []model.MetricPoint {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	cutoff := time.Now().Add(-span).Unix()
+	source := h.history
+	if span > 2*time.Hour && len(h.archive) > 0 {
+		source = h.archive
+	}
+	out := make([]model.MetricPoint, 0, len(source))
+	for _, point := range source {
+		if point.T >= cutoff {
+			out = append(out, point)
+		}
+	}
+	return out
+}
+
+func (h *Hub) loadArchive() {
+	if h.archivePath == "" {
+		return
+	}
+	raw, err := os.ReadFile(h.archivePath)
+	if err != nil {
+		return
+	}
+	_ = json.Unmarshal(raw, &h.archive)
+}
+
+func (h *Hub) saveArchive() {
+	if h.archivePath == "" {
+		return
+	}
+	raw, err := json.Marshal(h.archive)
+	if err != nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(h.archivePath), 0o750); err != nil {
+		return
+	}
+	tmp := h.archivePath + ".tmp"
+	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+		return
+	}
+	_ = os.Rename(tmp, h.archivePath)
 }

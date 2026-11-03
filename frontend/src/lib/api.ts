@@ -74,6 +74,25 @@ export const api = {
   bootstrap: () => request<Snapshot>("/api/v1/bootstrap"),
   serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
   auditLog: (limit = 200) => request<import("./types").AuditEntry[]>(`/api/v1/audit?limit=${limit}`),
+  metricsHistory: (range: string) =>
+    request<import("./types").MetricPoint[]>(`/api/v1/metrics/history?range=${encodeURIComponent(range)}`),
+  flashBackup: () => fetch("/api/v1/tools/flash-backup", { credentials: "same-origin" }),
+  configExport: () => fetch("/api/v1/config/export", { credentials: "same-origin" }),
+  configImport: async (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch("/api/v1/config/import", {
+      method: "POST",
+      headers: { "X-Aurora-Request": "aurora" },
+      body,
+      credentials: "same-origin",
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => null);
+      throw new ApiError(res.status, "import_failed", payload?.error?.message ?? res.statusText);
+    }
+    return (await res.json()) as { ok: boolean; files: string[]; restartRequired: boolean };
+  },
   upsSettings: () => request<import("./types").UPSSettings>("/api/v1/ups/settings"),
   saveUPSSettings: (settings: import("./types").UPSSettings) =>
     request<{ ok: boolean }>("/api/v1/ups/settings", { method: "PUT", body: JSON.stringify(settings) }),

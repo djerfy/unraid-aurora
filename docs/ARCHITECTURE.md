@@ -144,6 +144,11 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET/POST` | `/api/v1/zfs/*` | ZFS pools, scrub and snapshots |
 | `GET/PUT` | `/api/v1/ups/settings` | apcupsd shutdown policy |
 | `POST` | `/api/v1/notifications/test` | Test configured outbound channels |
+| `GET` | `/api/v1/tools/flash-backup` | Streaming zip of `/boot` |
+| `GET` | `/api/v1/config/export` | Aurora configuration archive |
+| `POST` | `/api/v1/config/import` | Restore an Aurora configuration archive |
+| `GET` | `/api/v1/metrics/history?range=` | 1h/24h/7d/30d metrics |
+| `GET` | `/metrics` | Prometheus exposition (Bearer token) |
 | `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
 | `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
 | `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |

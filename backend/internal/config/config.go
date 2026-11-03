@@ -21,6 +21,7 @@ type Config struct {
 	ServerName   string // optional override for certificate lookup
 	SessionTTL   time.Duration
 	Version      string
+	MetricsToken string
 	ReadOnly     bool
 }
 
@@ -37,6 +38,7 @@ func Load(version string) (Config, error) {
 		ServerName:   env("AURORA_SERVER_NAME", ""),
 		SessionTTL:   24 * time.Hour,
 		Version:      version,
+		MetricsToken: env("AURORA_METRICS_TOKEN", ""),
 		ReadOnly:     envBool("AURORA_READ_ONLY", false),
 	}
 

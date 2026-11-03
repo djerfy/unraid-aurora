@@ -3,6 +3,8 @@ package api
 import (
 	"bufio"
 	"context"
+	"crypto/subtle"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -123,6 +125,9 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/metrics/history", s.metricsHistory)
 	api.HandleFunc("GET /api/v1/events", s.events)
 	api.HandleFunc("GET /api/v1/tools/diagnostics", s.diagnostics)
+	api.HandleFunc("GET /api/v1/tools/flash-backup", s.flashBackup)
+	api.HandleFunc("GET /api/v1/config/export", s.configExport)
+	api.HandleFunc("POST /api/v1/config/import", s.configImport)
 	api.HandleFunc("GET /api/v1/balance/disks", s.balanceDisks)
 	api.HandleFunc("GET /api/v1/balance/browse", s.balanceBrowse)
 	api.HandleFunc("GET /api/v1/balance/status", s.balanceStatus)
@@ -136,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/actions", s.action)
 
 	root := http.NewServeMux()
+	root.HandleFunc("GET /metrics", s.prometheus)
 	root.Handle("/api/", api)
 	root.HandleFunc("GET /api", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
@@ -270,6 +276,51 @@ func (s *Server) accessLog(next http.Handler) http.Handler {
 			)
 		}
 	})
+}
+
+func (s *Server) prometheus(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.MetricsToken == "" {
+		http.NotFound(w, r)
+		return
+	}
+	header := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if header == "" || subtle.ConstantTimeCompare([]byte(header), []byte(s.cfg.MetricsToken)) != 1 {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "metrics token is invalid")
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	metrics, err := s.provider.Metrics(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	fmt.Fprintf(w, "# HELP aurora_cpu_usage_percent Current CPU usage.\n")
+	fmt.Fprintf(w, "# TYPE aurora_cpu_usage_percent gauge\naurora_cpu_usage_percent %.2f\n", metrics.CPU)
+	fmt.Fprintf(w, "# HELP aurora_memory_usage_percent Current memory usage.\n")
+	fmt.Fprintf(w, "# TYPE aurora_memory_usage_percent gauge\naurora_memory_usage_percent %.2f\n", metrics.Memory)
+	fmt.Fprintf(w, "# HELP aurora_cpu_temperature_celsius CPU package temperature.\n")
+	fmt.Fprintf(w, "# TYPE aurora_cpu_temperature_celsius gauge\naurora_cpu_temperature_celsius %.1f\n", metrics.Temp)
+	fmt.Fprintf(w, "# HELP aurora_load_1m One-minute load average.\n")
+	fmt.Fprintf(w, "# TYPE aurora_load_1m gauge\naurora_load_1m %.2f\n", metrics.Load)
+	fmt.Fprintf(w, "# HELP aurora_network_receive_bytes_per_second Receive rate.\n")
+	fmt.Fprintf(w, "# TYPE aurora_network_receive_bytes_per_second gauge\naurora_network_receive_bytes_per_second %.0f\n", metrics.NetRx)
+	fmt.Fprintf(w, "# HELP aurora_network_transmit_bytes_per_second Transmit rate.\n")
+	fmt.Fprintf(w, "# TYPE aurora_network_transmit_bytes_per_second gauge\naurora_network_transmit_bytes_per_second %.0f\n", metrics.NetTx)
+	fmt.Fprintf(w, "# HELP aurora_disk_read_bytes_per_second Disk read rate.\n")
+	fmt.Fprintf(w, "# TYPE aurora_disk_read_bytes_per_second gauge\naurora_disk_read_bytes_per_second %.0f\n", metrics.DiskRead)
+	fmt.Fprintf(w, "# HELP aurora_disk_write_bytes_per_second Disk write rate.\n")
+	fmt.Fprintf(w, "# TYPE aurora_disk_write_bytes_per_second gauge\naurora_disk_write_bytes_per_second %.0f\n", metrics.DiskWrite)
+	if ups, err := s.provider.UPS(ctx); err == nil && ups.Present {
+		onBattery := 0
+		if ups.OnBattery {
+			onBattery = 1
+		}
+		fmt.Fprintf(w, "# HELP aurora_ups_battery_percent UPS battery charge.\n# TYPE aurora_ups_battery_percent gauge\naurora_ups_battery_percent %.0f\n", ups.Battery)
+		fmt.Fprintf(w, "# HELP aurora_ups_load_percent UPS load.\n# TYPE aurora_ups_load_percent gauge\naurora_ups_load_percent %.0f\n", ups.Load)
+		fmt.Fprintf(w, "# HELP aurora_ups_on_battery Whether the UPS is on battery.\n# TYPE aurora_ups_on_battery gauge\naurora_ups_on_battery %d\n", onBattery)
+	}
 }
 
 func (s *Server) auditMutations(next http.Handler) http.Handler {

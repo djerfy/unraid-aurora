@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -35,6 +36,7 @@ import {
 import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
+import { api } from "../lib/api";
 import {
   formatBytes,
   formatMemory,
@@ -50,6 +52,13 @@ export function DashboardPage() {
   const { toast } = useToast();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [range, setRange] = useState<"1h" | "24h" | "7d" | "30d">("1h");
+  const longHistory = useQuery({
+    queryKey: ["metrics-history", range],
+    queryFn: () => api.metricsHistory(range),
+    enabled: range !== "1h",
+    refetchInterval: 30_000,
+  });
 
   if (!snapshot) return null;
   const { system, array, disks, containers, shares, network, ups, notifications, pools, gpus } = snapshot;
@@ -58,11 +67,11 @@ export function DashboardPage() {
   const updates = containers.filter((c) => c.updateAvailable).length;
   const unread = notifications.filter((n) => !n.read).length;
   const points = history.slice(-240);
-  const cpuHistory = points.map((point) => point.cpu);
+  const chartPoints = range === "1h" ? points : (longHistory.data?.length ? longHistory.data : points);
+  const cpuHistory = chartPoints.map((point) => point.cpu);
   const netRx = points.map((point) => point.netRx);
   const netTx = points.map((point) => point.netTx);
-  const timestamps = points.map((point) => point.t);
-
+  const timestamps = chartPoints.map((point) => point.t);
   const cpu = metrics?.cpu ?? system.cpu.usage;
   const memory = metrics?.memory ?? system.memory.usage;
   const packagePower = metrics?.power || system.cpu.power;
@@ -217,7 +226,22 @@ export function DashboardPage() {
               </p>
             </div>
           </div>
-          <div className="-mx-1 mt-2">
+          <div className="mt-2 flex items-center justify-end gap-1">
+            {(["1h", "24h", "7d", "30d"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setRange(value)}
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.08em] transition",
+                  range === value ? "bg-[var(--surface-3)] text-ink" : "text-subtle hover:text-ink",
+                )}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+          <div className="-mx-1 mt-1">
             <AreaChart
               series={[{ values: cpuHistory, color: "var(--accent)", label: "CPU" }]}
               timestamps={timestamps}

@@ -76,7 +76,8 @@ files and commands as the official webGUI.
 The dashboard is the operational summary of the host:
 
 - **Health score** and detected issues.
-- **CPU** usage, temperature, package power and a live per-core matrix.
+- **CPU** usage, temperature, package power and a live per-core matrix. The processor chart offers
+  **1h / 24h / 7d / 30d** ranges backed by a persistent one-minute archive.
 - **GPU** utilisation, VRAM, temperature, power, fan and clocks (first GPU, with a link to the GPU page).
 - **Memory** used/available.
 - **Array** state, capacity and protection.

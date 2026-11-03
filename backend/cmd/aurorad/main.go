@@ -104,7 +104,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	hub := metrics.NewHub(p)
+	hub := metrics.NewHub(p, filepath.Join(cfg.ConfigDir, "metrics-archive.json"))
 	go hub.Run(ctx, 2*time.Second)
 	go notify.Run(ctx, p, log)
 

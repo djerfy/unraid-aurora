@@ -1415,7 +1415,18 @@ func (s *Server) saveStorageLayout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) metricsHistory(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.hub.History())
+	span := time.Hour
+	switch r.URL.Query().Get("range") {
+	case "6h":
+		span = 6 * time.Hour
+	case "24h":
+		span = 24 * time.Hour
+	case "7d":
+		span = 7 * 24 * time.Hour
+	case "30d":
+		span = 30 * 24 * time.Hour
+	}
+	writeJSON(w, http.StatusOK, s.hub.HistoryRange(span))
 }
 
 func (s *Server) action(w http.ResponseWriter, r *http.Request) {

@@ -50,6 +50,33 @@ const tools: Record<string, string> = {
   "Disks": "Disques",
   "Notifications": "Notifications",
   "Plugins": "Plugins",
+  "Backup and restore": "Sauvegarde et restauration",
+  "Download the whole flash drive, export Aurora configuration, or restore a previous Aurora configuration archive.":
+    "Téléchargez la clé USB complète, exportez la configuration Aurora ou restaurez une archive Aurora précédente.",
+  "Flash drive": "Clé USB",
+  "Full /boot archive. It contains secrets such as WireGuard keys and credentials.":
+    "Archive complète de /boot. Elle contient des secrets comme les clés WireGuard et les identifiants.",
+  "Download flash backup": "Télécharger la sauvegarde flash",
+  "Aurora configuration": "Configuration Aurora",
+  "Settings, storage layout, histories and audit log.":
+    "Réglages, plan de stockage, historiques et journal d'audit.",
+  "Export configuration": "Exporter la configuration",
+  "Restore configuration": "Restaurer la configuration",
+  "Import a previously exported Aurora archive. A restart is required.":
+    "Importez une archive Aurora précédemment exportée. Un redémarrage est nécessaire.",
+  "Import configuration": "Importer la configuration",
+  "Importing…": "Importation…",
+  "Import this Aurora configuration? The current settings, layout and histories will be replaced.":
+    "Importer cette configuration Aurora ? Les réglages, le plan et les historiques actuels seront remplacés.",
+  "Flash backup downloaded": "Sauvegarde flash téléchargée",
+  "Flash backup failed": "Échec de la sauvegarde flash",
+  "Aurora configuration exported": "Configuration Aurora exportée",
+  "Configuration export failed": "Échec de l'export de la configuration",
+  "Configuration imported": "Configuration importée",
+  "Restart Aurora to apply the imported configuration.":
+    "Redémarrez Aurora pour appliquer la configuration importée.",
+  "Configuration import failed": "Échec de l'import de la configuration",
+  "{size} MB archive.": "Archive de {size} Mo.",
 };
 
 export default tools;

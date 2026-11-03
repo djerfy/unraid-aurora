@@ -190,6 +190,7 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_LOG_LEVEL` | `info` | `debug` for verbose logs |
 | `AURORA_LOG_FILE` | stdout | Append logs to this file |
 | `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
+| `AURORA_METRICS_TOKEN` | empty | Bearer token for the Prometheus `/metrics` endpoint; disabled when empty |
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 
 Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
