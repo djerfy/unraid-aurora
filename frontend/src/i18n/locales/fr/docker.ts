@@ -153,6 +153,13 @@ const docker: Record<string, string> = {
   "the container is not running": "le conteneur n'est pas en cours d'exécution",
   "ss could not inspect the container network namespace": "ss n'a pas pu inspecter l'espace réseau du conteneur",
   "the container processes could not be mapped": "les processus du conteneur n'ont pas pu être associés",
+  "Open terminal": "Ouvrir le terminal",
+  "Filter logs…": "Filtrer les logs…",
+  "Filter logs": "Filtrer les logs",
+  "Download logs": "Télécharger les logs",
+  "No log line matches this filter.": "Aucune ligne de log ne correspond à ce filtre.",
+  "Commands execute inside the container. Keep this session private.":
+    "Les commandes s'exécutent dans le conteneur. Gardez cette session privée.",
   "Click a bubble to open details and network calls.":
     "Cliquez sur une bulle pour ouvrir les détails et les appels réseau.",
 };

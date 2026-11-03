@@ -21,6 +21,7 @@ import (
 	"aurora/internal/auth"
 	"aurora/internal/config"
 	"aurora/internal/metrics"
+	"aurora/internal/notify"
 	"aurora/internal/provider"
 )
 
@@ -105,6 +106,7 @@ func main() {
 
 	hub := metrics.NewHub(p)
 	go hub.Run(ctx, 2*time.Second)
+	go notify.Run(ctx, p, log)
 
 	authManager := auth.New(cfg.SessionTTL)
 	srv := &http.Server{

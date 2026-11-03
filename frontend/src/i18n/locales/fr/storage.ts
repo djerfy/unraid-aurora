@@ -330,6 +330,10 @@ const storage: Record<string, string> = {
     "Les services et les partages seront indisponibles jusqu'au redémarrage de la grappe.",
   "Unraid will flush pending writes and stop the array. Encryption keys are not stored by Aurora.":
     "Unraid va vider les écritures en attente et arrêter la grappe. Les clés de chiffrement ne sont pas stockées par Aurora.",
+  "Disk rebuild in progress": "Reconstruction de disque en cours",
+  "Unraid is rebuilding or replacing a disk. Aurora monitors the operation but never changes disk assignments.":
+    "Unraid reconstruit ou remplace un disque. Aurora surveille l'opération mais ne modifie jamais les affectations de disques.",
+  "rebuilt": "reconstruit",
 };
 
 export default storage;

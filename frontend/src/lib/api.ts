@@ -73,6 +73,32 @@ async function readNDJSON<T>(body: ReadableStream<Uint8Array>, onEvent: (event: 
 export const api = {
   bootstrap: () => request<Snapshot>("/api/v1/bootstrap"),
   serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
+  auditLog: (limit = 200) => request<import("./types").AuditEntry[]>(`/api/v1/audit?limit=${limit}`),
+  upsSettings: () => request<import("./types").UPSSettings>("/api/v1/ups/settings"),
+  saveUPSSettings: (settings: import("./types").UPSSettings) =>
+    request<{ ok: boolean }>("/api/v1/ups/settings", { method: "PUT", body: JSON.stringify(settings) }),
+  zfsPools: () => request<import("./types").ZFSPool[]>("/api/v1/zfs/pools"),
+  scrubZFSPool: (name: string) =>
+    request<{ ok: boolean }>(`/api/v1/zfs/pools/${encodeURIComponent(name)}/scrub`, { method: "POST", body: "{}" }),
+  zfsSnapshots: (dataset: string) =>
+    request<import("./types").ZFSSnapshot[]>(`/api/v1/zfs/snapshots?dataset=${encodeURIComponent(dataset)}`),
+  createZFSSnapshot: (dataset: string, name: string) =>
+    request<{ ok: boolean }>("/api/v1/zfs/snapshots", { method: "POST", body: JSON.stringify({ dataset, name }) }),
+  deleteZFSSnapshot: (dataset: string, name: string) =>
+    request<{ ok: boolean }>(`/api/v1/zfs/snapshots?dataset=${encodeURIComponent(dataset)}&name=${encodeURIComponent(name)}`, { method: "DELETE" }),
+  userScripts: () => request<import("./types").UserScript[]>("/api/v1/user-scripts"),
+  userScript: (id: string) =>
+    request<{ content: string }>(`/api/v1/user-scripts/${encodeURIComponent(id)}`),
+  runUserScript: (id: string) =>
+    request<{ output: string; error?: string }>(`/api/v1/user-scripts/${encodeURIComponent(id)}/run`, {
+      method: "POST",
+      body: "{}",
+    }),
+  testNotification: (settings: import("./types").Settings) =>
+    request<{ ok: boolean }>("/api/v1/notifications/test", {
+      method: "POST",
+      body: JSON.stringify(settings),
+    }),
   session: () => request<SessionInfo>("/api/v1/auth/session"),
   login: (username: string, password: string) =>
     request<{ authenticated: boolean; user: string }>("/api/v1/auth/login", {
@@ -164,6 +190,29 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  createVM: (options: import("./types").VMCreateOptions) =>
+    request<import("./types").VM>("/api/v1/vms", { method: "POST", body: JSON.stringify(options) }),
+  updateVMXML: (id: string, xml: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`, {
+      method: "PUT",
+      body: JSON.stringify({ xml }),
+    }),
+  vmSnapshots: (id: string) =>
+    request<import("./types").VMSnapshot[]>(`/api/v1/vms/${encodeURIComponent(id)}/snapshots`),
+  createVMSnapshot: (id: string, name: string, description: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/snapshots`, {
+      method: "POST",
+      body: JSON.stringify({ name, description }),
+    }),
+  restoreVMSnapshot: (id: string, name: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/snapshots/${encodeURIComponent(name)}/revert`, {
+      method: "POST",
+      body: "{}",
+    }),
+  deleteVMSnapshot: (id: string, name: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/snapshots/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }),
   createShare: (config: import("./types").ShareConfig) =>
     request<{ ok: boolean }>("/api/v1/shares", { method: "POST", body: JSON.stringify(config) }),
   shareConfig: (name: string) =>

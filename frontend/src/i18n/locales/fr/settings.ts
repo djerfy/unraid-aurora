@@ -104,6 +104,20 @@ const settings: Record<string, string> = {
   "Plugin ecosystem": "Écosystème de plugins",
   "Aurora is not affiliated with Lime Technology. Unraid is a trademark of Lime Technology, Inc.":
     "Aurora n'est pas affilié à Lime Technology. Unraid est une marque de Lime Technology, Inc.",
+  "Discord webhook": "Webhook Discord",
+  "Paste a Discord channel webhook URL.": "Collez l'URL du webhook d'un salon Discord.",
+  "ntfy URL": "URL ntfy",
+  "Full ntfy topic URL, for example https://ntfy.sh/aurora.":
+    "URL complète du sujet ntfy, par exemple https://ntfy.sh/aurora.",
+  "Generic webhook": "Webhook générique",
+  "JSON payload posted to any compatible endpoint.":
+    "Charge JSON envoyée à tout endpoint compatible.",
+  "Send test": "Envoyer un test",
+  "Test notification sent": "Notification de test envoyée",
+  "Check the configured channels.": "Vérifiez les canaux configurés.",
+  "Test notification failed": "Échec de la notification de test",
+  "Aurora forwards new Unraid notifications to every configured channel. Save the settings before relying on them in production.":
+    "Aurora transmet les nouvelles notifications Unraid à chaque canal configuré. Enregistrez les réglages avant de vous y fier en production.",
 };
 
 export default settings;

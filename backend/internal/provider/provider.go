@@ -34,6 +34,12 @@ type Provider interface {
 	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
 	SetVMAutostart(ctx context.Context, id string, enabled bool) error
 	VMXML(ctx context.Context, id string) (string, error)
+	CreateVM(ctx context.Context, opts model.VMCreateOptions) (model.VM, error)
+	UpdateVMXML(ctx context.Context, id, raw string) error
+	VMSnapshots(ctx context.Context, id string) ([]model.VMSnapshot, error)
+	CreateVMSnapshot(ctx context.Context, id, name, description string) error
+	RestoreVMSnapshot(ctx context.Context, id, name string) error
+	DeleteVMSnapshot(ctx context.Context, id, name string) error
 	SmartReport(ctx context.Context, device string) (model.SmartReport, error)
 	RunSmartTest(ctx context.Context, device string) error
 	Diagnostics(ctx context.Context) ([]byte, error)
@@ -51,6 +57,14 @@ type Provider interface {
 	InstallPlugin(ctx context.Context, url string, report func(model.PluginEvent)) error
 	RemovePlugin(ctx context.Context, name string, report func(model.PluginEvent)) error
 	VMs(ctx context.Context) ([]model.VM, error)
+	UserScripts(ctx context.Context) ([]model.UserScript, error)
+	ZFSPools(ctx context.Context) ([]model.ZFSPool, error)
+	ScrubZFSPool(ctx context.Context, name string) error
+	ZFSSnapshots(ctx context.Context, dataset string) ([]model.ZFSSnapshot, error)
+	CreateZFSSnapshot(ctx context.Context, dataset, name string) error
+	DeleteZFSSnapshot(ctx context.Context, dataset, name string) error
+	UserScript(ctx context.Context, id string) (string, error)
+	RunUserScript(ctx context.Context, id string) (string, error)
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error
 	StopArray(ctx context.Context) error
@@ -76,6 +90,8 @@ type Provider interface {
 	Notifications(ctx context.Context) ([]model.Notification, error)
 	ParityHistory(ctx context.Context) ([]model.ParityCheck, error)
 	UPS(ctx context.Context) (model.UPS, error)
+	UPSSettings(ctx context.Context) (model.UPSSettings, error)
+	SaveUPSSettings(ctx context.Context, settings model.UPSSettings) error
 	Logs(ctx context.Context, source string, lines int) ([]model.LogLine, error)
 	Settings(ctx context.Context) (model.Settings, error)
 	SaveSettings(ctx context.Context, s model.Settings) error

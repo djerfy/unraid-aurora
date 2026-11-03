@@ -9,6 +9,7 @@ import {
   CloudDownload,
   Copy,
   ChevronDown,
+  Download,
   Cpu,
   ExternalLink,
   Globe2,
@@ -908,6 +909,7 @@ function ContainerDrawer({
   const { toast } = useToast();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [logQuery, setLogQuery] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
   const running = container?.state === "running";
   const publishedPorts = (container?.ports ?? []).filter((port) => port.host > 0);
@@ -938,12 +940,29 @@ function ContainerDrawer({
     logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs.data]);
 
+  const filteredLogs = (logs.data ?? []).filter((line) => {
+    const query = logQuery.trim().toLowerCase();
+    return !query || `${line.level} ${line.message}`.toLowerCase().includes(query);
+  });
+
+  const logText = () => filteredLogs.map((line) => `${line.time} ${line.level.toUpperCase()} ${line.message}`).join("\n");
+
   const copyLogs = async () => {
     if (!logs.data) return;
-    const text = logs.data.map((line) => `${line.time} ${line.level.toUpperCase()} ${line.message}`).join("\n");
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(logText());
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  };
+
+  const downloadLogs = () => {
+    if (!container) return;
+    const blob = new Blob([logText()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${container.name}.log`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   if (!container) return null;
@@ -1012,14 +1031,22 @@ function ContainerDrawer({
       }
     >
       <div className="space-y-5">
-        <Button
-          variant="secondary"
-          icon={<Settings2 className="size-3.5" />}
-          className="w-full"
-          onClick={() => onEdit(container)}
-        >
-          {t("Edit configuration")}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            variant="secondary"
+            icon={<Settings2 className="size-3.5" />}
+            onClick={() => onEdit(container)}
+          >
+            {t("Edit configuration")}
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<Terminal className="size-3.5" />}
+            onClick={() => window.open(`/docker/terminal/${encodeURIComponent(container.id)}`, "_blank", "noopener")}
+          >
+            {t("Open terminal")}
+          </Button>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Info label={t("Repository")} value={container.repository} className="col-span-2" />
           <Info label={t("Tag")} value={container.tag} />
@@ -1081,8 +1108,18 @@ function ContainerDrawer({
               <Terminal className="size-3.5" /> {t("Container logs")}
             </h3>
             <div className="flex items-center gap-1">
+              <input
+                value={logQuery}
+                onChange={(event) => setLogQuery(event.target.value)}
+                placeholder={t("Filter logs…")}
+                aria-label={t("Filter logs")}
+                className="h-7 w-36 rounded-md border border-line bg-[var(--surface-2)] px-2 text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+              />
               <IconButton label={t("Reload logs")} size="sm" onClick={() => void logs.refetch()}>
                 <RefreshCw className={cn("size-3.5", logs.isFetching && "animate-spin")} />
+              </IconButton>
+              <IconButton label={t("Download logs")} size="sm" onClick={downloadLogs}>
+                <Download className="size-3.5" />
               </IconButton>
               <IconButton label={t("Copy logs")} size="sm" onClick={() => void copyLogs()}>
                 {copied ? <Check className="size-3.5 text-[var(--success)]" /> : <Copy className="size-3.5" />}
@@ -1095,8 +1132,8 @@ function ContainerDrawer({
           >
             {logs.isLoading ? (
               <p className="text-[#6b7280]">{t("Loading logs…")}</p>
-            ) : logs.data?.length ? (
-              logs.data.map((line, index) => (
+            ) : filteredLogs.length ? (
+              filteredLogs.map((line, index) => (
                 <div key={`${line.time}-${index}`} className="flex gap-2">
                   <span className="shrink-0 text-[#4b5563]">{new Date(line.time).toLocaleTimeString([], { hour12: false })}</span>
                   <span
@@ -1111,7 +1148,7 @@ function ContainerDrawer({
                 </div>
               ))
             ) : (
-              <p className="text-[#6b7280]">{t("No logs available.")}</p>
+              <p className="text-[#6b7280]">{logQuery.trim() ? t("No log line matches this filter.") : t("No logs available.")}</p>
             )}
           </div>
         </div>

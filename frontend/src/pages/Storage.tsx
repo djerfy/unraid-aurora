@@ -103,6 +103,7 @@ export function StoragePage() {
   if (!snapshot) return null;
   const { array, disks, shares, pools } = snapshot;
   const parity = array.parity;
+  const rebuilding = Boolean(array.rebuild?.running && array.rebuild.action && !/check/i.test(array.rebuild.action));
 
   const dataDisks = disks.filter((disk) => disk.type === "Data");
   const parityDisks = disks.filter((disk) => disk.type === "Parity");
@@ -488,6 +489,33 @@ export function StoragePage() {
 
       {tab === "parity" ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+          {rebuilding ? (
+            <Card className="card-pad xl:col-span-12">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[13px] font-semibold text-ink">{t("Disk rebuild in progress")}</h2>
+                  <p className="mt-0.5 text-[10.5px] text-subtle">
+                    {t("Unraid is rebuilding or replacing a disk. Aurora monitors the operation but never changes disk assignments.")}
+                  </p>
+                </div>
+                <Badge tone="warning" dot pulse>{array.rebuild.action}</Badge>
+              </div>
+              <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Ring value={array.rebuild.progress} size={110} stroke={8}>
+                  <div className="text-center">
+                    <p className="num text-[22px] font-semibold leading-none text-ink">{array.rebuild.progress.toFixed(1)}%</p>
+                    <p className="mt-1 text-[8px] uppercase tracking-[0.12em] text-subtle">{t("rebuilt")}</p>
+                  </div>
+                </Ring>
+                <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
+                  <DataRow label={t("Speed")} value={formatSpeed(array.rebuild.speed)} />
+                  <DataRow label={t("Position")} value={formatBytes(array.rebuild.position)} />
+                  <DataRow label={t("Elapsed")} value={formatDuration(array.rebuild.elapsed)} />
+                  <DataRow label={t("Errors")} value={String(array.rebuild.errors)} tone={array.rebuild.errors > 0 ? "warning" : "success"} />
+                </div>
+              </div>
+            </Card>
+          ) : null}
           <Card className="card-pad xl:col-span-7">
             <div className="flex items-start justify-between gap-4">
               <div>

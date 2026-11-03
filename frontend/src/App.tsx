@@ -18,6 +18,10 @@ import { LogsPage } from "./pages/Logs";
 import { TerminalPage } from "./pages/Terminal";
 import { ToolsPage } from "./pages/Tools";
 import { HistoryPage } from "./pages/History";
+import { AuditPage } from "./pages/Audit";
+import { UserScriptsPage } from "./pages/UserScripts";
+import { ZFSPage } from "./pages/ZFS";
+import { UPSPage } from "./pages/UPS";
 import { BalancePage } from "./pages/Balance";
 import { SettingsPage } from "./pages/Settings";
 import { AboutPage } from "./pages/About";
@@ -55,6 +59,7 @@ export default function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/storage" element={<StoragePage />} />
           <Route path="/docker" element={<DockerPage />} />
+          <Route path="/docker/terminal/:id" element={<TerminalPage />} />
           <Route path="/vms" element={<VMsPage />} />
           <Route path="/vms/console/:id" element={<VMConsolePage />} />
           <Route path="/network" element={<NetworkPage />} />
@@ -66,6 +71,10 @@ export default function App() {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/audit" element={<AuditPage />} />
+          <Route path="/scripts" element={<UserScriptsPage />} />
+          <Route path="/zfs" element={<ZFSPage />} />
+          <Route path="/ups" element={<UPSPage />} />
           <Route path="/balance" element={<BalancePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/about" element={<AboutPage />} />

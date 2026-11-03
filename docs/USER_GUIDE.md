@@ -303,9 +303,18 @@ sends addresses to an external geolocation API.
 ![Container details](screenshots/docker-drawer.png)
 
 The drawer shows the real icon, state, image, repository/tag, category, restart policy, network, IP,
-uptime, memory, published ports, network calls and live container logs with reload/copy.
+uptime, memory, published ports, network calls and live container logs with reload, search, copy and
+download. **Open terminal** starts an interactive `docker exec` session in a new window.
 
-Actions: start, restart, stop, open WebUI, update image, edit settings, remove.
+Actions: start, restart, stop, open WebUI, update image, edit settings, open terminal, remove.
+
+### Create, edit and snapshot VMs
+
+- **New VM** creates a qcow2 disk under `/mnt/user/domains`, with vCPU/RAM/disk, network bridge and
+  an optional ISO.
+- The XML drawer is editable; the domain name is immutable through the editor and changes apply on
+  the next boot.
+- **Snapshots** can be created, restored and deleted from the VM drawer.
 
 ### Settings editor
 
@@ -517,9 +526,20 @@ can itself be reverted.
 - **Refresh interval**.
 - **Language**: English (default) or French. The switch previews immediately; **Save changes** persists it on the server.
 - **Automatic updates**, **anonymous telemetry**, **email alerts**, **push notifications**.
+- **Outbound notifications**: Discord webhook, ntfy URL and generic JSON webhook, with a test button.
+  New Unraid notifications are forwarded after Aurora starts.
 - Session information: account, authentication, HMAC session store, CSRF protection.
 - About: Unraid version, kernel, uptime, board, memory, license.
 - The **System → About** page describes Aurora, the author (🌱 DJΞRFY 🚀), the public repository and the AGPL-3.0 license.
+
+### UPS, ZFS, user scripts and audit
+
+- **UPS** shows battery/load/runtime and edits the apcupsd shutdown policy; NUT remains managed by
+  its own plugin.
+- **ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
+- **User scripts** lists the User Scripts plugin inventory, shows the source and runs a script as root,
+  returning its output.
+- **Audit log** records every mutating API call with user, method, path, status and remote address.
 
 ---
 

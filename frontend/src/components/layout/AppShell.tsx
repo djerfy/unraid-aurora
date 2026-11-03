@@ -76,7 +76,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const isTerminal = location.pathname === "/terminal";
+  const isTerminal = location.pathname === "/terminal" || location.pathname.startsWith("/docker/terminal/");
   const isStandaloneConsole = location.pathname.startsWith("/vms/console/");
   const terminalPopout = isTerminal && searchParams.get("popout") === "1";
   const [collapsed, setCollapsed] = useState(() => {

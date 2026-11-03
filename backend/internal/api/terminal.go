@@ -8,11 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/coder/websocket"
 	"github.com/creack/pty"
 )
+
+var containerIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 
 type terminalResize struct {
 	Type string `json:"type"`
@@ -46,7 +49,17 @@ func (s *Server) terminal(w http.ResponseWriter, r *http.Request) {
 		username = sess.User
 	}
 	shell := loginShell(username)
-	cmd := exec.Command(shell, loginShellArgs(shell)...)
+	container := strings.TrimSpace(r.URL.Query().Get("container"))
+	var cmd *exec.Cmd
+	if container != "" {
+		if !containerIDPattern.MatchString(container) {
+			_ = conn.Write(r.Context(), websocket.MessageText, []byte("Invalid container id.\r\n"))
+			return
+		}
+		cmd = exec.Command("docker", "exec", "-it", container, "/bin/sh")
+	} else {
+		cmd = exec.Command(shell, loginShellArgs(shell)...)
+	}
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "LANG=C.UTF-8")
 	cmd.Env = withEnvValue(cmd.Env, "SHELL", shell)
 	terminal, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 32, Cols: 120})

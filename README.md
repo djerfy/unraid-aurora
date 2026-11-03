@@ -269,10 +269,14 @@ Deep dives:
 |---|---|
 | Dashboard | Health score, CPU load graph and per-core matrix, package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
-| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, network calls, autostart toggle, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
-| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, autostart toggle, read-only libvirt XML view, lifecycle actions and a VNC/SPICE console |
+| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, network calls, container terminal, log search/export, autostart toggle, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
+| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
+| ZFS | Pools, datasets, scrub and snapshots |
+| UPS | Battery telemetry and apcupsd shutdown policy |
+| User scripts | User Scripts plugin inventory, source and root execution output |
+| Audit log | Durable record of every mutating API call |
 | About | Product description, author, repository, runtime and AGPL-3.0 license |
 | Users | Accounts, roles, share access matrix, add/edit/password/delete through Unraid account management |
 | Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Apple,
+  Camera,
   Check,
   Clock3,
   Copy,
@@ -17,9 +18,12 @@ import {
   Network,
   Pause,
   Play,
+  Plus,
   RefreshCw,
+  RotateCcw,
   Square,
   SquareTerminal,
+  Trash2,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
@@ -50,6 +54,7 @@ export function VMsPage() {
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
   const [xmlVm, setXmlVm] = useState<VM | null>(null);
+  const [creating, setCreating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const autostart = useMutation({
@@ -114,9 +119,14 @@ export function VMsPage() {
           </>
         }
         actions={
-          <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-            {t("Refresh")}
-          </Button>
+          <>
+            <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
+              {t("Refresh")}
+            </Button>
+            <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setCreating(true)}>
+              {t("New VM")}
+            </Button>
+          </>
         }
       />
 
@@ -366,6 +376,8 @@ export function VMsPage() {
               <Progress value={selected.diskSize ? (selected.diskUsed / selected.diskSize) * 100 : 0} height={5} className="mt-2" tone="var(--violet)" />
             </div>
 
+            <VMSnapshots vm={selected} />
+
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/60 p-3 text-[10.5px] leading-relaxed text-muted">
               {t(
                 "Virtual machines run under libvirt/KVM. Changes to hardware, boot order and passthrough devices require a graceful shutdown.",
@@ -383,6 +395,7 @@ export function VMsPage() {
       />
 
       <VMXMLModal vm={xmlVm} onClose={() => setXmlVm(null)} />
+      <NewVMModal open={creating} onClose={() => setCreating(false)} />
     </>
   );
 }
@@ -390,7 +403,9 @@ export function VMsPage() {
 function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [draft, setDraft] = useState("");
   const query = useQuery({
     queryKey: ["vm-xml", vm?.id],
     queryFn: () => api.vmXML(vm?.id ?? ""),
@@ -398,9 +413,26 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
     staleTime: 10_000,
   });
 
+  useEffect(() => {
+    if (query.data) setDraft(query.data.xml);
+  }, [query.data]);
+
+  const save = useMutation({
+    mutationFn: () => api.updateVMXML(vm?.id ?? "", draft),
+    onSuccess: () => {
+      toast({ kind: "success", title: t("VM definition saved"), description: t("Changes apply to the next boot.") });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      void queryClient.invalidateQueries({ queryKey: ["vm-xml", vm?.id] });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: t("Could not save the VM definition"), description: error.message });
+    },
+  });
+
   const copy = async () => {
     if (!query.data) return;
-    await navigator.clipboard.writeText(query.data.xml);
+    await navigator.clipboard.writeText(draft);
     setCopied(true);
     toast({ kind: "info", title: t("XML copied") });
     window.setTimeout(() => setCopied(false), 1600);
@@ -411,7 +443,7 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
       open={Boolean(vm)}
       onClose={onClose}
       title={t("XML · {name}", { name: vm?.name ?? "" })}
-      description={t("Read-only libvirt domain definition, like the XML view of the official VM editor.")}
+      description={t("Edit the libvirt domain definition. The domain name cannot be changed here; changes apply on the next boot.")}
       size="xl"
       footer={
         <>
@@ -421,6 +453,15 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
           <Button variant="secondary" onClick={onClose}>
             {t("Close")}
           </Button>
+          <Button
+            variant="primary"
+            icon={<FileCode2 className="size-3.5" />}
+            loading={save.isPending}
+            disabled={!draft.trim() || draft === query.data?.xml}
+            onClick={() => save.mutate()}
+          >
+            {t("Save definition")}
+          </Button>
         </>
       }
     >
@@ -429,10 +470,272 @@ function VMXMLModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
       ) : query.isError ? (
         <p className="text-[11px] text-[var(--danger)]">{(query.error as Error).message}</p>
       ) : (
-        <pre className="max-h-[60vh] overflow-auto rounded-xl border border-[#1f2230] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed text-[#c7cbd6]">
-          {query.data?.xml}
-        </pre>
+        <textarea
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          spellCheck={false}
+          aria-label={t("Libvirt XML")}
+          className="h-[60vh] w-full resize-none rounded-xl border border-[#1f2230] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed text-[#c7cbd6] outline-none focus:border-[var(--accent-line)]"
+        />
       )}
+    </Modal>
+  );
+}
+
+function VMSnapshots({ vm }: { vm: VM }) {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const snapshots = useQuery({
+    queryKey: ["vm-snapshots", vm.id],
+    queryFn: () => api.vmSnapshots(vm.id),
+    refetchInterval: 10_000,
+  });
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["vm-snapshots", vm.id] });
+    void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+  };
+
+  const create = useMutation({
+    mutationFn: () => api.createVMSnapshot(vm.id, name.trim(), `${vm.name} · Aurora`),
+    onSuccess: () => {
+      setName("");
+      refresh();
+      toast({ kind: "success", title: t("Snapshot created") });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: t("Could not create the snapshot"), description: error.message });
+    },
+  });
+
+  const restore = useMutation({
+    mutationFn: (snapshot: string) => api.restoreVMSnapshot(vm.id, snapshot),
+    onSuccess: () => {
+      refresh();
+      toast({ kind: "success", title: t("Snapshot restored") });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: t("Could not restore the snapshot"), description: error.message });
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (snapshot: string) => api.deleteVMSnapshot(vm.id, snapshot),
+    onSuccess: () => {
+      refresh();
+      toast({ kind: "success", title: t("Snapshot deleted") });
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: t("Could not delete the snapshot"), description: error.message });
+    },
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+          <Camera className="size-3.5" /> {t("Snapshots")}
+        </h3>
+        <IconButton label={t("Refresh snapshots")} size="sm" onClick={refresh}>
+          <RefreshCw className={cn("size-3.5", snapshots.isFetching && "animate-spin")} />
+        </IconButton>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={t("Snapshot name")}
+          aria-label={t("Snapshot name")}
+          className="h-9 min-w-0 flex-1 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[11px] text-ink outline-none focus:border-[var(--accent-line)]"
+        />
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Plus className="size-3.5" />}
+          loading={create.isPending}
+          disabled={!name.trim()}
+          onClick={() => create.mutate()}
+        >
+          {t("Create")}
+        </Button>
+      </div>
+      {snapshots.isLoading ? (
+        <p className="mt-2 text-[10px] text-muted">{t("Loading snapshots…")}</p>
+      ) : snapshots.isError ? (
+        <p className="mt-2 text-[10px] text-[var(--danger)]">{(snapshots.error as Error).message}</p>
+      ) : snapshots.data?.length ? (
+        <div className="mt-2 overflow-hidden rounded-xl border border-line">
+          {snapshots.data.map((snapshot) => (
+            <div key={snapshot.name} className="flex items-center gap-2 border-b border-line/60 px-3 py-2 last:border-0">
+              <span className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-soft">{snapshot.name}</span>
+              <IconButton
+                label={t("Restore snapshot")}
+                size="sm"
+                disabled={restore.isPending}
+                onClick={() => {
+                  if (window.confirm(t("Restore snapshot {name}? The current VM state will be replaced.", { name: snapshot.name }))) {
+                    restore.mutate(snapshot.name);
+                  }
+                }}
+              >
+                <RotateCcw className="size-3.5" />
+              </IconButton>
+              <IconButton
+                label={t("Delete snapshot")}
+                size="sm"
+                disabled={remove.isPending}
+                onClick={() => {
+                  if (window.confirm(t("Delete snapshot {name}?", { name: snapshot.name }))) {
+                    remove.mutate(snapshot.name);
+                  }
+                }}
+              >
+                <Trash2 className="size-3.5" />
+              </IconButton>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-[10px] text-subtle">{t("No snapshots for this VM.")}</p>
+      )}
+    </div>
+  );
+}
+
+function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState({
+    name: "",
+    vcpus: 2,
+    memoryMB: 2048,
+    diskGB: 32,
+    isoPath: "",
+    network: "br0",
+    start: true,
+  });
+
+  useEffect(() => {
+    if (open) {
+      setDraft({ name: "", vcpus: 2, memoryMB: 2048, diskGB: 32, isoPath: "", network: "br0", start: true });
+    }
+  }, [open]);
+
+  const create = useMutation({
+    mutationFn: () => api.createVM(draft),
+    onSuccess: (vm) => {
+      toast({ kind: "success", title: t("Virtual machine created"), description: vm.name });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({ kind: "error", title: t("Could not create the virtual machine"), description: error.message });
+    },
+  });
+
+  const field = "h-9 w-full rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[11.5px] text-ink outline-none focus:border-[var(--accent-line)]";
+  const label = "mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle";
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t("New virtual machine")}
+      description={t("Create a libvirt/KVM domain with a qcow2 virtual disk and an optional installation ISO.")}
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>{t("Cancel")}</Button>
+          <Button
+            variant="primary"
+            icon={<Plus className="size-3.5" />}
+            loading={create.isPending}
+            disabled={!draft.name.trim()}
+            onClick={() => create.mutate()}
+          >
+            {draft.start ? t("Create and start") : t("Create")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <label className="block">
+          <span className={label}>{t("Name")}</span>
+          <input
+            value={draft.name}
+            onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+            placeholder="Windows 11"
+            className={field}
+            autoFocus
+          />
+          <span className="mt-1 block text-[9.5px] text-subtle">{t("The virtual disk will be created under /mnt/user/domains.")}</span>
+        </label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block">
+            <span className={label}>{t("vCPUs")}</span>
+            <input
+              type="number"
+              min={1}
+              max={128}
+              value={draft.vcpus}
+              onChange={(event) => setDraft({ ...draft, vcpus: Number(event.target.value) })}
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={label}>{t("Memory (MiB)")}</span>
+            <input
+              type="number"
+              min={512}
+              step={512}
+              value={draft.memoryMB}
+              onChange={(event) => setDraft({ ...draft, memoryMB: Number(event.target.value) })}
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={label}>{t("Disk (GiB)")}</span>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              value={draft.diskGB}
+              onChange={(event) => setDraft({ ...draft, diskGB: Number(event.target.value) })}
+              className={field}
+            />
+          </label>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className={label}>{t("Network bridge")}</span>
+            <input
+              value={draft.network}
+              onChange={(event) => setDraft({ ...draft, network: event.target.value })}
+              placeholder="br0"
+              className={field}
+            />
+          </label>
+          <label className="block">
+            <span className={label}>{t("Installation ISO")}</span>
+            <input
+              value={draft.isoPath}
+              onChange={(event) => setDraft({ ...draft, isoPath: event.target.value })}
+              placeholder="/mnt/user/isos/windows.iso"
+              className={`${field} font-mono text-[10.5px]`}
+            />
+          </label>
+        </div>
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+          <span>
+            <span className="block text-[11px] font-medium text-soft">{t("Start after creation")}</span>
+            <span className="block text-[9.5px] text-subtle">{t("Boot the VM as soon as it is defined.")}</span>
+          </span>
+          <Switch checked={draft.start} onChange={(start) => setDraft({ ...draft, start })} label={t("Start after creation")} />
+        </label>
+      </div>
     </Modal>
   );
 }

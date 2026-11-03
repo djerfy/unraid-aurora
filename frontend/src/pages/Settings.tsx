@@ -62,6 +62,7 @@ export function SettingsPage() {
   const [draft, setDraft] = useState<Settings | null>(snapshot?.settings ?? null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testingNotification, setTestingNotification] = useState(false);
 
   if (!snapshot) return null;
   const settings = draft ?? snapshot.settings;
@@ -80,6 +81,18 @@ export function SettingsPage() {
   const chooseAccent = (accent: Accent) => {
     update("accent", accent);
     theme.setAccent(accent);
+  };
+
+  const testNotification = async () => {
+    setTestingNotification(true);
+    try {
+      await api.testNotification(settings);
+      toast({ kind: "success", title: t("Test notification sent"), description: t("Check the configured channels.") });
+    } catch (error) {
+      toast({ kind: "error", title: t("Test notification failed"), description: (error as Error).message });
+    } finally {
+      setTestingNotification(false);
+    }
   };
 
   const save = async () => {
@@ -348,9 +361,43 @@ export function SettingsPage() {
                   <Switch checked={settings.pushAlerts} onChange={(value) => update("pushAlerts", value)} label={t("Push notifications")} />
                 </SettingsRow>
               </div>
-              <div className="mt-3 flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
-                <Bell className="mt-0.5 size-3.5 shrink-0 text-subtle" />
-                {t("Delivery agents are configured on the Unraid side. Aurora mirrors the settings and shows the resulting in-app inbox.")}
+              <div className="mt-2 divide-y divide-line">
+                <SettingsRow label={t("Discord webhook")} description={t("Paste a Discord channel webhook URL.")}>
+                  <input
+                    value={settings.discordWebhook}
+                    onChange={(event) => update("discordWebhook", event.target.value)}
+                    placeholder="https://discord.com/api/webhooks/…"
+                    aria-label={t("Discord webhook")}
+                    className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                  />
+                </SettingsRow>
+                <SettingsRow label={t("ntfy URL")} description={t("Full ntfy topic URL, for example https://ntfy.sh/aurora.")}>
+                  <input
+                    value={settings.ntfyUrl}
+                    onChange={(event) => update("ntfyUrl", event.target.value)}
+                    placeholder="https://ntfy.sh/aurora"
+                    aria-label={t("ntfy URL")}
+                    className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                  />
+                </SettingsRow>
+                <SettingsRow label={t("Generic webhook")} description={t("JSON payload posted to any compatible endpoint.")}>
+                  <input
+                    value={settings.webhookUrl}
+                    onChange={(event) => update("webhookUrl", event.target.value)}
+                    placeholder="https://example.com/aurora"
+                    aria-label={t("Generic webhook")}
+                    className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                  />
+                </SettingsRow>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
+                <span className="flex min-w-0 items-start gap-2">
+                  <Bell className="mt-0.5 size-3.5 shrink-0 text-subtle" />
+                  {t("Aurora forwards new Unraid notifications to every configured channel. Save the settings before relying on them in production.")}
+                </span>
+                <Button size="sm" variant="secondary" loading={testingNotification} onClick={() => void testNotification()}>
+                  {t("Send test")}
+                </Button>
               </div>
             </Card>
           ) : null}

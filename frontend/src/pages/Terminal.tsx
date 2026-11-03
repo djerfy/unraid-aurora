@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
@@ -16,6 +16,8 @@ export function TerminalPage() {
   const { toast } = useToast();
   const { t } = useI18n();
   const [params] = useSearchParams();
+  const { id: containerId } = useParams();
+  const container = snapshot?.containers.find((item) => item.id === containerId || item.name === containerId) ?? null;
   const popout = params.get("popout") === "1";
   const hostRef = useRef<HTMLDivElement>(null);
   const [connection, setConnection] = useState<Connection>("connecting");
@@ -70,14 +72,21 @@ export function TerminalPage() {
     resize();
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}/api/v1/terminal`);
+    const endpoint = containerId
+      ? `/api/v1/terminal?container=${encodeURIComponent(container?.id ?? containerId)}`
+      : "/api/v1/terminal";
+    const socket = new WebSocket(`${protocol}//${window.location.host}${endpoint}`);
     socket.binaryType = "arraybuffer";
     setConnection("connecting");
 
     socket.onopen = () => {
       setConnection("connected");
       term.reset();
-      term.writeln("\x1b[38;5;209mAurora terminal\x1b[0m  \x1b[90mroot shell · encrypted transport\x1b[0m");
+      term.writeln(
+        container
+          ? `\x1b[38;5;209m${container.name}\x1b[0m  \x1b[90mcontainer shell · docker exec\x1b[0m`
+          : "\x1b[38;5;209mAurora terminal\x1b[0m  \x1b[90mroot shell · encrypted transport\x1b[0m",
+      );
       term.writeln("");
       resize();
       term.focus();
@@ -122,11 +131,11 @@ export function TerminalPage() {
       socket.close();
       term.dispose();
     };
-  }, [generation]);
+  }, [generation, containerId, container?.id, container?.name]);
 
   const openWindow = () => {
     const popup = window.open(
-      `${window.location.origin}/terminal?popout=1`,
+      container ? `${window.location.origin}/docker/terminal/${encodeURIComponent(container.id)}?popout=1` : `${window.location.origin}/terminal?popout=1`,
       "aurora-terminal",
       "popup=yes,width=1200,height=800",
     );
@@ -138,7 +147,7 @@ export function TerminalPage() {
       <div className="flex flex-wrap items-center gap-2 border-b border-[#1f2230] bg-[#08090d] px-4 py-2.5">
         <SquareTerminal className="size-4 text-[#ff8a6b]" />
         <span className="font-mono text-[11px] text-[#c7cbd6]">
-          {session?.user ?? "root"}@{snapshot?.system.hostname ?? "server"}:~
+          {session?.user ?? "root"}@{container ? container.name : snapshot?.system.hostname ?? "server"}:~
         </span>
         <Badge
           tone={connection === "connected" ? "success" : connection === "connecting" ? "warning" : "danger"}
@@ -176,7 +185,9 @@ export function TerminalPage() {
       <div ref={hostRef} className="min-h-0 w-full flex-1 px-2 py-2" />
       <div className="flex items-center gap-2 border-t border-[#1f2230] bg-[#08090d] px-4 py-2 font-mono text-[9px] text-[#5f6678]">
         <ShieldCheck className="size-3 text-[#3ddc97]" />
-        {t("Commands execute as root on the Unraid host. Keep this session private.")}
+        {container
+          ? t("Commands execute inside the container. Keep this session private.")
+          : t("Commands execute as root on the Unraid host. Keep this session private.")}
       </div>
     </div>
   );

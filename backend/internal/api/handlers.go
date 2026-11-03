@@ -14,6 +14,7 @@ import (
 
 	"aurora/internal/auth"
 	"aurora/internal/model"
+	"aurora/internal/notify"
 	"aurora/internal/provider"
 )
 
@@ -616,6 +617,111 @@ func (s *Server) vmXML(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"xml": xml})
 }
 
+func (s *Server) createVM(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var opts model.VMCreateOptions
+	if !s.decode(w, r, &opts) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	vm, err := s.provider.CreateVM(ctx, opts)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "vm_create_failed", err.Error())
+		return
+	}
+	s.log.Info("vm created", "name", opts.Name)
+	writeJSON(w, http.StatusCreated, vm)
+}
+
+func (s *Server) updateVMXML(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		XML string `json:"xml"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	if strings.TrimSpace(body.XML) == "" {
+		writeError(w, http.StatusBadRequest, "invalid_xml", "XML cannot be empty")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.UpdateVMXML(ctx, r.PathValue("id"), body.XML); err != nil {
+		writeError(w, http.StatusBadRequest, "vm_xml_failed", err.Error())
+		return
+	}
+	s.log.Info("vm xml updated", "id", r.PathValue("id"))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) vmSnapshots(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.VMSnapshots(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "vm_snapshots_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) createVMSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if err := s.provider.CreateVMSnapshot(ctx, r.PathValue("id"), body.Name, body.Description); err != nil {
+		writeError(w, http.StatusBadRequest, "vm_snapshot_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+}
+
+func (s *Server) restoreVMSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	if err := s.provider.RestoreVMSnapshot(ctx, r.PathValue("id"), r.PathValue("snapshot")); err != nil {
+		writeError(w, http.StatusBadRequest, "vm_snapshot_restore_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) deleteVMSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if err := s.provider.DeleteVMSnapshot(ctx, r.PathValue("id"), r.PathValue("snapshot")); err != nil {
+		writeError(w, http.StatusBadRequest, "vm_snapshot_delete_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) vms(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -849,6 +955,137 @@ func streamPluginCommand(w http.ResponseWriter, r *http.Request, s *Server, run 
 	}
 }
 
+func (s *Server) zfsPools(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.ZFSPools(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) zfsScrub(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.ScrubZFSPool(ctx, r.PathValue("name")); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_scrub_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) zfsSnapshots(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.ZFSSnapshots(ctx, r.URL.Query().Get("dataset"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_snapshots_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) createZFSSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Dataset string `json:"dataset"`
+		Name    string `json:"name"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.CreateZFSSnapshot(ctx, body.Dataset, body.Name); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_snapshot_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true})
+}
+
+func (s *Server) deleteZFSSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.DeleteZFSSnapshot(ctx, r.URL.Query().Get("dataset"), r.URL.Query().Get("name")); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_snapshot_delete_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) userScripts(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.UserScripts(ctx)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user_scripts_unavailable", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) userScript(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.UserScript(ctx, r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user_script_not_found", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"content": v})
+}
+
+func (s *Server) runUserScript(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	output, err := s.provider.RunUserScript(ctx, r.PathValue("id"))
+	result := map[string]any{"output": output}
+	if err != nil {
+		result["error"] = err.Error()
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.audit.List(queryInt(r, "limit", 200, 1, 500)))
+}
+
+func (s *Server) testNotification(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	settings, err := s.provider.Settings(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	var draft model.Settings
+	if err := json.NewDecoder(r.Body).Decode(&draft); err == nil && (draft.DiscordWebhook != "" || draft.NtfyURL != "" || draft.WebhookURL != "") {
+		settings = draft
+	}
+	if err := notify.SendTest(ctx, settings); err != nil {
+		writeError(w, http.StatusBadRequest, "notification_test_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) notifications(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
@@ -880,6 +1117,35 @@ func (s *Server) ups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) upsSettings(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.UPSSettings(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) saveUPSSettings(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var settings model.UPSSettings
+	if !s.decode(w, r, &settings) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.SaveUPSSettings(ctx, settings); err != nil {
+		writeError(w, http.StatusBadRequest, "ups_settings_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) gpus(w http.ResponseWriter, r *http.Request) {

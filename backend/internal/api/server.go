@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"aurora/internal/audit"
 	"aurora/internal/auth"
 	"aurora/internal/config"
 	"aurora/internal/metrics"
@@ -24,6 +25,7 @@ type Server struct {
 	auth     *auth.Manager
 	log      *slog.Logger
 	started  time.Time
+	audit    *audit.Log
 }
 
 func New(cfg config.Config, p provider.Provider, hub *metrics.Hub, authManager *auth.Manager, log *slog.Logger) *Server {
@@ -32,6 +34,7 @@ func New(cfg config.Config, p provider.Provider, hub *metrics.Hub, authManager *
 		auth:    authManager,
 		log:     log,
 		started: time.Now(),
+		audit:   audit.New(cfg.ConfigDir),
 	}
 }
 
@@ -71,10 +74,16 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/docker/templates", s.containerTemplates)
 	api.HandleFunc("POST /api/v1/docker/check-updates", s.checkContainerUpdates)
 	api.HandleFunc("GET /api/v1/vms", s.vms)
+	api.HandleFunc("POST /api/v1/vms", s.createVM)
 	api.HandleFunc("GET /api/v1/vms/{id}/icon", s.vmIcon)
 	api.HandleFunc("GET /api/v1/vms/{id}/console", s.vmConsole)
 	api.HandleFunc("PUT /api/v1/vms/{id}/autostart", s.vmAutostart)
 	api.HandleFunc("GET /api/v1/vms/{id}/xml", s.vmXML)
+	api.HandleFunc("PUT /api/v1/vms/{id}/xml", s.updateVMXML)
+	api.HandleFunc("GET /api/v1/vms/{id}/snapshots", s.vmSnapshots)
+	api.HandleFunc("POST /api/v1/vms/{id}/snapshots", s.createVMSnapshot)
+	api.HandleFunc("POST /api/v1/vms/{id}/snapshots/{snapshot}/revert", s.restoreVMSnapshot)
+	api.HandleFunc("DELETE /api/v1/vms/{id}/snapshots/{snapshot}", s.deleteVMSnapshot)
 	api.HandleFunc("GET /api/v1/network", s.network)
 	api.HandleFunc("GET /api/v1/users", s.users)
 	api.HandleFunc("POST /api/v1/users", s.createUser)
@@ -88,8 +97,20 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/plugins/install", s.installPlugin)
 	api.HandleFunc("DELETE /api/v1/plugins/{name}", s.removePlugin)
 	api.HandleFunc("GET /api/v1/notifications", s.notifications)
+	api.HandleFunc("GET /api/v1/audit", s.auditLog)
+	api.HandleFunc("GET /api/v1/user-scripts", s.userScripts)
+	api.HandleFunc("GET /api/v1/user-scripts/{id}", s.userScript)
+	api.HandleFunc("POST /api/v1/user-scripts/{id}/run", s.runUserScript)
+	api.HandleFunc("GET /api/v1/zfs/pools", s.zfsPools)
+	api.HandleFunc("POST /api/v1/zfs/pools/{name}/scrub", s.zfsScrub)
+	api.HandleFunc("GET /api/v1/zfs/snapshots", s.zfsSnapshots)
+	api.HandleFunc("POST /api/v1/zfs/snapshots", s.createZFSSnapshot)
+	api.HandleFunc("DELETE /api/v1/zfs/snapshots", s.deleteZFSSnapshot)
+	api.HandleFunc("POST /api/v1/notifications/test", s.testNotification)
 	api.HandleFunc("GET /api/v1/parity/history", s.parityHistory)
 	api.HandleFunc("GET /api/v1/ups", s.ups)
+	api.HandleFunc("GET /api/v1/ups/settings", s.upsSettings)
+	api.HandleFunc("PUT /api/v1/ups/settings", s.saveUPSSettings)
 	api.HandleFunc("GET /api/v1/gpus", s.gpus)
 	api.HandleFunc("GET /api/v1/mover", s.mover)
 	api.HandleFunc("POST /api/v1/mover/start", s.startMover)
@@ -137,6 +158,7 @@ func (s *Server) Handler() http.Handler {
 	handler = s.securityHeaders(handler)
 	handler = s.accessLog(handler)
 	handler = s.recoverPanic(handler)
+	handler = s.auditMutations(handler)
 	return handler
 }
 
@@ -247,6 +269,25 @@ func (s *Server) accessLog(next http.Handler) http.Handler {
 				"ip", auth.ClientIP(r),
 			)
 		}
+	})
+}
+
+func (s *Server) auditMutations(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(sw, r)
+		user := "anonymous"
+		if sess, ok := s.sessionUser(r); ok {
+			user = sess.User
+		}
+		s.audit.Record(audit.Entry{
+			Time: time.Now(), User: user, Method: r.Method, Path: r.URL.Path,
+			Status: sw.status, Remote: auth.ClientIP(r),
+		})
 	})
 }
 

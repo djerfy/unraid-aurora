@@ -118,6 +118,17 @@ export type MoverStatus = {
   history: MoverRun[];
 };
 
+export type ArrayRebuild = {
+  running: boolean;
+  action: string;
+  progress: number;
+  position: number;
+  size: number;
+  speed: number;
+  errors: number;
+  elapsed: number;
+};
+
 export type ArrayInfo = {
   state: string;
   protection: string;
@@ -128,6 +139,7 @@ export type ArrayInfo = {
   usage: number;
   disks: number;
   parity: Parity;
+  rebuild: ArrayRebuild;
   sync: boolean;
   startedAt: string;
 };
@@ -340,6 +352,20 @@ export type Container = {
   icon: string;
   webUi: string;
   restartPolicy: string;
+};
+
+export type VMCreateOptions = {
+  name: string;
+  vcpus: number;
+  memoryMB: number;
+  diskGB: number;
+  isoPath: string;
+  network: string;
+  start: boolean;
+};
+
+export type VMSnapshot = {
+  name: string;
 };
 
 export type VM = {
@@ -623,8 +649,64 @@ export type Settings = {
   autoUpdate: boolean;
   emailAlerts: boolean;
   pushAlerts: boolean;
+  discordWebhook: string;
+  ntfyUrl: string;
+  webhookUrl: string;
   telemetry: boolean;
   temperatureUnit: "celsius" | "fahrenheit" | string;
+};
+
+export type UPSSettings = {
+  service: string;
+  cable: string;
+  type: string;
+  device: string;
+  batteryLevel: number;
+  minutes: number;
+  timeout: number;
+  killUps: string;
+  overrideCapacity: number;
+};
+
+export type ZFSDataset = {
+  name: string;
+  used: number;
+  available: number;
+  refer: number;
+  mountpoint: string;
+  type: string;
+};
+
+export type ZFSPool = {
+  name: string;
+  size: number;
+  allocated: number;
+  free: number;
+  health: string;
+  datasets: ZFSDataset[];
+};
+
+export type ZFSSnapshot = {
+  name: string;
+  dataset: string;
+  used: number;
+  created: number;
+};
+
+export type UserScript = {
+  id: string;
+  name: string;
+  description: string;
+  schedule: string;
+};
+
+export type AuditEntry = {
+  time: string;
+  user: string;
+  method: string;
+  path: string;
+  status: number;
+  remote: string;
 };
 
 export type LogLine = { time: string; level: string; source: string; message: string };

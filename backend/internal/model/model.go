@@ -106,17 +106,29 @@ type ArrayStartOptions struct {
 }
 
 type Array struct {
-	State      string  `json:"state"`
-	Protection string  `json:"protection"`
-	Status     string  `json:"status"`
-	Total      uint64  `json:"total"`
-	Used       uint64  `json:"used"`
-	Free       uint64  `json:"free"`
-	Usage      float64 `json:"usage"`
-	Disks      int     `json:"disks"`
-	Parity     Parity  `json:"parity"`
-	Sync       bool    `json:"sync"`
-	StartedAt  string  `json:"startedAt"`
+	State      string       `json:"state"`
+	Protection string       `json:"protection"`
+	Status     string       `json:"status"`
+	Total      uint64       `json:"total"`
+	Used       uint64       `json:"used"`
+	Free       uint64       `json:"free"`
+	Usage      float64      `json:"usage"`
+	Disks      int          `json:"disks"`
+	Parity     Parity       `json:"parity"`
+	Rebuild    ArrayRebuild `json:"rebuild"`
+	Sync       bool         `json:"sync"`
+	StartedAt  string       `json:"startedAt"`
+}
+
+type ArrayRebuild struct {
+	Running  bool    `json:"running"`
+	Action   string  `json:"action"`
+	Progress float64 `json:"progress"`
+	Position uint64  `json:"position"`
+	Size     uint64  `json:"size"`
+	Speed    float64 `json:"speed"`
+	Errors   int     `json:"errors"`
+	Elapsed  int64   `json:"elapsed"`
 }
 
 type SmartAttribute struct {
@@ -385,6 +397,64 @@ type VM struct {
 	ConsolePort      int    `json:"consolePort"`
 	ConsoleWebSocket int    `json:"consoleWebSocket"`
 	ConsoleKeyboard  bool   `json:"consoleKeyboard"`
+}
+
+type UPSSettings struct {
+	Service          string `json:"service"`
+	Cable            string `json:"cable"`
+	Type             string `json:"type"`
+	Device           string `json:"device"`
+	BatteryLevel     int    `json:"batteryLevel"`
+	Minutes          int    `json:"minutes"`
+	Timeout          int    `json:"timeout"`
+	KillUPS          string `json:"killUps"`
+	OverrideCapacity int    `json:"overrideCapacity"`
+}
+
+type ZFSDataset struct {
+	Name       string `json:"name"`
+	Used       uint64 `json:"used"`
+	Available  uint64 `json:"available"`
+	Refer      uint64 `json:"refer"`
+	Mountpoint string `json:"mountpoint"`
+	Type       string `json:"type"`
+}
+
+type ZFSPool struct {
+	Name      string       `json:"name"`
+	Size      uint64       `json:"size"`
+	Allocated uint64       `json:"allocated"`
+	Free      uint64       `json:"free"`
+	Health    string       `json:"health"`
+	Datasets  []ZFSDataset `json:"datasets"`
+}
+
+type ZFSSnapshot struct {
+	Name    string `json:"name"`
+	Dataset string `json:"dataset"`
+	Used    uint64 `json:"used"`
+	Created int64  `json:"created"`
+}
+
+type UserScript struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Schedule    string `json:"schedule"`
+}
+
+type VMCreateOptions struct {
+	Name     string `json:"name"`
+	VCPUs    int    `json:"vcpus"`
+	MemoryMB int    `json:"memoryMB"`
+	DiskGB   int    `json:"diskGB"`
+	ISOPath  string `json:"isoPath"`
+	Network  string `json:"network"`
+	Start    bool   `json:"start"`
+}
+
+type VMSnapshot struct {
+	Name string `json:"name"`
 }
 
 type Notification struct {
@@ -679,6 +749,9 @@ type Settings struct {
 	AutoUpdate      bool   `json:"autoUpdate"`
 	EmailAlerts     bool   `json:"emailAlerts"`
 	PushAlerts      bool   `json:"pushAlerts"`
+	DiscordWebhook  string `json:"discordWebhook"`
+	NtfyURL         string `json:"ntfyUrl"`
+	WebhookURL      string `json:"webhookUrl"`
 	Telemetry       bool   `json:"telemetry"`
 	TemperatureUnit string `json:"temperatureUnit"`
 }

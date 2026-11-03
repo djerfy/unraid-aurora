@@ -334,6 +334,13 @@ func (l *Live) Array(ctx context.Context) (model.Array, error) {
 		parity.LastCheck = last
 	}
 	parity.History, _ = l.ParityHistory(ctx)
+	rebuild := model.ArrayRebuild{
+		Running: running, Action: action, Progress: round1(progress),
+		Position: resync * 1024, Size: resyncSize * 1024,
+		Speed:   float64(parseInt(varIni.get("", "mdResyncDt"))) * 1024,
+		Errors:  parseInt(varIni.get("", "sbSyncErrs")),
+		Elapsed: int64(parseInt(varIni.get("", "mdResyncElapsed"))),
+	}
 
 	status := "protected"
 	if !started {
@@ -359,6 +366,7 @@ func (l *Live) Array(ctx context.Context) (model.Array, error) {
 		Usage:      round1(usage),
 		Disks:      disks,
 		Parity:     parity,
+		Rebuild:    rebuild,
 		Sync:       running && action != "",
 	}, nil
 }

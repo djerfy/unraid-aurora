@@ -75,6 +75,45 @@ const vms: Record<string, string> = {
   "Start the VM to open its console": "Démarrez la VM pour ouvrir sa console",
   "Open in browser": "Ouvrir dans le navigateur",
   "{count} vCPU": "{count} vCPU",
+  "New VM": "Nouvelle VM",
+  "New virtual machine": "Nouvelle machine virtuelle",
+  "Create a libvirt/KVM domain with a qcow2 virtual disk and an optional installation ISO.":
+    "Créez un domaine libvirt/KVM avec un disque virtuel qcow2 et une ISO d'installation optionnelle.",
+  "The virtual disk will be created under /mnt/user/domains.":
+    "Le disque virtuel sera créé dans /mnt/user/domains.",
+  "Memory (MiB)": "Mémoire (Mio)",
+  "Disk (GiB)": "Disque (Gio)",
+  "Network bridge": "Bridge réseau",
+  "Installation ISO": "ISO d'installation",
+  "Start after creation": "Démarrer après création",
+  "Boot the VM as soon as it is defined.":
+    "Démarrez la VM dès qu'elle est définie.",
+  "Create and start": "Créer et démarrer",
+  "Virtual machine created": "Machine virtuelle créée",
+  "Could not create the virtual machine": "Impossible de créer la machine virtuelle",
+  "Edit the libvirt domain definition. The domain name cannot be changed here; changes apply on the next boot.":
+    "Modifiez la définition du domaine libvirt. Le nom du domaine ne peut pas être changé ici ; les modifications s'appliquent au prochain démarrage.",
+  "Libvirt XML": "XML libvirt",
+  "Save definition": "Enregistrer la définition",
+  "VM definition saved": "Définition de la VM enregistrée",
+  "Changes apply to the next boot.": "Les modifications s'appliquent au prochain démarrage.",
+  "Could not save the VM definition": "Impossible d'enregistrer la définition de la VM",
+  "Snapshots": "Snapshots",
+  "Refresh snapshots": "Actualiser les snapshots",
+  "Snapshot name": "Nom du snapshot",
+  "Loading snapshots…": "Chargement des snapshots…",
+  "No snapshots for this VM.": "Aucun snapshot pour cette VM.",
+  "Snapshot created": "Snapshot créé",
+  "Could not create the snapshot": "Impossible de créer le snapshot",
+  "Snapshot restored": "Snapshot restauré",
+  "Could not restore the snapshot": "Impossible de restaurer le snapshot",
+  "Restore snapshot": "Restaurer le snapshot",
+  "Restore snapshot {name}? The current VM state will be replaced.":
+    "Restaurer le snapshot {name} ? L'état actuel de la VM sera remplacé.",
+  "Snapshot deleted": "Snapshot supprimé",
+  "Could not delete the snapshot": "Impossible de supprimer le snapshot",
+  "Delete snapshot": "Supprimer le snapshot",
+  "Delete snapshot {name}?": "Supprimer le snapshot {name} ?",
 };
 
 export default vms;

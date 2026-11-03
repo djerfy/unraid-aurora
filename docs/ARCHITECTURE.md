@@ -135,6 +135,15 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |
 | `GET` | `/api/v1/docker/containers/{id}/connections` | Network sockets observed with `ss` (public, private and loopback) |
+| `POST` | `/api/v1/vms` | Create a VM |
+| `PUT` | `/api/v1/vms/{id}/xml` | Update a libvirt domain definition |
+| `GET/POST` | `/api/v1/vms/{id}/snapshots` | List or create VM snapshots |
+| `POST/DELETE` | `/api/v1/vms/{id}/snapshots/{snapshot}` | Restore or delete a VM snapshot |
+| `GET` | `/api/v1/audit` | Durable mutation audit |
+| `GET/POST` | `/api/v1/user-scripts` | User Scripts inventory and execution |
+| `GET/POST` | `/api/v1/zfs/*` | ZFS pools, scrub and snapshots |
+| `GET/PUT` | `/api/v1/ups/settings` | apcupsd shutdown policy |
+| `POST` | `/api/v1/notifications/test` | Test configured outbound channels |
 | `GET` | `/api/v1/docker/containers/{id}/icon` | Cached Unraid container icon |
 | `GET` | `/api/v1/docker/containers/{id}/config` | Editable container configuration |
 | `PUT` | `/api/v1/docker/containers/{id}/config` | Recreate the container with new paths/ports/env |
