@@ -535,12 +535,13 @@ can itself be reverted.
 
 ### UPS, ZFS, user scripts and audit
 
-- **UPS** shows battery/load/runtime and edits the apcupsd shutdown policy; NUT remains managed by
-  its own plugin.
-- **ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
+- **Settings → UPS** shows battery/load/runtime and edits the apcupsd shutdown policy; NUT remains
+  managed by its own plugin.
+- **Storage → ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
 - **User scripts** lists the User Scripts plugin inventory, shows the source and runs a script as root,
   returning its output.
-- **Audit log** records every mutating API call with user, method, path, status and remote address.
+- The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. The audit tab records
+  every mutating API call with user, method, path, status and remote address.
 
 ---
 

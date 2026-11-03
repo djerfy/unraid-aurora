@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BatteryCharging, Save, ShieldAlert, Zap } from "lucide-react";
-import { PageHeader } from "../components/layout/PageHeader";
 import { Badge, Button, Card, Progress } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useI18n } from "../i18n";
@@ -16,7 +15,7 @@ function runtimeLabel(minutes: number) {
   return `${hours}h ${String(rest).padStart(2, "0")}m`;
 }
 
-export function UPSPage() {
+export function UPSView() {
   const { snapshot } = useApp();
   const { t } = useI18n();
   const { toast } = useToast();
@@ -44,18 +43,6 @@ export function UPSPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={t("Infrastructure")}
-        title={t("UPS")}
-        description={t("Battery status and the built-in apcupsd shutdown policy.")}
-        meta={
-          <>
-            <Badge tone={ups?.present ? "success" : "neutral"} dot>{ups?.present ? t("Detected") : t("Not detected")}</Badge>
-            {ups?.model ? <span className="chip">{ups.model}</span> : null}
-          </>
-        }
-      />
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card className="card-pad">
           <div className="flex items-start justify-between gap-4">

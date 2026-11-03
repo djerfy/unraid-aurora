@@ -14,14 +14,10 @@ import { GPUsPage } from "./pages/GPUs";
 import { UsersPage } from "./pages/Users";
 import { NotificationsPage } from "./pages/Notifications";
 import { PluginsPage } from "./pages/Plugins";
-import { LogsPage } from "./pages/Logs";
+import { LogsHubPage } from "./pages/LogsHub";
 import { TerminalPage } from "./pages/Terminal";
 import { ToolsPage } from "./pages/Tools";
-import { HistoryPage } from "./pages/History";
-import { AuditPage } from "./pages/Audit";
 import { UserScriptsPage } from "./pages/UserScripts";
-import { ZFSPage } from "./pages/ZFS";
-import { UPSPage } from "./pages/UPS";
 import { BalancePage } from "./pages/Balance";
 import { SettingsPage } from "./pages/Settings";
 import { AboutPage } from "./pages/About";
@@ -58,6 +54,7 @@ export default function App() {
         <Route element={<ProtectedShell />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/storage" element={<StoragePage />} />
+          <Route path="/zfs" element={<Navigate to="/storage?tab=zfs" replace />} />
           <Route path="/docker" element={<DockerPage />} />
           <Route path="/docker/terminal/:id" element={<TerminalPage />} />
           <Route path="/vms" element={<VMsPage />} />
@@ -67,16 +64,15 @@ export default function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/plugins" element={<PluginsPage />} />
-          <Route path="/logs" element={<LogsPage />} />
+          <Route path="/logs" element={<LogsHubPage />} />
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/tools" element={<ToolsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/audit" element={<AuditPage />} />
+          <Route path="/history" element={<Navigate to="/logs?tab=history" replace />} />
+          <Route path="/audit" element={<Navigate to="/logs?tab=audit" replace />} />
           <Route path="/scripts" element={<UserScriptsPage />} />
-          <Route path="/zfs" element={<ZFSPage />} />
-          <Route path="/ups" element={<UPSPage />} />
           <Route path="/balance" element={<BalancePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/ups" element={<Navigate to="/settings" replace />} />
           <Route path="/about" element={<AboutPage />} />
         </Route>
 

@@ -54,6 +54,7 @@ import {
   formatSpeed,
   relativeTime,
 } from "../lib/format";
+import { ZFSView } from "./ZFS";
 import type { Disk, MoverRun, Share, ShareConfig } from "../lib/types";
 
 const TABS = [
@@ -62,6 +63,7 @@ const TABS = [
   { value: "pools", label: "Pools" },
   { value: "parity", label: "Parity" },
   { value: "location", label: "Location" },
+  { value: "zfs", label: "ZFS" },
 ];
 
 const MOVER_PHASES = [
@@ -335,7 +337,9 @@ export function StoragePage() {
         ) : null}
       </div>
 
-      {tab === "location" ? (
+      {tab === "zfs" ? (
+        <ZFSView />
+      ) : tab === "location" ? (
         <StorageLocation disks={disks} onOpenDisk={setSelectedDisk} />
       ) : tab === "array" ? (
         <div className="space-y-4">

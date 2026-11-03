@@ -8,6 +8,7 @@ import {
   Info,
   KeyRound,
   LogOut,
+  BatteryCharging,
   Monitor,
   Moon,
   Palette,
@@ -31,6 +32,7 @@ import { useApp } from "../app/AppDataProvider";
 import { useTheme, type Accent, type ThemeMode } from "../app/ThemeProvider";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
+import { UPSView } from "./UPS";
 import { api } from "../lib/api";
 import { formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -39,6 +41,7 @@ const SECTIONS = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "general", label: "General", icon: SlidersHorizontal },
   { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "ups", label: "UPS", icon: BatteryCharging },
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "about", label: "About", icon: Info },
 ];
@@ -401,6 +404,8 @@ export function SettingsPage() {
               </div>
             </Card>
           ) : null}
+
+          {section === "ups" ? <UPSView /> : null}
 
           {section === "security" ? (
             <>

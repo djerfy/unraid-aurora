@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Database, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { PageHeader } from "../components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState, IconButton, Progress, cn } from "../components/ui/primitives";
 import { useI18n } from "../i18n";
 import { useToast } from "../app/ToastProvider";
 import { api } from "../lib/api";
 import { formatBytes, formatDateTime } from "../lib/format";
 
-export function ZFSPage() {
+export function ZFSView() {
   const { t } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -46,13 +45,10 @@ export function ZFSPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={t("Infrastructure")}
-        title={t("ZFS")}
-        description={t("Pools, datasets and snapshots on this Unraid host.")}
-        meta={<Badge tone="neutral" dot>{t("{count} pools", { count: pools.data?.length ?? 0 })}</Badge>}
-        actions={<Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={() => void pools.refetch()}>{t("Refresh")}</Button>}
-      />
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <p className="text-[10.5px] text-subtle">{t("Pools, datasets and snapshots on this Unraid host.")}</p>
+        <Button variant="secondary" size="sm" icon={<RefreshCw className="size-3.5" />} onClick={() => void pools.refetch()}>{t("Refresh")}</Button>
+      </div>
 
       {pools.isLoading ? (
         <p className="text-[11px] text-muted">{t("Loading ZFS data…")}</p>

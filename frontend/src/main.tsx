@@ -22,6 +22,14 @@ const queryClient = new QueryClient({
 const container = document.getElementById("root");
 if (!container) throw new Error("Root element is missing");
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // Private browsing or a blocked worker keeps the app fully functional.
+    });
+  });
+}
+
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
