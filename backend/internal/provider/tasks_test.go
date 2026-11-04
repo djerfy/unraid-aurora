@@ -80,3 +80,29 @@ func TestTasksShowsTrivyImageScans(t *testing.T) {
 		t.Fatalf("completed scan is missing: %+v", completed)
 	}
 }
+
+func TestTasksAreSortedByLatestUpdate(t *testing.T) {
+	now := time.Now()
+	older := now.Add(-10 * time.Minute)
+	live := &Live{
+		shareUsage:        map[string]shareUsageEntry{},
+		shareUsageStarted: map[string]time.Time{},
+		shareUsageErrors:  map[string]string{},
+		trivyScans: func() []model.TrivyScan {
+			return []model.TrivyScan{
+				{Image: "old:1", Status: "completed", StartedAt: older, FinishedAt: &older},
+				{Image: "new:1", Status: "running", StartedAt: now},
+			}
+		},
+	}
+	tasks, err := live.Tasks(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tasks) != 2 {
+		t.Fatalf("unexpected tasks: %+v", tasks)
+	}
+	if tasks[0].Name != "new:1" || tasks[1].Name != "old:1" {
+		t.Fatalf("tasks are not sorted by latest activity: %+v", tasks)
+	}
+}

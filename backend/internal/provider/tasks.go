@@ -98,14 +98,26 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 		}
 	}
 
-	rank := map[string]int{"running": 0, "queued": 1, "failed": 2, "completed": 3}
 	sort.Slice(tasks, func(i, j int) bool {
-		if rank[tasks[i].Status] != rank[tasks[j].Status] {
-			return rank[tasks[i].Status] < rank[tasks[j].Status]
+		left, right := taskTimestamp(tasks[i]), taskTimestamp(tasks[j])
+		if left.Equal(right) {
+			return tasks[i].Name < tasks[j].Name
 		}
-		return tasks[i].Name < tasks[j].Name
+		return left.After(right)
 	})
 	return tasks, nil
+}
+
+// taskTimestamp is the most recent activity for a task: its last update when
+// known, otherwise when it started.
+func taskTimestamp(task model.Task) time.Time {
+	if task.UpdatedAt != nil {
+		return *task.UpdatedAt
+	}
+	if task.StartedAt != nil {
+		return *task.StartedAt
+	}
+	return time.Time{}
 }
 
 func trivyScanTask(scan model.TrivyScan) model.Task {
