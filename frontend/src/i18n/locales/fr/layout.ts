@@ -93,6 +93,14 @@ const layout: Record<string, string> = {
 
   // Primitives
   "Usage": "Utilisation",
+  "Skip to content": "Aller au contenu",
+  "Live metrics are unavailable. Showing the last snapshot and reconnecting automatically.": "Les métriques en direct sont indisponibles. Affichage du dernier instantané et reconnexion automatique.",
+  "Keyboard shortcuts": "Raccourcis clavier",
+  "Navigate Aurora without leaving the keyboard.": "Navigue dans Aurora sans quitter le clavier.",
+  "Open the command palette": "Ouvrir la palette de commandes",
+  "Focus search": "Aller à la recherche",
+  "Show this help": "Afficher cette aide",
+  "Close dialogs": "Fermer les dialogues",
 };
 
 export default layout;

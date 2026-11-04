@@ -618,3 +618,21 @@ input[type="range"] {
     animation: none;
   }
 }
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  transform: translateY(-160%);
+  border-radius: 8px;
+  border: 1px solid var(--accent-line);
+  background: var(--surface);
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 11px;
+  transition: transform 160ms ease;
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}

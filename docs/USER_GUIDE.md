@@ -691,6 +691,7 @@ can itself be reverted.
 |---|---|
 | `⌘K` / `Ctrl+K` | Open/close the command palette |
 | `/` | Open the command palette when not typing |
+| `?` | Show the keyboard shortcut help |
 | `↑` / `↓` | Move through palette results |
 | `Enter` | Run the selected command |
 | `Esc` | Close overlay/drawer/palette |

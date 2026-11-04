@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Sidebar, MobileSidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import { CommandPalette, type Command } from "../ui/overlays";
+import { CommandPalette, Modal, type Command } from "../ui/overlays";
 import { Button } from "../ui/primitives";
 import { useApp } from "../../app/AppDataProvider";
 import { useTheme } from "../../app/ThemeProvider";
@@ -69,10 +69,12 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
 }
 
 export function AppShell() {
-  const { snapshot, session, error, refresh } = useApp();
+  const { snapshot, session, error, live, refresh } = useApp();
   const { resolvedTheme, setTheme, setPreferences } = useTheme();
   const { t } = useI18n();
   const action = useAction();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [showOffline, setShowOffline] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -102,6 +104,11 @@ export function AppShell() {
           event.preventDefault();
           setCommandOpen(true);
         },
+        "?": (event: KeyboardEvent) => {
+          if (isTypingTarget(event.target)) return;
+          event.preventDefault();
+          setShortcutsOpen(true);
+        },
       }),
       [],
     ),
@@ -110,6 +117,15 @@ export function AppShell() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (live) {
+      setShowOffline(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setShowOffline(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [live]);
 
   // A browser that has never chosen a theme adopts the server preference once.
   useEffect(() => {
@@ -265,6 +281,7 @@ export function AppShell() {
 
   return (
     <div className="relative min-h-dvh">
+      <a href="#main-content" className="skip-link">{t("Skip to content")}</a>
       <div className="app-atmosphere" />
       <div className="grain" />
 
@@ -289,7 +306,13 @@ export function AppShell() {
       >
         <Topbar onOpenCommand={() => setCommandOpen(true)} onOpenMobile={() => setMobileOpen(true)} />
 
-        <main className={isTerminal ? "flex min-h-0 w-full flex-1 flex-col" : "w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8"}>
+        {showOffline ? (
+          <div role="status" aria-live="polite" className="relative z-10 border-b border-[var(--warning)]/30 bg-[var(--warning-soft)] px-4 py-2 text-center text-[10px] text-[var(--warning)]">
+            {t("Live metrics are unavailable. Showing the last snapshot and reconnecting automatically.")}
+          </div>
+        ) : null}
+
+        <main id="main-content" className={isTerminal ? "flex min-h-0 w-full flex-1 flex-col" : "w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8"}>
           <div key={location.pathname} className={isTerminal ? "flex min-h-0 flex-1 flex-col" : "animate-fade-up"}>
             <Outlet />
           </div>
@@ -312,6 +335,28 @@ export function AppShell() {
       </div>
 
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} commands={commands} />
+
+      <Modal
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        title={t("Keyboard shortcuts")}
+        description={t("Navigate Aurora without leaving the keyboard.")}
+        footer={<Button variant="secondary" onClick={() => setShortcutsOpen(false)}>{t("Close")}</Button>}
+      >
+        <div className="space-y-2">
+          {([
+            ["⌘K / Ctrl K", "Open the command palette"],
+            ["/", "Focus search"],
+            ["?", "Show this help"],
+            ["Esc", "Close dialogs"],
+          ] as const).map(([keys, label]) => (
+            <div key={keys} className="flex items-center justify-between rounded-lg border border-line bg-[var(--surface-2)]/45 px-3 py-2 text-[11px]">
+              <span className="text-muted">{t(label)}</span>
+              <kbd className="rounded-md border border-line bg-[var(--surface)] px-2 py-0.5 font-mono text-[9.5px] text-soft">{keys}</kbd>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
