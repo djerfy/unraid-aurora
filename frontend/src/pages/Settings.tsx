@@ -82,6 +82,7 @@ export function SettingsPage() {
   const [tokenName, setTokenName] = useState("");
   const [tokenRole, setTokenRole] = useState<"viewer" | "operator" | "admin">("viewer");
   const [tokenExpiry, setTokenExpiry] = useState(90);
+  const [tokenScopes, setTokenScopes] = useState<string[]>([]);
   const [newToken, setNewToken] = useState("");
 
   if (!snapshot) return null;
@@ -118,7 +119,7 @@ export function SettingsPage() {
   const tokens = useQuery({ queryKey: ["api-tokens"], queryFn: api.apiTokens, enabled: section === "api" });
   const authSessions = useQuery({ queryKey: ["auth-sessions"], queryFn: api.authSessions, enabled: section === "security", refetchInterval: 30_000 });
   const createToken = useMutation({
-    mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole, tokenExpiry),
+    mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole, tokenExpiry, tokenScopes),
     onSuccess: (result) => {
       setNewToken(result.secret);
       setTokenName("");
@@ -645,6 +646,33 @@ export function SettingsPage() {
                 </label>
                 <Button variant="primary" loading={createToken.isPending} disabled={!tokenName.trim()} onClick={() => createToken.mutate()}>{t("Create token")}</Button>
               </div>
+              <div className="mt-4 rounded-xl border border-line bg-[var(--surface-2)]/35 p-3">
+                <p className="text-[10px] font-medium text-soft">{t("Scopes")}</p>
+                <p className="mt-0.5 text-[9px] text-subtle">{t("Leave all unchecked to allow every resource for this role.")}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {([
+                    ["docker", "Docker"],
+                    ["vms", "Virtual machines"],
+                    ["storage", "Storage"],
+                    ["network", "Network"],
+                    ["system", "System"],
+                    ["ups", "UPS"],
+                    ["apps", "Applications"],
+                    ["automation", "Automation"],
+                    ["access", "Access"],
+                  ] as const).map(([scope, label]) => (
+                    <label key={scope} className="flex items-center gap-1.5 rounded-lg border border-line px-2 py-1 text-[9.5px] text-muted">
+                      <input
+                        type="checkbox"
+                        checked={tokenScopes.includes(scope)}
+                        onChange={(event) => setTokenScopes(event.target.checked ? [...tokenScopes, scope] : tokenScopes.filter((item) => item !== scope))}
+                        className="size-3.5 accent-[var(--accent)]"
+                      />
+                      {t(label)}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="mt-3 space-y-2">
                 {tokens.isLoading ? <p className="text-[10.5px] text-muted">{t("Loading API tokens…")}</p> : tokens.isError ? <p className="text-[10.5px] text-[var(--danger)]">{(tokens.error as Error).message}</p> : tokens.data?.length ? tokens.data.map((token) => (
                   <div key={token.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/40 px-3 py-2">
@@ -652,6 +680,7 @@ export function SettingsPage() {
                     <Badge tone={token.role === "viewer" ? "info" : token.role === "operator" ? "warning" : "danger"}>
                       {t(token.role === "viewer" ? "Viewer" : token.role === "operator" ? "Operator" : "Admin")}
                     </Badge>
+                    {token.scopes?.length ? <Badge tone="neutral">{t("{count} scopes", { count: token.scopes.length })}</Badge> : null}
                     <span className="text-[9px] text-subtle">
                       {token.expiresAt && new Date(token.expiresAt).getTime() <= Date.now()
                         ? t("Expired")

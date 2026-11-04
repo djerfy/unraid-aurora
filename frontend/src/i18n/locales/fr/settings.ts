@@ -179,6 +179,10 @@ const settings: Record<string, string> = {
   "Disks & SMART": "Disques et SMART",
   "Plugins & updates": "Plugins et mises à jour",
   "UPS & power": "UPS et alimentation",
+  "Scopes": "Portées",
+  "Leave all unchecked to allow every resource for this role.": "Laisse tout décoché pour autoriser toutes les ressources de ce rôle.",
+  "Automation": "Automatisation",
+  "{count} scopes": "{count} portées",
 };
 
 export default settings;

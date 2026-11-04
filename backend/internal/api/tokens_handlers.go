@@ -24,10 +24,11 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name          string `json:"name"`
-		Role          string `json:"role"`
-		ReadOnly      bool   `json:"readOnly"`
-		ExpiresInDays int    `json:"expiresInDays"`
+		Name          string   `json:"name"`
+		Role          string   `json:"role"`
+		ReadOnly      bool     `json:"readOnly"`
+		ExpiresInDays int      `json:"expiresInDays"`
+		Scopes        []string `json:"scopes"`
 	}
 	if !s.decode(w, r, &body) {
 		return
@@ -50,7 +51,7 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		value := time.Now().AddDate(0, 0, body.ExpiresInDays)
 		expiresAt = &value
 	}
-	token, secret, err := s.tokens.create(body.Name, role, expiresAt)
+	token, secret, err := s.tokens.create(body.Name, role, expiresAt, body.Scopes)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "token_create_failed", err.Error())
 		return

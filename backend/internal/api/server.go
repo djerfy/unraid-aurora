@@ -227,7 +227,10 @@ type tokenPrincipal struct {
 // tokenRoleAllows applies the token role policy. Viewers are read-only,
 // operators can run day-to-day workload and array actions, and admins retain
 // full control over host configuration.
-func tokenRoleAllows(role, method, path string) bool {
+func tokenRoleAllows(role string, scopes []string, method, path string) bool {
+	if !tokenScopeAllows(scopes, path) {
+		return false
+	}
 	if handled, allowed := sensitiveReadAllows(role, path); handled {
 		return allowed
 	}
@@ -318,7 +321,7 @@ func (s *Server) authenticate(next http.Handler) http.Handler {
 				writeError(w, http.StatusUnauthorized, "unauthorized", "API token is invalid")
 				return
 			}
-			if !tokenRoleAllows(token.Role, r.Method, r.URL.Path) {
+			if !tokenRoleAllows(token.Role, token.Scopes, r.Method, r.URL.Path) {
 				if token.Role == TokenRoleViewer {
 					writeError(w, http.StatusForbidden, "read_only_token", "this API token is read-only")
 				} else {

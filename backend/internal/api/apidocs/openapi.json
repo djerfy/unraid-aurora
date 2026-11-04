@@ -3771,7 +3771,7 @@
           "Access"
         ],
         "summary": "Create an API token",
-        "description": "Create `{name,role,expiresInDays}` \u2192 secret once",
+        "description": "Create `{name,role,expiresInDays,scopes}` \u2192 secret once",
         "operationId": "post_tokens",
         "security": [
           {
@@ -9223,6 +9223,23 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "docker",
+                "vms",
+                "storage",
+                "network",
+                "system",
+                "ups",
+                "apps",
+                "automation",
+                "access"
+              ]
+            }
           }
         }
       },
@@ -9250,6 +9267,12 @@
             "maximum": 3650,
             "default": 90,
             "description": "0 means never expires."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

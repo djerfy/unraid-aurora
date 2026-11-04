@@ -962,6 +962,7 @@ export type APIToken = {
   created: string;
   lastUsed: string;
   expiresAt?: string | null;
+  scopes?: string[];
 };
 
 export type AuditEntry = {

@@ -37,7 +37,9 @@ a 15 minute cooldown, matching the Unraid webGUI.
 
 Create a token in **Settings → API tokens** or with `POST /api/v1/tokens` from a
 signed-in session. Set `expiresInDays` (0 = never); expired tokens are rejected
-even if their hash is still stored. The secret is shown once. Send it as:
+even if their hash is still stored. Optional `scopes` restricts a token to
+`docker`, `vms`, `storage`, `network`, `system`, `ups`, `apps`, `automation` or
+`access`; an empty list keeps the role-wide access. The secret is shown once. Send it as:
 
 ```http
 Authorization: Bearer <token>
@@ -285,7 +287,7 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | PUT | `/users/{name}/password` | admin | Change a password |
 | DELETE | `/users/{name}` | admin | Delete a non-root account |
 | GET | `/tokens` | session | List API tokens |
-| POST | `/tokens` | session | Create `{name,role,expiresInDays}` → secret once |
+| POST | `/tokens` | session | Create `{name,role,expiresInDays,scopes}` → secret once |
 | DELETE | `/tokens/{id}` | session | Revoke a token |
 | GET | `/audit?limit=&method=&statusClass=&user=` | admin | Mutation audit (newest first, max 500) |
 | GET | `/notifications` | viewer+ | Inbox and archive |

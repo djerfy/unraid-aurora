@@ -83,10 +83,10 @@ export const api = {
     return request<import("./types").AuditEntry[]>(`/api/v1/audit?${params.toString()}`);
   },
   apiTokens: () => request<import("./types").APIToken[]>("/api/v1/tokens"),
-  createAPIToken: (name: string, role: "viewer" | "operator" | "admin", expiresInDays: number) =>
+  createAPIToken: (name: string, role: "viewer" | "operator" | "admin", expiresInDays: number, scopes: string[]) =>
     request<{ token: import("./types").APIToken; secret: string }>("/api/v1/tokens", {
       method: "POST",
-      body: JSON.stringify({ name, role, expiresInDays }),
+      body: JSON.stringify({ name, role, expiresInDays, scopes }),
     }),
   revokeAPIToken: (id: string) =>
     request<{ ok: boolean }>(`/api/v1/tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),

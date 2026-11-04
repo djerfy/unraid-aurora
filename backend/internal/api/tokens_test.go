@@ -11,7 +11,7 @@ import (
 func TestTokenStoreLifecycle(t *testing.T) {
 	dir := t.TempDir()
 	store := newTokenStore(dir)
-	token, secret, err := store.create("prometheus", TokenRoleViewer, nil)
+	token, secret, err := store.create("prometheus", TokenRoleViewer, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestTokenRolePolicy(t *testing.T) {
 		{TokenRoleAdmin, http.MethodGet, "/api/v1/config/export", true},
 	}
 	for _, tc := range cases {
-		if got := tokenRoleAllows(tc.role, tc.method, tc.path); got != tc.want {
+		if got := tokenRoleAllows(tc.role, nil, tc.method, tc.path); got != tc.want {
 			t.Fatalf("tokenRoleAllows(%q, %s, %s) = %v, want %v", tc.role, tc.method, tc.path, got, tc.want)
 		}
 	}
@@ -85,7 +85,7 @@ func TestRedactSettings(t *testing.T) {
 func TestTokenExpiry(t *testing.T) {
 	store := newTokenStore(t.TempDir())
 	past := time.Now().Add(-time.Hour)
-	token, secret, err := store.create("expired", TokenRoleViewer, &past)
+	token, secret, err := store.create("expired", TokenRoleViewer, &past, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,10 +93,25 @@ func TestTokenExpiry(t *testing.T) {
 		t.Fatalf("expired token %s was accepted", token.ID)
 	}
 	future := time.Now().Add(time.Hour)
-	if _, secret, err = store.create("valid", TokenRoleViewer, &future); err != nil {
+	if _, secret, err = store.create("valid", TokenRoleViewer, &future, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := store.validate(secret); !ok {
 		t.Fatal("valid token was rejected")
+	}
+}
+
+func TestTokenScopes(t *testing.T) {
+	if !tokenScopeAllows(nil, "/api/v1/docker/containers") {
+		t.Fatal("empty scopes must allow every resource")
+	}
+	if !tokenScopeAllows([]string{"docker"}, "/api/v1/docker/containers") {
+		t.Fatal("docker scope was rejected")
+	}
+	if tokenScopeAllows([]string{"docker"}, "/api/v1/vms") {
+		t.Fatal("docker scope allowed a VM endpoint")
+	}
+	if _, err := normalizeTokenScopes([]string{"unknown"}); err == nil {
+		t.Fatal("unknown scope was accepted")
 	}
 }
