@@ -32,6 +32,7 @@ func main() {
 		addr      = flag.String("addr", "", "listen address (overrides AURORA_ADDR)")
 		logFile   = flag.String("log-file", envString("AURORA_LOG_FILE", ""), "append logs to this file instead of stdout")
 		logFormat = flag.String("log-format", envString("AURORA_LOG_FORMAT", "text"), "log format: text or json")
+		logLevel  = flag.String("log-level", envString("AURORA_LOG_LEVEL", "info"), "log level: debug, info, warn or error")
 		daemon    = flag.Bool("daemon", envBool("AURORA_DAEMON", false), "run in the background")
 		showVer   = flag.Bool("version", false, "print version and exit")
 	)
@@ -59,9 +60,10 @@ func main() {
 		return
 	}
 
-	level := slog.LevelInfo
-	if strings.EqualFold(os.Getenv("AURORA_LOG_LEVEL"), "debug") {
-		level = slog.LevelDebug
+	level, err := normalizeLogLevel(*logLevel)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "aurora:", err)
+		os.Exit(2)
 	}
 	log, closeLog, err := newLogger(level, format, logPath)
 	if err != nil {

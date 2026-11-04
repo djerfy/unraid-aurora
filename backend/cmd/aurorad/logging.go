@@ -49,6 +49,23 @@ func normalizeLogFormat(format string) (string, error) {
 	}
 }
 
+// normalizeLogLevel maps the -log-level flag and AURORA_LOG_LEVEL to a slog
+// level. Unknown values are rejected instead of silently defaulting.
+func normalizeLogLevel(level string) (slog.Level, error) {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "", "info":
+		return slog.LevelInfo, nil
+	case "debug":
+		return slog.LevelDebug, nil
+	case "warn", "warning":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return 0, fmt.Errorf("unsupported log level %q (use debug, info, warn or error)", level)
+	}
+}
+
 func openLogFile(path string) (*os.File, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {

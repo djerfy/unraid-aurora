@@ -194,13 +194,13 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_SESSION_TTL` | `24h` | Session lifetime (`time.ParseDuration`) |
 | `AURORA_AUDIT_LIMIT` | `5000` | In-memory audit entries retained (100–50000) |
 | `AURORA_READ_ONLY` | `false` | Disable every mutation |
-| `AURORA_LOG_LEVEL` | `info` | `debug` for verbose logs |
+| `AURORA_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
 | `AURORA_LOG_FILE` | stdout | Append logs to this file |
 | `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
 | `AURORA_METRICS_TOKEN` | empty | Dedicated bearer token for the Prometheus `/metrics` endpoint. Scoped API tokens also work; with no dedicated token, only a valid API token is accepted |
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 
-Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
+Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-log-level`, `-daemon`, `-version`.
 `make build` injects the latest reachable Git tag, and `/api/v1/health` exposes the same version to
 the About page.
 
@@ -218,8 +218,8 @@ caches and the mover output log, which can be regenerated.
 # Detached; defaults to /var/log/aurora.log
 ./aurora -daemon
 
-# Detached with explicit JSON logging
-./aurora -daemon -log-format json -log-file /var/log/aurora.log
+# Detached with explicit JSON logging and a lower verbosity
+./aurora -daemon -log-format json -log-level warn -log-file /var/log/aurora.log
 ```
 
 A daemon writes its standard streams to the log file (or `/dev/null` when logging is disabled)

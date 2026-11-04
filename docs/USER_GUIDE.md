@@ -741,7 +741,7 @@ canvas so they never steal keystrokes from a console.
 | Container update check fails | The host needs outbound HTTPS access to the registry; private registries need credentials in `/root/.docker/config.json`. |
 | Share/user change is rejected | Validation is strict; check the message and the official webGUI for the same values. |
 | VNC keyboard does not reach the guest | Check the VM has a keyboard device and see issue #1. |
-| Service logs | Use `-log-file`, `-log-format json` and `-daemon`; see the README for environment variables and flags. |
+| Service logs | Use `-log-file`, `-log-format json`, `-log-level warn` and `-daemon`; see the README for environment variables and flags. |
 
 ---
 
