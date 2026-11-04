@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -9,20 +9,24 @@ import {
   Network as NetworkIcon,
   RefreshCw,
   Server,
+  SlidersHorizontal,
   Shield,
   Signal,
   Waypoints,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { AreaChart } from "../components/ui/charts";
-import { Badge, Button, Card, cn } from "../components/ui/primitives";
+import { Badge, Button, Card, IconButton, cn } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useI18n } from "../i18n";
 import { formatBytes, formatSpeed, formatUptime, relativeTime } from "../lib/format";
+import { NetworkConfigModal } from "../components/system/NetworkConfigModal";
 
 export function NetworkPage() {
   const { snapshot, metrics, history, refresh } = useApp();
   const { t } = useI18n();
+  const [showConfig, setShowConfig] = useState(false);
+  const [editingInterface, setEditingInterface] = useState<string | null>(null);
   if (!snapshot) return null;
 
   const { network, system } = snapshot;
@@ -60,9 +64,14 @@ export function NetworkPage() {
           </>
         }
         actions={
-          <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
-            {t("Refresh")}
-          </Button>
+          <>
+            <Button variant="secondary" icon={<SlidersHorizontal className="size-3.5" />} onClick={() => { setEditingInterface(null); setShowConfig(true); }}>
+              {t("Edit configuration")}
+            </Button>
+            <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
+              {t("Refresh")}
+            </Button>
+          </>
         }
       />
 
@@ -143,23 +152,34 @@ export function NetworkPage() {
           return (
             <Card key={iface.name} className="card-pad xl:col-span-6">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="grid size-8 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-muted">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-muted">
                     {iface.name.startsWith("wg") ? <Shield className="size-4" /> : iface.bridge ? <Waypoints className="size-4" /> : <Cable className="size-4" />}
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-mono text-[12px] font-semibold text-ink">{iface.name}</h3>
+                      <h3 className="truncate font-mono text-[12px] font-semibold text-ink">{iface.name}</h3>
                       <Badge tone={iface.state === "up" ? "success" : "neutral"} dot>{iface.state}</Badge>
                     </div>
-                    <p className="mt-0.5 text-[10px] text-subtle">{iface.description}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-subtle">{iface.description}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="num text-[12px] text-soft">{iface.speedMbps ? `${(iface.speedMbps / 1000).toFixed(1)} GbE` : "—"}</p>
-                  <p className="text-[9px] uppercase tracking-[0.1em] text-subtle">
-                    {iface.name.startsWith("wg") ? t("tunnel") : iface.bridge ? t("bridge") : iface.bond ? t("bond") : t("physical")}
-                  </p>
+                <div className="flex items-start gap-1.5">
+                  <div className="text-right">
+                    <p className="num text-[12px] text-soft">{iface.speedMbps ? `${(iface.speedMbps / 1000).toFixed(1)} GbE` : "—"}</p>
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-subtle">
+                      {iface.name.startsWith("wg") ? t("tunnel") : iface.bridge ? t("bridge") : iface.bond ? t("bond") : t("physical")}
+                    </p>
+                  </div>
+                  {!iface.name.startsWith("wg") ? (
+                    <IconButton
+                      label={t("Edit {name}", { name: iface.name })}
+                      size="sm"
+                      onClick={() => { setEditingInterface(iface.name); setShowConfig(true); }}
+                    >
+                      <SlidersHorizontal className="size-3.5" />
+                    </IconButton>
+                  ) : null}
                 </div>
               </div>
 
@@ -253,6 +273,11 @@ export function NetworkPage() {
           </div>
         </Card>
       </div>
+      <NetworkConfigModal
+        open={showConfig}
+        onClose={() => { setShowConfig(false); setEditingInterface(null); }}
+        initialInterface={editingInterface ?? undefined}
+      />
     </>
   );
 }

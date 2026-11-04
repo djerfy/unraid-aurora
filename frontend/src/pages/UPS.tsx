@@ -1,13 +1,50 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BatteryCharging, Save, ShieldAlert, Zap } from "lucide-react";
-import { Badge, Button, Card, Progress } from "../components/ui/primitives";
+import { Badge, Button, Card } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
 import { useI18n } from "../i18n";
 import { useToast } from "../app/ToastProvider";
 import { api } from "../lib/api";
 
 import type { UPSSettings } from "../lib/types";
+
+// Position-based charge map: 0 % is red, the 30 % safety floor stays red,
+// then the bar moves through orange and yellow before reaching green.
+const BATTERY_GRADIENT =
+  "linear-gradient(90deg, #ef4444 0%, #ef4444 30%, #f97316 45%, #facc15 65%, #84cc16 82%, #22c55e 100%)";
+
+function BatteryBar({ value }: { value: number }) {
+  const { t } = useI18n();
+  const level = Math.max(0, Math.min(100, value));
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(level)}
+      aria-label={t("Battery charge")}
+      className="relative mt-5 h-5 w-full overflow-hidden rounded-full border border-line bg-[var(--surface-2)] shadow-[inset_0_2px_7px_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(255,255,255,0.05)]"
+    >
+      <span
+        className="pointer-events-none absolute inset-0 opacity-20"
+        style={{ backgroundImage: BATTERY_GRADIENT }}
+      />
+      <div
+        className="absolute inset-y-0 left-0 overflow-hidden rounded-full transition-[width] duration-700 ease-out"
+        style={{
+          width: `${level}%`,
+          backgroundImage: BATTERY_GRADIENT,
+          backgroundSize: level > 0 ? `${10000 / level}% 100%` : "100% 100%",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <span className="battery-flow pointer-events-none absolute inset-0" />
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 via-white/5 to-transparent" />
+      </div>
+    </div>
+  );
+}
 
 function runtimeLabel(minutes: number) {
   const hours = Math.floor(minutes / 60);
@@ -68,7 +105,7 @@ export function UPSView() {
                   <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-subtle">{t("load")}</p>
                 </div>
               </div>
-              <Progress value={ups.battery} height={7} className="mt-4" />
+              <BatteryBar value={ups.battery} />
               <div className="mt-4 grid grid-cols-2 gap-3 text-[10.5px]">
                 <span className="text-muted">{t("Input voltage")} <b className="num text-soft">{ups.inputVoltage.toFixed(0)} V</b></span>
                 <span className="text-muted">{t("Output voltage")} <b className="num text-soft">{ups.outputVoltage.toFixed(0)} V</b></span>
