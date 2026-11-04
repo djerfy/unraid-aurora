@@ -12,7 +12,7 @@ VERSION := 0.0.0-dev
 endif
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp
+.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp openapi
 
 all: build
 
@@ -62,6 +62,9 @@ vet:
 
 fmt:
 	cd backend && gofmt -w .
+
+openapi:
+	python3 scripts/openapi.py
 
 clean:
 	rm -rf bin frontend/dist
