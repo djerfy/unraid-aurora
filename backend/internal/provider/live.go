@@ -117,6 +117,7 @@ type Live struct {
 	shareUsage           map[string]shareUsageEntry
 	shareUsageRefreshing map[string]bool
 	shareUsageStarted    map[string]time.Time
+	shareUsageTrigger    map[string]string
 	shareUsageErrors     map[string]string
 	shareUsageSem        chan struct{}
 }
@@ -161,6 +162,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		shareUsage:           map[string]shareUsageEntry{},
 		shareUsageRefreshing: map[string]bool{},
 		shareUsageStarted:    map[string]time.Time{},
+		shareUsageTrigger:    map[string]string{},
 		shareUsageErrors:     map[string]string{},
 		shareUsageSem:        make(chan struct{}, 2),
 	}

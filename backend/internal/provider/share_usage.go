@@ -21,8 +21,10 @@ const shareUsageTTL = 6 * time.Hour
 var shareUserRoot = "/mnt/user"
 
 type shareUsageEntry struct {
-	Used    uint64    `json:"used"`
-	Updated time.Time `json:"updated"`
+	Used     uint64    `json:"used"`
+	Updated  time.Time `json:"updated"`
+	Trigger  string    `json:"trigger,omitempty"`
+	Duration int64     `json:"duration,omitempty"`
 }
 
 func (l *Live) loadShareUsage() {
@@ -117,6 +119,7 @@ func (l *Live) RefreshShareUsage(ctx context.Context, name string) (int, error) 
 		}
 		l.shareUsageRefreshing[shareName] = true
 		l.shareUsageStarted[shareName] = time.Now()
+		l.shareUsageTrigger[shareName] = "manual"
 		l.shareUsageMu.Unlock()
 		started++
 		go l.refreshShareUsage(shareName)
@@ -136,18 +139,21 @@ func (l *Live) scheduleShareUsage(shares []model.Share) {
 		}
 		l.shareUsageRefreshing[share.Name] = true
 		l.shareUsageStarted[share.Name] = time.Now()
+		l.shareUsageTrigger[share.Name] = "automatic"
 		l.shareUsageMu.Unlock()
 		go l.refreshShareUsage(share.Name)
 	}
 }
 
 func (l *Live) refreshShareUsage(name string) {
+	started := time.Now()
 	l.shareUsageSem <- struct{}{}
 	defer func() { <-l.shareUsageSem }()
 	defer func() {
 		l.shareUsageMu.Lock()
 		delete(l.shareUsageRefreshing, name)
 		delete(l.shareUsageStarted, name)
+		delete(l.shareUsageTrigger, name)
 		l.shareUsageMu.Unlock()
 	}()
 	paths := l.sharePaths(name)
@@ -180,13 +186,18 @@ func (l *Live) refreshShareUsage(name string) {
 		// on every bootstrap.
 		entry := l.shareUsage[name]
 		entry.Updated = time.Now()
+		entry.Trigger = l.shareUsageTrigger[name]
+		entry.Duration = int64(time.Since(started).Seconds())
 		l.shareUsage[name] = entry
 		l.shareUsageErrors[name] = "no readable share path"
 		l.saveShareUsageLocked()
 		l.shareUsageMu.Unlock()
 		return
 	}
-	l.shareUsage[name] = shareUsageEntry{Used: total, Updated: time.Now()}
+	l.shareUsage[name] = shareUsageEntry{
+		Used: total, Updated: time.Now(), Trigger: l.shareUsageTrigger[name],
+		Duration: int64(time.Since(started).Seconds()),
+	}
 	delete(l.shareUsageErrors, name)
 	l.saveShareUsageLocked()
 	l.shareUsageMu.Unlock()

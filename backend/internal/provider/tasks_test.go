@@ -32,4 +32,9 @@ func TestTasksShowsShareScans(t *testing.T) {
 	if status["media"] != "completed" || status["appdata"] != "running" {
 		t.Fatalf("unexpected tasks: %+v", tasks)
 	}
+	for _, task := range tasks {
+		if task.Path == "" || task.Command == "" || task.Description == "" {
+			t.Fatalf("task is missing context: %+v", task)
+		}
+	}
 }

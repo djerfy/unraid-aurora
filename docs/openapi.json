@@ -9601,8 +9601,23 @@
               "failed"
             ]
           },
+          "description": {
+            "type": "string"
+          },
           "detail": {
             "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer"
           },
           "progress": {
             "type": "number"

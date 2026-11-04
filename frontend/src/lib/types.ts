@@ -1164,7 +1164,12 @@ export type Task = {
   name: string;
   category: string;
   status: string;
+  description: string;
   detail: string;
+  path?: string;
+  command?: string;
+  trigger?: string;
+  duration: number;
   progress: number;
   startedAt?: string | null;
   updatedAt?: string | null;

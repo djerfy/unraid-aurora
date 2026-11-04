@@ -855,16 +855,21 @@ type Settings struct {
 }
 
 type Task struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Category   string     `json:"category"`
-	Status     string     `json:"status"`
-	Detail     string     `json:"detail"`
-	Progress   float64    `json:"progress"`
-	StartedAt  *time.Time `json:"startedAt,omitempty"`
-	UpdatedAt  *time.Time `json:"updatedAt,omitempty"`
-	FinishedAt *time.Time `json:"finishedAt,omitempty"`
-	Error      string     `json:"error,omitempty"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Category    string     `json:"category"`
+	Status      string     `json:"status"`
+	Description string     `json:"description"`
+	Detail      string     `json:"detail"`
+	Path        string     `json:"path,omitempty"`
+	Command     string     `json:"command,omitempty"`
+	Trigger     string     `json:"trigger,omitempty"`
+	Duration    int64      `json:"duration"`
+	Progress    float64    `json:"progress"`
+	StartedAt   *time.Time `json:"startedAt,omitempty"`
+	UpdatedAt   *time.Time `json:"updatedAt,omitempty"`
+	FinishedAt  *time.Time `json:"finishedAt,omitempty"`
+	Error       string     `json:"error,omitempty"`
 }
 
 type LogLine struct {

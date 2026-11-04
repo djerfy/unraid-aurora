@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, CheckCircle2, CircleAlert, Clock3, RefreshCw } from "lucide-react";
+import { Activity, CheckCircle2, CircleAlert, Clock3, Info as InfoIcon, RefreshCw } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState, Progress } from "../components/ui/primitives";
+import { Modal } from "../components/ui/overlays";
+import { Badge, Button, Card, EmptyState, IconButton, Progress } from "../components/ui/primitives";
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
-import { formatDateTime, relativeTime } from "../lib/format";
+import { formatDateTime, formatDuration, relativeTime } from "../lib/format";
+import type { Task } from "../lib/types";
 
 function statusTone(status: string): "accent" | "success" | "warning" | "danger" | "neutral" {
   switch (status) {
@@ -42,6 +45,7 @@ export function TasksPage() {
   const running = values.filter((task) => task.status === "running").length;
   const queued = values.filter((task) => task.status === "queued").length;
   const failed = values.filter((task) => task.status === "failed").length;
+  const [selected, setSelected] = useState<Task | null>(null);
 
   return (
     <>
@@ -73,17 +77,18 @@ export function TasksPage() {
         ) : (
           <div className="overflow-x-auto rounded-xl border border-line">
             <div className="min-w-[860px]">
-              <div className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_90px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
+              <div className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_110px_32px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
                 <span>{t("Status")}</span>
                 <span>{t("Task")}</span>
                 <span>{t("Category")}</span>
                 <span>{t("Started")}</span>
                 <span>{t("Updated")}</span>
                 <span className="text-right">{t("Progress")}</span>
+                <span />
               </div>
               <div className="divide-y divide-line/60">
                 {values.map((task) => (
-                  <div key={task.id} className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_90px] items-center gap-3 px-3 py-2.5 text-[10px]">
+                  <div key={task.id} className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_110px_32px] items-center gap-3 px-3 py-2.5 text-[10px]">
                     <span className="flex items-center gap-1.5">
                       <Badge tone={statusTone(task.status)} dot={task.status === "running"} pulse={task.status === "running"}>
                         <span className="flex items-center gap-1">{statusIcon(task.status)}{statusLabel(t, task.status)}</span>
@@ -91,7 +96,8 @@ export function TasksPage() {
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-soft">{task.name}</span>
-                      <span className="block truncate text-[9px] text-subtle">{task.detail || "—"}</span>
+                      <span className="block truncate text-[9px] text-subtle">{task.description ? `${task.description} · ` : ""}{task.detail || "—"}</span>
+                      {task.path ? <span className="block truncate font-mono text-[8.5px] text-subtle">{task.path}</span> : null}
                       {task.error ? <span className="mt-0.5 block truncate text-[9px] text-[var(--danger)]">{task.error}</span> : null}
                     </span>
                     <span className="truncate text-[9.5px] capitalize text-muted">{t(task.category)}</span>
@@ -102,9 +108,12 @@ export function TasksPage() {
                       {task.updatedAt ? relativeTime(task.updatedAt) : "—"}
                     </span>
                     <span className="flex items-center justify-end gap-2">
-                      {task.status === "running" ? <Progress value={task.progress} height={4} className="w-12" /> : null}
-                      <span className="num text-[9px] text-subtle">{Math.round(task.progress)}%</span>
+                      {task.progress >= 0 ? <Progress value={task.progress} height={4} className="w-12" /> : null}
+                      <span className="num text-[9px] text-subtle">{task.progress >= 0 ? `${Math.round(task.progress)}%` : "—"}</span>
                     </span>
+                    <IconButton label={t("Task details")} size="sm" onClick={() => setSelected(task)}>
+                      <InfoIcon className="size-3.5" />
+                    </IconButton>
                   </div>
                 ))}
               </div>
@@ -112,6 +121,45 @@ export function TasksPage() {
           </div>
         )}
       </Card>
+
+      <Modal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title={selected?.name ?? ""}
+        description={selected?.description ?? ""}
+        size="lg"
+        footer={<Button variant="secondary" onClick={() => setSelected(null)}>{t("Close")}</Button>}
+      >
+        {selected ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Info label={t("Status")} value={statusLabel(t, selected.status)} />
+            <Info label={t("Category")} value={t(selected.category)} />
+            <Info label={t("Trigger")} value={selected.trigger ? t(selected.trigger) : "—"} />
+            <Info label={t("Duration")} value={selected.duration > 0 ? formatDuration(selected.duration) : "—"} />
+            <Info label={t("Started")} value={selected.startedAt ? formatDateTime(selected.startedAt) : "—"} />
+            <Info label={t("Updated")} value={selected.updatedAt ? formatDateTime(selected.updatedAt) : "—"} />
+            <Info label={t("Finished")} value={selected.finishedAt ? formatDateTime(selected.finishedAt) : "—"} />
+            <Info label={t("Progress")} value={selected.progress >= 0 ? `${Math.round(selected.progress)}%` : "—"} />
+            <div className="sm:col-span-2">
+              <Info label={t("Detail")} value={selected.detail || "—"} />
+            </div>
+            {selected.path ? <div className="sm:col-span-2"><Info label={t("Path")} value={selected.path} mono /></div> : null}
+            {selected.command ? <div className="sm:col-span-2"><Info label={t("Command")} value={selected.command} mono /></div> : null}
+            {selected.error ? (
+              <div className="sm:col-span-2 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger-soft)] p-3 text-[10px] text-[var(--danger)]">{selected.error}</div>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
     </>
+  );
+}
+
+function Info({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-lg border border-line bg-[var(--surface-2)]/45 px-3 py-2">
+      <p className="text-[8.5px] uppercase tracking-[0.1em] text-subtle">{label}</p>
+      <p className={mono ? "mt-1 break-all font-mono text-[10px] text-soft" : "mt-1 text-[10.5px] text-soft"}>{value}</p>
+    </div>
   );
 }

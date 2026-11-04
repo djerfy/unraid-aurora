@@ -19,24 +19,29 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 	if shares, err := parseINI(filepath.Join(l.stateDir, "shares.ini")); err == nil {
 		l.shareUsageMu.Lock()
 		for name := range shares {
+			path := "/mnt/user/" + name
 			task := model.Task{
-				ID: "share:" + name, Name: name, Category: "storage", Status: "queued",
-				Detail: "Waiting for the first usage scan",
+				ID: "share:" + name, Name: name, Category: "share-usage", Status: "queued",
+				Description: "Share usage scan", Path: path, Command: "du -skx " + path,
+				Trigger: "automatic", Progress: -1,
+				Detail: "Waiting for the first scan (cache empty)",
 			}
 			entry, cached := l.shareUsage[name]
 			if started, running := l.shareUsageStarted[name]; running {
 				task.Status = "running"
 				task.StartedAt = &started
-				task.Detail = "Scanning /mnt/user/" + name
-				task.Progress = 0
+				task.Trigger = l.shareUsageTrigger[name]
+				task.Detail = "Scanning " + path
 			} else if cached {
 				updated := entry.Updated
 				task.UpdatedAt = &updated
 				task.FinishedAt = &updated
+				task.Trigger = entry.Trigger
+				task.Duration = entry.Duration
 				task.Detail = fmt.Sprintf("%s used", formatBytesForTask(entry.Used))
 				if now.Sub(entry.Updated) >= shareUsageTTL {
 					task.Status = "queued"
-					task.Detail += " · cache expired"
+					task.Detail += " · cache expired after 6 h"
 				} else {
 					task.Status = "completed"
 					task.Progress = 100
@@ -53,7 +58,8 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 
 	if job, err := l.BalanceStatus(ctx); err == nil && (job.State == "scanning" || job.State == "running") {
 		task := model.Task{
-			ID: "balance", Name: "Balance", Category: "storage", Status: "running",
+			ID: "balance", Name: "Balance", Category: "balance", Status: "running",
+			Description: "Disk balance job", Path: job.Source, Trigger: "manual",
 			Detail: job.Phase, Progress: jobProgress(job),
 		}
 		if !job.Started.IsZero() {
@@ -63,8 +69,9 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 	}
 	if mover, err := l.Mover(ctx); err == nil && mover.Running {
 		task := model.Task{
-			ID: "mover", Name: "Mover", Category: "storage", Status: "running",
-			Detail: mover.Action, Progress: mover.Progress,
+			ID: "mover", Name: "Mover", Category: "mover", Status: "running",
+			Description: "Official Unraid mover run", Command: "/usr/local/sbin/mover start",
+			Trigger: "scheduler or manual", Detail: mover.Action, Progress: mover.Progress,
 		}
 		if !mover.Updated.IsZero() {
 			updated := mover.Updated
@@ -75,6 +82,7 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 	if trivy, err := l.TrivyStatus(ctx); err == nil && (trivy.Installing || trivy.UpdatingDB) {
 		task := model.Task{
 			ID: "trivy", Name: "Trivy", Category: "security", Status: "running",
+			Description: "Trivy binary/database operation", Trigger: "manual or scheduled",
 			Detail: trivy.Stage,
 		}
 		if trivy.Error != "" {
