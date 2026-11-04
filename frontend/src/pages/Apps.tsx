@@ -37,6 +37,16 @@ function formatDownloads(value: number): string {
   return String(value);
 }
 
+function normalizeImageRef(value?: string): string {
+  if (!value) return "";
+  let image = value.trim().toLowerCase().split("@")[0];
+  if (image.lastIndexOf(":") <= image.lastIndexOf("/")) image += ":latest";
+  for (const prefix of ["lscr.io/", "docker.io/", "index.docker.io/"]) {
+    if (image.startsWith(prefix)) image = image.slice(prefix.length);
+  }
+  return image.startsWith("library/") ? image.slice("library/".length) : image;
+}
+
 function containerOptions(template: ContainerTemplate): ContainerCreateOptions {
   return {
     name: template.name,
@@ -157,23 +167,19 @@ export function AppsPage() {
   const installedContainers = useMemo(() => {
     const map = new Map<string, Container>();
     for (const container of snapshot?.containers ?? []) {
-      const keys = [container.name, container.repository, container.image, container.image.split(":")[0]];
-      for (const key of keys) {
-        if (key) map.set(key.toLowerCase(), container);
+      for (const value of [container.image, container.repository]) {
+        const key = normalizeImageRef(value);
+        if (key) map.set(key, container);
       }
     }
     return map;
   }, [snapshot?.containers]);
 
+  // Match the actual image repository, never the container or catalog name:
+  // many catalog entries share a name (Plex, Redis, …) but use another image.
   const installedFor = (entry: AppCatalogEntry) => {
-    const keys = [entry.name, entry.repository, entry.repo, entry.repository?.split(":")[0]].filter(Boolean) as string[];
-    for (const key of keys) {
-      const match = installedContainers.get(key.toLowerCase());
-      if (match) return match;
-    }
-    const repository = entry.repository?.toLowerCase();
-    if (!repository) return undefined;
-    return (snapshot?.containers ?? []).find((container) => container.image.toLowerCase().includes(repository));
+    const key = normalizeImageRef(entry.repository);
+    return key ? installedContainers.get(key) : undefined;
   };
 
   const runUpdate = async (container: Container) => {
