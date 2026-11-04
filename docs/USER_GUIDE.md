@@ -103,8 +103,9 @@ live SSE metrics.
 - **Acknowledge** moves a notification to the archive.
 - **Acknowledge all** clears the unread inbox.
 - The top bar shows the unread count and a short preview menu.
-- **Settings → Notifications** can drop messages below a minimum importance and mute specific
-  Unraid sources (for example `docker` or `vm`) before they reach Discord, ntfy or a webhook.
+- **Settings → Notifications** can drop messages below a minimum importance, mute specific Unraid
+  sources (for example `docker` or `vm`), and toggle event categories (array, disks, Docker, VMs,
+  mover, plugins, UPS, system) before they reach Discord, ntfy or a webhook.
 
 ---
 
@@ -434,7 +435,9 @@ The **Applications** page browses the official Community Applications feed:
 - **Autostart** toggle uses libvirt `virsh autostart`.
 - **XML** opens the libvirt domain definition, editable with copy-to-clipboard.
 - **Hardware** edits vCPU, memory, CPU pinning (clickable logical cores), network bridge/model/MAC,
-  virtual sound and PCI/USB passthrough with IOMMU group hints.
+  virtual sound, virtiofs shared folders and PCI/USB passthrough with IOMMU group hints.
+- **USB passthrough** hot-plugs a host USB device into a running guest, or records it in the domain
+  definition when the guest is stopped.
 - **Clone** copies the domain, disks and NVRAM into a new VM with fresh UUID and MAC addresses.
 - **Expand disk** grows the first file-backed vDisk, online with `virsh blockresize` or offline with
   `qemu-img resize`.
@@ -639,8 +642,10 @@ can itself be reverted.
   forwarded after Aurora starts.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Viewers can only
   read, operators manage containers, VMs, array and mover actions, and admins control everything.
-  The secret is shown once; token management itself requires a signed-in session. **Revoke all
-  sessions** invalidates every Aurora cookie, including the current browser.
+  Tokens can expire after 30, 90 or 365 days (or never). The secret is shown once; token management
+  itself requires a signed-in session. The **Security** section lists active sessions with their IP
+  and last activity, allows revoking one session, and **Revoke all sessions** invalidates every Aurora
+  cookie, including the current browser.
 - **Unraid OS**: current version and branch, update check against `releases.unraid.net`, release
   notes, streamed installation through the official plugin manager, and a downgrade that restores
   the boot files kept in `/boot/previous`. A reboot is required to boot the new or restored version.
@@ -663,16 +668,17 @@ can itself be reverted.
 
 ### UPS, ZFS, user scripts and audit
 
-- **Settings → UPS** shows battery/load/runtime and edits the apcupsd shutdown policy; NUT remains
-  managed by its own plugin.
+- **Settings → UPS** shows battery/load/runtime, edits the apcupsd shutdown policy, and can write the
+  NUT plugin connection, thresholds and monitor password before restarting its service.
 - **Storage → ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
 - **User scripts** lists the User Scripts plugin inventory, shows and edits the source, runs a script
   as root and returns its output. The schedule editor writes the plugin's `schedule.json` and cron
   fragment: disabled, hourly, daily, weekly, monthly, array start/stop, first array start, or a
   five-field custom cron expression. Unraid's `update_cron` helper is invoked after a change.
 - The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. The audit tab records
-  every mutating API call with user, method, path, status and remote address, and can export the
-  visible entries as CSV.
+  every mutating API call with user, method, path, status and remote address, filters by method,
+  status class or user, and exports the visible entries as CSV. The in-memory log keeps 5000 entries
+  by default (`AURORA_AUDIT_LIMIT`).
 
 ---
 

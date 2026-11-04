@@ -192,6 +192,7 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_TLS_KEY` | same as the bundle | Optional separate private key path |
 | `AURORA_SERVER_NAME` | `var.ini` / hostname | Override the `<server>` part of the certificate filename |
 | `AURORA_SESSION_TTL` | `24h` | Session lifetime (`time.ParseDuration`) |
+| `AURORA_AUDIT_LIMIT` | `5000` | In-memory audit entries retained (100–50000) |
 | `AURORA_READ_ONLY` | `false` | Disable every mutation |
 | `AURORA_LOG_LEVEL` | `info` | `debug` for verbose logs |
 | `AURORA_LOG_FILE` | stdout | Append logs to this file |
@@ -279,18 +280,18 @@ Deep dives:
 | Dashboard | Health score, CPU load graph and per-core matrix, package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
 | Containers | Docker workloads with real icons, CPU/memory, health status, ports, network, IP address, network calls, a merged Trivy security overview grouped by image/container/CVE/package/severity, container terminal, log search/export, bulk start/stop/restart, autostart toggle, image update checks, live pull/recreate progress, Trivy image scanning with a Security column and finding details, create from an Unraid XML template, advanced devices/capabilities/sysctls/ulimits/resources/MAC fields, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
-| Applications | Community Applications catalog for Docker apps and plugins, search/filter/sort, template review before creation, and plugin installation through the official plugin manager |
+| Applications | Community Applications catalog for Docker apps and plugins, search/filter/sort, installed/update badges, dependency hints, template review before creation, and plugin installation through the official plugin manager |
 | Scheduler | Parity, mover and SSD TRIM schedules with generated cron preview, `update_cron` activation, plus shared date/time display formats |
-| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, guided hardware editor (CPU pinning, network/MAC, sound, PCI/USB passthrough with IOMMU groups), clone, vDisk expansion, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console with clipboard paste |
+| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, guided hardware editor (CPU pinning, network/MAC, sound, virtiofs shared folders, PCI/USB passthrough with IOMMU groups), live USB passthrough, clone, vDisk expansion, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console with clipboard paste |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart, and guarded per-interface editing (DHCP/static, DNS, MTU, bonding, bridging) with live state, link up/down, backups, revert and delayed apply |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
 | ZFS | Pools, datasets, scrub and snapshots |
-| UPS | Battery telemetry and apcupsd shutdown policy |
+| UPS | Battery telemetry, apcupsd shutdown policy and NUT connection/threshold settings |
 | User scripts | User Scripts plugin inventory, source editing, root execution output and plugin-native schedules (hourly/daily/weekly/monthly, array start/stop, first boot, custom cron) |
-| Audit log | Durable record of every mutating API call, searchable and exportable as CSV |
+| Audit log | Durable record of every mutating API call, filterable by method/status/user, exportable as CSV, with configurable retention |
 | About | Product description, author, repository, runtime and AGPL-3.0 license |
 | Users | Accounts, roles, share access matrix, add/edit/password/delete through Unraid account management |
-| Notifications | Inbox, unread/archived filters, acknowledge all, severity and source, minimum-importance and muted-source filters |
+| Notifications | Inbox, unread/archived filters, acknowledge all, severity and source, minimum-importance, muted-source and event-category filters |
 | Plugins | Real .plg metadata, update checks, streamed update/install/remove through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) with credentials redacted, redacted configuration export, host summary |
