@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -154,6 +155,7 @@ func (l *Live) refreshShareUsage(name string) {
 		delete(l.shareUsageRefreshing, name)
 		delete(l.shareUsageStarted, name)
 		delete(l.shareUsageTrigger, name)
+		delete(l.shareUsagePID, name)
 		l.shareUsageMu.Unlock()
 	}()
 	paths := l.sharePaths(name)
@@ -165,11 +167,23 @@ func (l *Live) refreshShareUsage(name string) {
 	var total uint64
 	scanned := false
 	for _, path := range paths {
-		out, err := exec.CommandContext(ctx, "du", "-s", "-k", "-x", path).Output()
-		if err != nil {
+		command := exec.CommandContext(ctx, "du", "-s", "-k", "-x", path)
+		var output bytes.Buffer
+		command.Stdout = &output
+		if err := command.Start(); err != nil {
 			continue
 		}
-		fields := strings.Fields(string(out))
+		l.shareUsageMu.Lock()
+		l.shareUsagePID[name] = command.Process.Pid
+		l.shareUsageMu.Unlock()
+		waitErr := command.Wait()
+		l.shareUsageMu.Lock()
+		delete(l.shareUsagePID, name)
+		l.shareUsageMu.Unlock()
+		if waitErr != nil {
+			continue
+		}
+		fields := strings.Fields(output.String())
 		if len(fields) == 0 {
 			continue
 		}

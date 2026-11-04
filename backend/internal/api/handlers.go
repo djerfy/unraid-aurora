@@ -1491,9 +1491,9 @@ func (s *Server) stopMover(w http.ResponseWriter, r *http.Request) {
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	source := r.URL.Query().Get("source")
 	switch source {
-	case "", "syslog", "docker", "parity", "nginx", "libvirt", "maillog":
+	case "", "syslog", "docker", "parity", "nginx", "libvirt", "maillog", "tasks":
 	default:
-		writeError(w, http.StatusBadRequest, "invalid_source", "source must be syslog, docker, parity, nginx, libvirt or maillog")
+		writeError(w, http.StatusBadRequest, "invalid_source", "source must be syslog, docker, parity, nginx, libvirt, maillog or tasks")
 		return
 	}
 	if source == "" {

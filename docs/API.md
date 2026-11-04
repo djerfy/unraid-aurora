@@ -298,7 +298,7 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | POST | `/tokens` | session | Create `{name,role,expiresInDays,scopes}` → secret once |
 | DELETE | `/tokens/{id}` | session | Revoke a token |
 | GET | `/audit?limit=&method=&statusClass=&user=` | admin | Mutation audit (newest first, max 500) |
-| GET | `/tasks` | viewer+ | Background tasks: share scans, mover, balance, Trivy |
+| GET | `/tasks` | viewer+ | Running background tasks (share scans, mover, balance, Trivy) with PID |
 | GET | `/notifications` | viewer+ | Inbox and archive |
 | POST | `/notifications/test` | admin | Test outbound channels |
 
@@ -320,7 +320,7 @@ rows as CSV client-side.
 | GET | `/tools/diagnostics` | admin | Diagnostics ZIP with secrets redacted |
 | GET | `/tools/flash-backup` | admin | Streaming `/boot` ZIP |
 | GET | `/metrics/history?range=` | viewer+ | `1h`, `24h`, `7d`, `30d` history |
-| GET | `/logs?source=&lines=` | admin | `syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity` |
+| GET | `/logs?source=&lines=` | admin | `syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`, `tasks` |
 | GET | `/terminal` | session | WebSocket root shell |
 | POST | `/actions` | operator | Enumerated mutation |
 

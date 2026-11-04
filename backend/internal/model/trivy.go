@@ -107,6 +107,7 @@ type TrivyScan struct {
 	Image      string     `json:"image"`
 	ImageID    string     `json:"imageId,omitempty"`
 	Status     string     `json:"status"`
+	PID        int        `json:"pid,omitempty"`
 	StartedAt  time.Time  `json:"startedAt"`
 	FinishedAt *time.Time `json:"finishedAt,omitempty"`
 	Running    bool       `json:"running"`

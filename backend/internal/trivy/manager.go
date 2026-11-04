@@ -711,7 +711,7 @@ func (m *Manager) updateDBNow(ctx context.Context) error {
 	return m.persistState()
 }
 
-func (m *Manager) scan(ctx context.Context, image, imageID string) (model.ContainerSecurityDetail, error) {
+func (m *Manager) scan(ctx context.Context, image, imageID string, onStart func(pid int)) (model.ContainerSecurityDetail, error) {
 	m.mu.Lock()
 	version := m.state.Version
 	m.mu.Unlock()
@@ -760,7 +760,13 @@ func (m *Manager) scan(ctx context.Context, image, imageID string) (model.Contai
 	stderr.limit = 1 << 20
 	command.Stdout = &stdout
 	command.Stderr = &stderr
-	if err := command.Run(); err != nil {
+	if err := command.Start(); err != nil {
+		return model.ContainerSecurityDetail{}, fmt.Errorf("Trivy scan failed: %w", err)
+	}
+	if onStart != nil && command.Process != nil {
+		onStart(command.Process.Pid)
+	}
+	if err := command.Wait(); err != nil {
 		message := strings.TrimSpace(stderr.String())
 		if message == "" {
 			message = err.Error()
@@ -847,9 +853,16 @@ func (m *Manager) worker() {
 				image: job.image, imageID: job.imageID, started: started, running: true,
 			}
 			m.mu.Unlock()
+			setPID := func(pid int) {
+				m.mu.Lock()
+				activity := m.scanning[job.key]
+				activity.pid = pid
+				m.scanning[job.key] = activity
+				m.mu.Unlock()
+			}
 			slog.Debug("trivy scan started", "image", job.image, "imageID", job.imageID)
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
-			detail, err := m.scan(ctx, job.image, job.imageID)
+			detail, err := m.scan(ctx, job.image, job.imageID, setPID)
 			if errors.Is(err, errDatabaseNotReady) {
 				m.mu.Lock()
 				delete(m.scanning, job.key)
@@ -1212,6 +1225,7 @@ type scanActivity struct {
 	image   string
 	imageID string
 	started time.Time
+	pid     int
 	running bool
 }
 
@@ -1226,13 +1240,12 @@ type scanRecord struct {
 	err      string
 }
 
-const maxRecentScans = 20
+const maxRecentScans = 200
 
-// Scans returns in-flight scans and the scans that finished recently, oldest
-// first. Short manual scans would otherwise never appear in the task monitor.
+// Scans returns the in-flight scans, oldest first.
 func (m *Manager) Scans() []model.TrivyScan {
 	m.mu.Lock()
-	out := make([]model.TrivyScan, 0, len(m.scanning)+len(m.recentScans))
+	out := make([]model.TrivyScan, 0, len(m.scanning))
 	for _, activity := range m.scanning {
 		status := "queued"
 		if activity.running {
@@ -1240,10 +1253,25 @@ func (m *Manager) Scans() []model.TrivyScan {
 		}
 		out = append(out, model.TrivyScan{
 			Image: activity.image, ImageID: activity.imageID, Status: status,
-			StartedAt: activity.started, Running: activity.running,
+			PID: activity.pid, StartedAt: activity.started, Running: activity.running,
 		})
 	}
-	cutoff := time.Now().Add(-30 * time.Minute)
+	m.mu.Unlock()
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].StartedAt.Equal(out[j].StartedAt) {
+			return out[i].Image < out[j].Image
+		}
+		return out[i].StartedAt.Before(out[j].StartedAt)
+	})
+	return out
+}
+
+// RecentScans returns the scans that finished during the last day, oldest
+// first. The task monitor no longer shows them; the Tasks log source does.
+func (m *Manager) RecentScans() []model.TrivyScan {
+	m.mu.Lock()
+	cutoff := time.Now().Add(-24 * time.Hour)
+	out := make([]model.TrivyScan, 0, len(m.recentScans))
 	for _, record := range m.recentScans {
 		if record.finished.Before(cutoff) {
 			continue
@@ -1255,12 +1283,7 @@ func (m *Manager) Scans() []model.TrivyScan {
 		})
 	}
 	m.mu.Unlock()
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].StartedAt.Equal(out[j].StartedAt) {
-			return out[i].Image < out[j].Image
-		}
-		return out[i].StartedAt.Before(out[j].StartedAt)
-	})
+	sort.Slice(out, func(i, j int) bool { return out[i].StartedAt.Before(out[j].StartedAt) })
 	return out
 }
 

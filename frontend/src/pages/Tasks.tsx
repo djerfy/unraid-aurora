@@ -43,8 +43,6 @@ export function TasksPage() {
   const tasks = useQuery({ queryKey: ["tasks"], queryFn: api.tasks, refetchInterval: 5_000 });
   const values = tasks.data ?? [];
   const running = values.filter((task) => task.status === "running").length;
-  const queued = values.filter((task) => task.status === "queued").length;
-  const failed = values.filter((task) => task.status === "failed").length;
   const [selected, setSelected] = useState<Task | null>(null);
 
   return (
@@ -52,12 +50,10 @@ export function TasksPage() {
       <PageHeader
         eyebrow={t("System")}
         title={t("Tasks")}
-        description={t("Background work running on this server: share scans, mover, balance and Trivy.")}
+        description={t("Active work only: share scans, mover, balance and Trivy. Finished tasks move to Logs → Tasks.")}
         meta={
           <>
             <Badge tone={running ? "accent" : "success"} dot pulse={running > 0}>{t("{count} running", { count: running })}</Badge>
-            <Badge tone="warning">{t("{count} queued", { count: queued })}</Badge>
-            {failed ? <Badge tone="danger">{t("{count} failed", { count: failed })}</Badge> : null}
           </>
         }
         actions={
@@ -73,14 +69,15 @@ export function TasksPage() {
         ) : tasks.isError ? (
           <p className="py-10 text-center text-[11px] text-[var(--danger)]">{(tasks.error as Error).message}</p>
         ) : values.length === 0 ? (
-          <EmptyState icon={<Activity className="size-5" />} title={t("No background tasks")} description={t("Share scans, mover runs, balance jobs and Trivy operations appear here.")} />
+          <EmptyState icon={<Activity className="size-5" />} title={t("No task is running")} description={t("Active share scans, mover runs, balance jobs and Trivy scans appear here. Finished work is listed in Logs → Tasks.")} />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-line">
-            <div className="min-w-[860px]">
-              <div className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_110px_32px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
+            <div className="min-w-[940px]">
+              <div className="grid grid-cols-[110px_minmax(0,1fr)_110px_80px_130px_130px_100px_32px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
                 <span>{t("Status")}</span>
                 <span>{t("Task")}</span>
                 <span>{t("Category")}</span>
+                <span>{t("PID")}</span>
                 <span>{t("Started")}</span>
                 <span>{t("Updated")}</span>
                 <span className="text-right">{t("Progress")}</span>
@@ -88,7 +85,7 @@ export function TasksPage() {
               </div>
               <div className="divide-y divide-line/60">
                 {values.map((task) => (
-                  <div key={task.id} className="grid grid-cols-[110px_minmax(0,1fr)_120px_150px_150px_110px_32px] items-center gap-3 px-3 py-2.5 text-[10px]">
+                  <div key={task.id} className="grid grid-cols-[110px_minmax(0,1fr)_110px_80px_130px_130px_100px_32px] items-center gap-3 px-3 py-2.5 text-[10px]">
                     <span className="flex items-center gap-1.5">
                       <Badge tone={statusTone(task.status)} dot={task.status === "running"} pulse={task.status === "running"}>
                         <span className="flex items-center gap-1">{statusIcon(task.status)}{statusLabel(t, task.status)}</span>
@@ -101,6 +98,7 @@ export function TasksPage() {
                       {task.error ? <span className="mt-0.5 block truncate text-[9px] text-[var(--danger)]">{task.error}</span> : null}
                     </span>
                     <span className="truncate text-[9.5px] capitalize text-muted">{t(task.category)}</span>
+                    <span className="num truncate text-[9px] text-subtle">{task.pid ? task.pid : "—"}</span>
                     <span className="truncate text-[9px] text-subtle" title={task.startedAt ? formatDateTime(task.startedAt) : undefined}>
                       {task.startedAt ? relativeTime(task.startedAt) : "—"}
                     </span>
@@ -134,11 +132,11 @@ export function TasksPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Info label={t("Status")} value={statusLabel(t, selected.status)} />
             <Info label={t("Category")} value={t(selected.category)} />
+            <Info label={t("PID")} value={selected.pid ? String(selected.pid) : "—"} mono />
             <Info label={t("Trigger")} value={selected.trigger ? t(selected.trigger) : "—"} />
             <Info label={t("Duration")} value={selected.duration > 0 ? formatDuration(selected.duration) : "—"} />
             <Info label={t("Started")} value={selected.startedAt ? formatDateTime(selected.startedAt) : "—"} />
             <Info label={t("Updated")} value={selected.updatedAt ? formatDateTime(selected.updatedAt) : "—"} />
-            <Info label={t("Finished")} value={selected.finishedAt ? formatDateTime(selected.finishedAt) : "—"} />
             <Info label={t("Progress")} value={selected.progress >= 0 ? `${Math.round(selected.progress)}%` : "—"} />
             <div className="sm:col-span-2">
               <Info label={t("Detail")} value={selected.detail ? t(selected.detail) : "—"} />

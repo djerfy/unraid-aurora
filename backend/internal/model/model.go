@@ -859,6 +859,7 @@ type Task struct {
 	Name        string     `json:"name"`
 	Category    string     `json:"category"`
 	Status      string     `json:"status"`
+	PID         int        `json:"pid,omitempty"`
 	Description string     `json:"description"`
 	Detail      string     `json:"detail"`
 	Path        string     `json:"path,omitempty"`

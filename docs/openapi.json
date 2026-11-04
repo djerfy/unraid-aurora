@@ -2652,8 +2652,8 @@
         "tags": [
           "System"
         ],
-        "summary": "`syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`",
-        "description": "`syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`",
+        "summary": "`syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`, `tasks`",
+        "description": "`syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`, `tasks`",
         "operationId": "get_logs",
         "security": [
           {
@@ -3856,8 +3856,8 @@
         "tags": [
           "System"
         ],
-        "summary": "Background tasks: share scans, mover, balance, Trivy",
-        "description": "Background tasks: share scans, mover, balance, Trivy",
+        "summary": "Running background tasks (share scans, mover, balance, Trivy) with PID",
+        "description": "Running background tasks (share scans, mover, balance, Trivy) with PID",
         "operationId": "get_tasks",
         "security": [
           {
@@ -9600,6 +9600,9 @@
               "completed",
               "failed"
             ]
+          },
+          "pid": {
+            "type": "integer"
           },
           "description": {
             "type": "string"

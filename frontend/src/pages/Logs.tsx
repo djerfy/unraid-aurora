@@ -34,6 +34,7 @@ const SOURCES = [
   { value: "libvirt", label: "Libvirt" },
   { value: "maillog", label: "Maillog" },
   { value: "parity", label: "Parity" },
+  { value: "tasks", label: "Tasks" },
 ];
 
 const SOURCE_PATHS: Record<string, string> = {
@@ -43,6 +44,7 @@ const SOURCE_PATHS: Record<string, string> = {
   libvirt: "/var/log/libvirt/libvirtd.log",
   maillog: "/var/log/maillog",
   parity: "/var/log/parity.log",
+  tasks: "Aurora background activity",
 };
 
 export function LogsPage() {

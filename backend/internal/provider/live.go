@@ -64,8 +64,9 @@ type Live struct {
 
 	osMu sync.Mutex
 
-	trivyManager *trivymanager.Manager
-	trivyScans   func() []model.TrivyScan
+	trivyManager     *trivymanager.Manager
+	trivyScans       func() []model.TrivyScan
+	trivyScanHistory func() []model.TrivyScan
 
 	apiMu        sync.Mutex
 	apiVersion   string
@@ -121,6 +122,7 @@ type Live struct {
 	shareUsageTrigger    map[string]string
 	shareUsageErrors     map[string]string
 	shareUsageSem        chan struct{}
+	shareUsagePID        map[string]int
 	pullStall            time.Duration
 }
 
@@ -167,6 +169,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		shareUsageTrigger:    map[string]string{},
 		shareUsageErrors:     map[string]string{},
 		shareUsageSem:        make(chan struct{}, 2),
+		shareUsagePID:        map[string]int{},
 	}
 	trivyDir := strings.TrimSpace(os.Getenv("AURORA_TRIVY_DIR"))
 	if trivyDir == "" && configDir != "" {
@@ -176,6 +179,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		l.trivyManager = trivymanager.New(trivyDir)
 		l.trivyManager.SetDockerSocket(dockerSocket)
 		l.trivyScans = l.trivyManager.Scans
+		l.trivyScanHistory = l.trivyManager.RecentScans
 	}
 	l.migrateDurableState()
 	l.loadSettings()
@@ -1039,6 +1043,8 @@ func (l *Live) Logs(ctx context.Context, source string, lines int) ([]model.LogL
 		return readLogSource("docker", lines, "/var/log/docker.log")
 	case "parity":
 		return readLogSource("parity", lines, "/var/log/parity.log")
+	case "tasks":
+		return l.taskLogs(lines), nil
 	default:
 		return readLogSource("syslog", lines, "/var/log/syslog")
 	}

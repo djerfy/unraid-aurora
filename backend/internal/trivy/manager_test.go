@@ -290,21 +290,24 @@ func TestScansReportsQueuedAndRunning(t *testing.T) {
 	}
 }
 
-func TestScansIncludesRecentlyFinished(t *testing.T) {
+func TestRecentScansIncludesFinished(t *testing.T) {
 	now := time.Now()
 	manager := &Manager{scanning: map[string]scanActivity{}, recentScans: []scanRecord{
 		{image: "redis:7", started: now.Add(-time.Minute), finished: now, status: "completed"},
 		{image: "old:1", started: now.Add(-2 * time.Hour), finished: now.Add(-time.Hour), status: "completed"},
 		{image: "broken:1", started: now.Add(-2 * time.Minute), finished: now.Add(-time.Minute), status: "failed", err: "boom"},
 	}}
-	scans := manager.Scans()
-	if len(scans) != 2 {
-		t.Fatalf("expired scans must be dropped: %+v", scans)
+	scans := manager.RecentScans()
+	if len(scans) != 3 {
+		t.Fatalf("finished scans = %+v", scans)
 	}
-	if scans[0].Image != "broken:1" || scans[0].Status != "failed" || scans[0].Error != "boom" {
+	if scans[1].Image != "broken:1" || scans[1].Status != "failed" || scans[1].Error != "boom" {
 		t.Fatalf("failed scan missing: %+v", scans)
 	}
-	if scans[1].Image != "redis:7" || scans[1].Status != "completed" || scans[1].FinishedAt == nil {
+	if scans[2].Image != "redis:7" || scans[2].Status != "completed" || scans[2].FinishedAt == nil {
 		t.Fatalf("completed scan missing: %+v", scans)
+	}
+	if active := manager.Scans(); len(active) != 0 {
+		t.Fatalf("finished scans must not be active: %+v", active)
 	}
 }

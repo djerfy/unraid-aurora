@@ -1164,6 +1164,7 @@ export type Task = {
   name: string;
   category: string;
   status: string;
+  pid?: number;
   description: string;
   detail: string;
   path?: string;

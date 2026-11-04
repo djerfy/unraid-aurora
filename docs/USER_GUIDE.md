@@ -690,11 +690,13 @@ can itself be reverted.
   as root and returns its output. The schedule editor writes the plugin's `schedule.json` and cron
   fragment: disabled, hourly, daily, weekly, monthly, array start/stop, first array start, or a
   five-field custom cron expression. Unraid's `update_cron` helper is invoked after a change.
-- **Tasks** lists background work: share usage scans, mover runs, balance jobs, Trivy
-  installs/database updates and image scans, with status, progress and last update, sorted by
-  most recent activity. Finished scans stay visible for 30 minutes, so a quick manual scan is not
-  missed.
-- The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. The audit tab records
+- **Tasks** lists only the work currently running: share usage scans, mover runs, balance jobs,
+  Trivy installs/database updates and image scans, with status, progress and the PID of the
+  process doing it. Queued and completed work never appears there: finished jobs are listed in
+  **Logs → Tasks**.
+- The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. Its **Tasks**
+  source lists completed background work (share scans, mover, balance, Trivy scans) with duration
+  and outcome. The audit tab records
   every mutating API call with user, method, path, status and remote address, filters by method,
   status class or user, and exports the visible entries as CSV. The in-memory log keeps 5000 entries
   by default (`AURORA_AUDIT_LIMIT`).
