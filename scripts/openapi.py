@@ -251,33 +251,94 @@ def request_body_for(method: str, path: str) -> dict | None:
     return {"required": True, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": True}}}}
 
 
-def response_schema_for(method: str, path: str) -> dict | None:
-    if path == "/api/v1/bootstrap":
-        return ref("Snapshot")
-    if path == "/api/v1/system/scheduler/preview":
-        return ref("SchedulerPreview")
-    if path == "/api/v1/system/scheduler":
-        return json_response("Applied scheduler state.", {"type": "object", "properties": {"ok": {"type": "boolean"}, "state": {"type": "object", "additionalProperties": True}}}).get("content", {}).get("application/json", {}).get("schema")
-    if path == "/api/v1/mover":
-        return ref("MoverStatus")
-    if path == "/api/v1/audit":
-        return {"type": "array", "items": ref("AuditEntry")}
-    if path == "/api/v1/tokens" and method == "GET":
-        return {"type": "array", "items": ref("APIToken")}
-    if path == "/api/v1/tokens" and method == "POST":
-        return {"type": "object", "properties": {"token": ref("APIToken"), "secret": {"type": "string"}}}
-    if path == "/api/v1/docker/containers":
-        return {"type": "array", "items": ref("Container")}
-    if path == "/api/v1/vms":
-        return {"type": "array", "items": ref("VM")}
-    if path == "/api/v1/docker/containers/bulk":
-        return ref("ContainerBulkResult")
-    if path == "/api/v1/health":
-        return ref("Health")
-    if path == "/api/v1/auth/session":
-        return ref("Session")
-    return None
+def array_of(name: str) -> dict:
+    return {"type": "array", "items": ref(name)}
 
+
+RESPONSE_SCHEMAS = {
+    ("GET", "/api/v1/bootstrap"): ref("Snapshot"),
+    ("GET", "/api/v1/system"): ref("System"),
+    ("GET", "/api/v1/array"): ref("Array"),
+    ("GET", "/api/v1/disks"): array_of("Disk"),
+    ("GET", "/api/v1/shares"): array_of("Share"),
+    ("GET", "/api/v1/shares/{name}/config"): ref("ShareConfig"),
+    ("GET", "/api/v1/pools"): array_of("Pool"),
+    ("GET", "/api/v1/parity/history"): array_of("ParityCheck"),
+    ("GET", "/api/v1/docker/containers"): array_of("Container"),
+    ("GET", "/api/v1/docker/containers/{id}/config"): ref("ContainerConfig"),
+    ("GET", "/api/v1/docker/security"): ref("SecurityOverview"),
+    ("GET", "/api/v1/docker/containers/{id}/security"): ref("SecurityDetail"),
+    ("GET", "/api/v1/vms"): array_of("VM"),
+    ("GET", "/api/v1/vms/host-devices"): array_of("VMHostDevice"),
+    ("GET", "/api/v1/vms/{id}/advanced"): ref("VMAdvanced"),
+    ("GET", "/api/v1/vms/{id}/snapshots"): array_of("VMSnapshot"),
+    ("GET", "/api/v1/network"): ref("Network"),
+    ("GET", "/api/v1/network/config"): ref("NetworkConfig"),
+    ("GET", "/api/v1/plugins"): array_of("Plugin"),
+    ("GET", "/api/v1/notifications"): array_of("Notification"),
+    ("GET", "/api/v1/users"): array_of("User"),
+    ("GET", "/api/v1/gpus"): array_of("GPU"),
+    ("GET", "/api/v1/ups"): ref("UPS"),
+    ("GET", "/api/v1/ups/settings"): ref("UPSSettings"),
+    ("GET", "/api/v1/zfs/pools"): array_of("ZFSPool"),
+    ("GET", "/api/v1/zfs/snapshots"): array_of("ZFSSnapshot"),
+    ("GET", "/api/v1/config-history"): array_of("ConfigHistory"),
+    ("GET", "/api/v1/config-history/{id}"): ref("ConfigHistory"),
+    ("GET", "/api/v1/storage-layout"): ref("StorageLayout"),
+    ("GET", "/api/v1/system/os"): ref("OSStatus"),
+    ("GET", "/api/v1/unraid-api"): ref("UnraidAPIStatus"),
+    ("GET", "/api/v1/trivy"): ref("TrivyStatus"),
+    ("GET", "/api/v1/trivy/versions"): array_of("TrivyRelease"),
+    ("GET", "/api/v1/apps"): ref("AppCatalog"),
+    ("GET", "/api/v1/user-scripts"): array_of("UserScript"),
+    ("GET", "/api/v1/user-scripts/{id}"): ref("UserScript"),
+    ("GET", "/api/v1/mover"): ref("MoverStatus"),
+    ("GET", "/api/v1/balance/status"): ref("BalanceJob"),
+    ("GET", "/api/v1/balance/history"): array_of("BalanceJob"),
+    ("GET", "/api/v1/audit"): array_of("AuditEntry"),
+    ("GET", "/api/v1/tokens"): array_of("APIToken"),
+    ("POST", "/api/v1/tokens"): {"type": "object", "properties": {"token": ref("APIToken"), "secret": {"type": "string"}}},
+    ("GET", "/api/v1/system/scheduler"): ref("SchedulerState"),
+    ("POST", "/api/v1/system/scheduler/preview"): ref("SchedulerPreview"),
+    ("GET", "/api/v1/health"): ref("Health"),
+    ("GET", "/api/v1/auth/session"): ref("Session"),
+    ("GET", "/api/v1/settings"): ref("Settings"),
+}
+
+
+def response_schema_for(method: str, path: str) -> dict | None:
+    return RESPONSE_SCHEMAS.get((method, path))
+
+
+RESPONSE_EXAMPLES = {
+    ("GET", "/api/v1/health"): {"status": "ok", "version": "0.1.0", "provider": "live", "uptime": 3600, "time": "2026-01-01T12:00:00Z"},
+    ("GET", "/api/v1/auth/session"): {"authenticated": True, "user": "root"},
+    ("POST", "/api/v1/auth/login"): {"authenticated": True, "user": "root"},
+    ("POST", "/api/v1/docker/containers/bulk"): {"ok": True, "succeeded": ["plex", "sonarr"], "failed": []},
+    ("POST", "/api/v1/system/scheduler/preview"): {
+        "files": [{"path": "/boot/config/plugins/dynamix/mover.cron", "content": "30 3 * * * /usr/local/sbin/mover start |& logger -t move\n", "diff": "--- /dev/null\n+++ mover.cron\n@@ -0,0 +1 @@\n+30 3 * * * /usr/local/sbin/mover start |& logger -t move\n", "existed": False, "delete": False}],
+        "warnings": [],
+    },
+    ("GET", "/api/v1/audit"): [{"time": "2026-01-01T12:00:00Z", "user": "root", "method": "POST", "path": "/api/v1/actions", "status": 200, "remote": "192.168.1.10"}],
+    ("GET", "/api/v1/mover"): {"running": True, "progressEnabled": True, "progressSource": "mover.ini", "total": 1000000000, "remain": 400000000, "progress": 60, "throughput": 50000000, "eta": 8, "phase": "moving", "files": [], "history": []},
+}
+
+
+def response_example_for(method: str, path: str) -> dict | list | None:
+    return RESPONSE_EXAMPLES.get((method, path))
+
+
+REQUEST_EXAMPLES = {
+    ("POST", "/api/v1/auth/login"): {"username": "root", "password": "secret"},
+    ("POST", "/api/v1/docker/containers/bulk"): {"action": "restart", "targets": ["plex", "sonarr"]},
+    ("POST", "/api/v1/system/scheduler/preview"): {"parity": {"mode": "disabled"}, "mover": {"mode": "daily", "hour": 3, "minute": 30}, "trim": {"mode": "disabled"}},
+    ("PUT", "/api/v1/system/scheduler"): {"parity": {"mode": "disabled"}, "mover": {"mode": "daily", "hour": 3, "minute": 30}, "trim": {"mode": "disabled"}, "acknowledge": True},
+    ("POST", "/api/v1/tokens"): {"name": "home-assistant", "role": "viewer"},
+}
+
+
+def request_example_for(method: str, path: str) -> dict | None:
+    return REQUEST_EXAMPLES.get((method, path))
 
 def build_spec() -> dict:
     routes = parse_routes()
@@ -310,9 +371,15 @@ def build_spec() -> dict:
         body = request_body_for(method, path)
         if body:
             operation["requestBody"] = body
+            example = request_example_for(method, path)
+            if example:
+                operation["requestBody"]["content"]["application/json"]["example"] = example
         schema = response_schema_for(method, path)
         if schema and "200" in operation["responses"] and "content" in operation["responses"]["200"]:
             operation["responses"]["200"]["content"]["application/json"]["schema"] = schema
+        example = response_example_for(method, path)
+        if example is not None and "200" in operation["responses"] and "content" in operation["responses"]["200"]:
+            operation["responses"]["200"]["content"]["application/json"]["example"] = example
         paths.setdefault(path, {})[method.lower()] = operation
 
     tags = [{"name": name, "description": desc} for name, desc in TAGS.values()]
@@ -446,7 +513,87 @@ def build_spec() -> dict:
                     "required": ["name", "role"],
                     "properties": {"name": {"type": "string"}, "role": {"type": "string", "enum": ["viewer", "operator", "admin"]}},
                 },
-                "Settings": {"type": "object", "additionalProperties": True},
+                "System": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "properties": {
+                        "hostname": {"type": "string"}, "name": {"type": "string"}, "version": {"type": "string"},
+                        "kernel": {"type": "string"}, "board": {"type": "string"}, "uptime": {"type": "integer"},
+                        "cpu": {"type": "object", "additionalProperties": True}, "memory": {"type": "object", "additionalProperties": True},
+                        "load": {"type": "array", "items": {"type": "number"}}, "health": {"type": "object", "additionalProperties": True},
+                        "temperatures": {"type": "array", "items": {"type": "object", "additionalProperties": True}},
+                    },
+                },
+                "Array": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "properties": {
+                        "state": {"type": "string"}, "status": {"type": "string"}, "total": {"type": "integer"},
+                        "used": {"type": "integer"}, "free": {"type": "integer"}, "usage": {"type": "number"},
+                        "parity": {"type": "object", "additionalProperties": True},
+                        "rebuild": {"type": "object", "additionalProperties": True},
+                    },
+                },
+                "Disk": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "properties": {
+                        "id": {"type": "string"}, "name": {"type": "string"}, "device": {"type": "string"},
+                        "type": {"type": "string"}, "size": {"type": "integer"}, "used": {"type": "integer"},
+                        "temp": {"type": "integer"}, "status": {"type": "string"}, "smart": {"type": "string"},
+                        "rotational": {"type": "boolean"}, "warnings": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+                "Share": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "properties": {
+                        "name": {"type": "string"}, "comment": {"type": "string"}, "size": {"type": "integer"},
+                        "free": {"type": "integer"}, "used": {"type": "integer"}, "usage": {"type": "number"},
+                        "allocator": {"type": "string"}, "splitLevel": {"type": "string"},
+                        "cacheMode": {"type": "string"}, "pool": {"type": "string"}, "smb": {"type": "boolean"}, "nfs": {"type": "boolean"},
+                    },
+                },
+                "ShareConfig": {"type": "object", "additionalProperties": True},
+                "Pool": {"type": "object", "additionalProperties": True, "properties": {"name": {"type": "string"}, "fsType": {"type": "string"}, "size": {"type": "integer"}, "used": {"type": "integer"}, "devices": {"type": "array", "items": {"type": "string"}}}},
+                "ParityCheck": {"type": "object", "additionalProperties": True},
+                "ContainerConfig": {"type": "object", "additionalProperties": True},
+                "SecurityOverview": {"type": "object", "additionalProperties": True},
+                "SecurityDetail": {"type": "object", "additionalProperties": True},
+                "VMHostDevice": {"type": "object", "additionalProperties": True, "properties": {"type": {"type": "string"}, "address": {"type": "string"}, "vendor": {"type": "string"}, "product": {"type": "string"}, "name": {"type": "string"}, "driver": {"type": "string"}, "iommuGroup": {"type": "string"}}},
+                "VMAdvanced": {"type": "object", "additionalProperties": True, "properties": {"vcpus": {"type": "integer"}, "memoryMB": {"type": "integer"}, "cpuSet": {"type": "string"}, "networks": {"type": "array", "items": {"type": "object", "additionalProperties": True}}, "soundModel": {"type": "string"}, "hostDevices": {"type": "array", "items": {"type": "object", "additionalProperties": True}}}},
+                "VMSnapshot": {"type": "object", "additionalProperties": True, "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "created": {"type": "string", "format": "date-time"}, "state": {"type": "string"}}},
+                "Network": {"type": "object", "additionalProperties": True, "properties": {"hostname": {"type": "string"}, "interfaces": {"type": "array", "items": {"type": "object", "additionalProperties": True}}, "wireGuard": {"type": "object", "additionalProperties": True}, "services": {"type": "array", "items": {"type": "object", "additionalProperties": True}}}},
+                "NetworkConfig": {"type": "object", "additionalProperties": True},
+                "Plugin": {"type": "object", "additionalProperties": True, "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "latest": {"type": "string"}, "updateAvailable": {"type": "boolean"}, "description": {"type": "string"}}},
+                "Notification": {"type": "object", "additionalProperties": True, "properties": {"id": {"type": "string"}, "title": {"type": "string"}, "subject": {"type": "string"}, "description": {"type": "string"}, "importance": {"type": "string"}, "source": {"type": "string"}, "timestamp": {"type": "string", "format": "date-time"}, "read": {"type": "boolean"}, "archived": {"type": "boolean"}}},
+                "User": {"type": "object", "additionalProperties": True, "properties": {"name": {"type": "string"}, "description": {"type": "string"}, "uid": {"type": "integer"}, "role": {"type": "string"}, "root": {"type": "boolean"}, "shares": {"type": "array", "items": {"type": "string"}}}},
+                "GPU": {"type": "object", "additionalProperties": True, "properties": {"index": {"type": "integer"}, "name": {"type": "string"}, "vendor": {"type": "string"}, "memoryTotal": {"type": "integer"}, "memoryUsed": {"type": "integer"}, "utilization": {"type": "number"}, "temperature": {"type": "number"}, "power": {"type": "number"}, "processes": {"type": "array", "items": {"type": "object", "additionalProperties": True}}}},
+                "UPS": {"type": "object", "additionalProperties": True, "properties": {"present": {"type": "boolean"}, "model": {"type": "string"}, "status": {"type": "string"}, "battery": {"type": "number"}, "load": {"type": "number"}, "runtime": {"type": "integer"}, "onBattery": {"type": "boolean"}}},
+                "UPSSettings": {"type": "object", "additionalProperties": True},
+                "ZFSPool": {"type": "object", "additionalProperties": True},
+                "ZFSSnapshot": {"type": "object", "additionalProperties": True},
+                "ConfigHistory": {"type": "object", "additionalProperties": True, "properties": {"id": {"type": "string"}, "created": {"type": "string", "format": "date-time"}, "action": {"type": "string"}, "description": {"type": "string"}, "files": {"type": "array", "items": {"type": "object", "additionalProperties": True}}}},
+                "StorageLayout": {"type": "object", "additionalProperties": True},
+                "OSStatus": {"type": "object", "additionalProperties": True},
+                "UnraidAPIStatus": {"type": "object", "additionalProperties": True},
+                "TrivyStatus": {"type": "object", "additionalProperties": True},
+                "TrivyRelease": {"type": "object", "additionalProperties": True, "properties": {"version": {"type": "string"}, "name": {"type": "string"}, "publishedAt": {"type": "string", "format": "date-time"}, "prerelease": {"type": "boolean"}}},
+                "AppCatalog": {"type": "object", "additionalProperties": True, "properties": {"entries": {"type": "array", "items": {"type": "object", "additionalProperties": True}}, "categories": {"type": "array", "items": {"type": "string"}}, "updated": {"type": "string", "format": "date-time"}}},
+                "UserScript": {"type": "object", "additionalProperties": True, "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "description": {"type": "string"}, "schedule": {"type": "string"}, "running": {"type": "boolean"}}},
+                "BalanceJob": {"type": "object", "additionalProperties": True},
+                "SchedulerState": {"type": "object", "additionalProperties": True, "properties": {"settings": ref("SchedulerSettings"), "system": {"type": "object", "additionalProperties": True}}},
+                "Settings": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "properties": {
+                        "theme": {"type": "string"}, "accent": {"type": "string"}, "density": {"type": "string"},
+                        "refreshInterval": {"type": "integer"}, "language": {"type": "string"},
+                        "notifyMinImportance": {"type": "string"}, "notifyMutedSources": {"type": "array", "items": {"type": "string"}},
+                        "trivyEnabled": {"type": "boolean"}, "trivyVersion": {"type": "string"},
+                    },
+                },
+
             },
         },
     }

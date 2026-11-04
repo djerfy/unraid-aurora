@@ -588,7 +588,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ZFSSnapshot"
+                  }
                 }
               }
             }
@@ -705,7 +708,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/AppCatalog"
                 }
               }
             }
@@ -855,7 +858,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Array"
                 }
               }
             }
@@ -909,7 +912,17 @@
                   "items": {
                     "$ref": "#/components/schemas/AuditEntry"
                   }
-                }
+                },
+                "example": [
+                  {
+                    "time": "2026-01-01T12:00:00Z",
+                    "user": "root",
+                    "method": "POST",
+                    "path": "/api/v1/actions",
+                    "status": 200,
+                    "remote": "192.168.1.10"
+                  }
+                ]
               }
             }
           },
@@ -966,6 +979,10 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Session"
+                },
+                "example": {
+                  "authenticated": true,
+                  "user": "root"
                 }
               }
             }
@@ -1095,7 +1112,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BalanceJob"
+                  }
                 }
               }
             }
@@ -1145,7 +1165,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/BalanceJob"
                 }
               }
             }
@@ -1245,7 +1265,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigHistory"
+                  }
                 }
               }
             }
@@ -1296,7 +1319,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ConfigHistory"
                 }
               }
             }
@@ -1409,7 +1432,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Disk"
+                  }
                 }
               }
             }
@@ -1571,10 +1597,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Container"
-                  }
+                  "type": "object"
                 }
               }
             }
@@ -1636,7 +1659,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ContainerConfig"
                 }
               }
             }
@@ -1963,7 +1986,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/SecurityDetail"
                 }
               }
             }
@@ -2074,7 +2097,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/SecurityOverview"
                 }
               }
             }
@@ -2224,7 +2247,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GPU"
+                  }
                 }
               }
             }
@@ -2268,6 +2294,13 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok",
+                  "version": "0.1.0",
+                  "provider": "live",
+                  "uptime": 3600,
+                  "time": "2026-01-01T12:00:00Z"
                 }
               }
             }
@@ -2445,6 +2478,19 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MoverStatus"
+                },
+                "example": {
+                  "running": true,
+                  "progressEnabled": true,
+                  "progressSource": "mover.ini",
+                  "total": 1000000000,
+                  "remain": 400000000,
+                  "progress": 60,
+                  "throughput": 50000000,
+                  "eta": 8,
+                  "phase": "moving",
+                  "files": [],
+                  "history": []
                 }
               }
             }
@@ -2494,7 +2540,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Network"
                 }
               }
             }
@@ -2544,7 +2590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/NetworkConfig"
                 }
               }
             }
@@ -2655,7 +2701,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  }
                 }
               }
             }
@@ -2705,7 +2754,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParityCheck"
+                  }
                 }
               }
             }
@@ -2755,7 +2807,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Plugin"
+                  }
                 }
               }
             }
@@ -2805,7 +2860,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pool"
+                  }
                 }
               }
             }
@@ -2855,7 +2913,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Settings"
                 }
               }
             }
@@ -2966,7 +3024,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Share"
+                  }
                 }
               }
             }
@@ -3077,7 +3138,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ShareConfig"
                 }
               }
             }
@@ -3138,7 +3199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/StorageLayout"
                 }
               }
             }
@@ -3249,7 +3310,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/System"
                 }
               }
             }
@@ -3299,7 +3360,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/OSStatus"
                 }
               }
             }
@@ -3349,16 +3410,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean"
-                    },
-                    "state": {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
-                  }
+                  "$ref": "#/components/schemas/SchedulerState"
                 }
               }
             }
@@ -3406,16 +3458,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean"
-                    },
-                    "state": {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
-                  }
+                  "type": "object"
                 }
               }
             }
@@ -3449,6 +3492,20 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SchedulerApply"
+              },
+              "example": {
+                "parity": {
+                  "mode": "disabled"
+                },
+                "mover": {
+                  "mode": "daily",
+                  "hour": 3,
+                  "minute": 30
+                },
+                "trim": {
+                  "mode": "disabled"
+                },
+                "acknowledge": true
               }
             }
           }
@@ -3606,6 +3663,10 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TokenCreate"
+              },
+              "example": {
+                "name": "home-assistant",
+                "role": "viewer"
               }
             }
           }
@@ -3736,7 +3797,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/TrivyStatus"
                 }
               }
             }
@@ -3786,7 +3847,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrivyRelease"
+                  }
                 }
               }
             }
@@ -3836,7 +3900,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/UnraidAPIStatus"
                 }
               }
             }
@@ -3937,7 +4001,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/UPS"
                 }
               }
             }
@@ -3987,7 +4051,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/UPSSettings"
                 }
               }
             }
@@ -4098,7 +4162,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserScript"
+                  }
                 }
               }
             }
@@ -4148,7 +4215,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/UserScript"
                 }
               }
             }
@@ -4281,7 +4348,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
                 }
               }
             }
@@ -4504,10 +4574,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/VM"
-                  }
+                  "type": "object"
                 }
               }
             }
@@ -4570,7 +4637,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VMHostDevice"
+                  }
                 }
               }
             }
@@ -4620,7 +4690,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/VMAdvanced"
                 }
               }
             }
@@ -4869,7 +4939,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VMSnapshot"
+                  }
                 }
               }
             }
@@ -5141,7 +5214,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ZFSPool"
+                  }
                 }
               }
             }
@@ -5371,6 +5447,10 @@
               "application/json": {
                 "schema": {
                   "type": "object"
+                },
+                "example": {
+                  "authenticated": true,
+                  "user": "root"
                 }
               }
             }
@@ -5396,6 +5476,10 @@
                     "format": "password"
                   }
                 }
+              },
+              "example": {
+                "username": "root",
+                "password": "secret"
               }
             }
           }
@@ -5936,7 +6020,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ContainerBulkResult"
+                  "type": "object"
+                },
+                "example": {
+                  "ok": true,
+                  "succeeded": [
+                    "plex",
+                    "sonarr"
+                  ],
+                  "failed": []
                 }
               }
             }
@@ -5970,6 +6062,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ContainerBulkRequest"
+              },
+              "example": {
+                "action": "restart",
+                "targets": [
+                  "plex",
+                  "sonarr"
+                ]
               }
             }
           }
@@ -6982,6 +7081,18 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SchedulerPreview"
+                },
+                "example": {
+                  "files": [
+                    {
+                      "path": "/boot/config/plugins/dynamix/mover.cron",
+                      "content": "30 3 * * * /usr/local/sbin/mover start |& logger -t move\n",
+                      "diff": "--- /dev/null\n+++ mover.cron\n@@ -0,0 +1 @@\n+30 3 * * * /usr/local/sbin/mover start |& logger -t move\n",
+                      "existed": false,
+                      "delete": false
+                    }
+                  ],
+                  "warnings": []
                 }
               }
             }
@@ -7015,6 +7126,19 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SchedulerSettings"
+              },
+              "example": {
+                "parity": {
+                  "mode": "disabled"
+                },
+                "mover": {
+                  "mode": "daily",
+                  "hour": 3,
+                  "minute": 30
+                },
+                "trim": {
+                  "mode": "disabled"
+                }
               }
             }
           }
@@ -8640,9 +8764,639 @@
           }
         }
       },
-      "Settings": {
+      "System": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "kernel": {
+            "type": "string"
+          },
+          "board": {
+            "type": "string"
+          },
+          "uptime": {
+            "type": "integer"
+          },
+          "cpu": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "memory": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "load": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "health": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "temperatures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "Array": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "used": {
+            "type": "integer"
+          },
+          "free": {
+            "type": "integer"
+          },
+          "usage": {
+            "type": "number"
+          },
+          "parity": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "rebuild": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Disk": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "used": {
+            "type": "integer"
+          },
+          "temp": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "smart": {
+            "type": "string"
+          },
+          "rotational": {
+            "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Share": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "free": {
+            "type": "integer"
+          },
+          "used": {
+            "type": "integer"
+          },
+          "usage": {
+            "type": "number"
+          },
+          "allocator": {
+            "type": "string"
+          },
+          "splitLevel": {
+            "type": "string"
+          },
+          "cacheMode": {
+            "type": "string"
+          },
+          "pool": {
+            "type": "string"
+          },
+          "smb": {
+            "type": "boolean"
+          },
+          "nfs": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ShareConfig": {
         "type": "object",
         "additionalProperties": true
+      },
+      "Pool": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "fsType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "used": {
+            "type": "integer"
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ParityCheck": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ContainerConfig": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "SecurityOverview": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "SecurityDetail": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "VMHostDevice": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "vendor": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          },
+          "iommuGroup": {
+            "type": "string"
+          }
+        }
+      },
+      "VMAdvanced": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "vcpus": {
+            "type": "integer"
+          },
+          "memoryMB": {
+            "type": "integer"
+          },
+          "cpuSet": {
+            "type": "string"
+          },
+          "networks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "soundModel": {
+            "type": "string"
+          },
+          "hostDevices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "VMSnapshot": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "Network": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "wireGuard": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "NetworkConfig": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "Plugin": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "latest": {
+            "type": "string"
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "importance": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "uid": {
+            "type": "integer"
+          },
+          "role": {
+            "type": "string"
+          },
+          "root": {
+            "type": "boolean"
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "GPU": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "vendor": {
+            "type": "string"
+          },
+          "memoryTotal": {
+            "type": "integer"
+          },
+          "memoryUsed": {
+            "type": "integer"
+          },
+          "utilization": {
+            "type": "number"
+          },
+          "temperature": {
+            "type": "number"
+          },
+          "power": {
+            "type": "number"
+          },
+          "processes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "UPS": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "present": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "battery": {
+            "type": "number"
+          },
+          "load": {
+            "type": "number"
+          },
+          "runtime": {
+            "type": "integer"
+          },
+          "onBattery": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UPSSettings": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ZFSPool": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ZFSSnapshot": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ConfigHistory": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "StorageLayout": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "OSStatus": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "UnraidAPIStatus": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "TrivyStatus": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "TrivyRelease": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prerelease": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AppCatalog": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserScript": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "running": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BalanceJob": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "SchedulerState": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/SchedulerSettings"
+          },
+          "system": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "Settings": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "theme": {
+            "type": "string"
+          },
+          "accent": {
+            "type": "string"
+          },
+          "density": {
+            "type": "string"
+          },
+          "refreshInterval": {
+            "type": "integer"
+          },
+          "language": {
+            "type": "string"
+          },
+          "notifyMinImportance": {
+            "type": "string"
+          },
+          "notifyMutedSources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "trivyEnabled": {
+            "type": "boolean"
+          },
+          "trivyVersion": {
+            "type": "string"
+          }
+        }
       }
     }
   }
