@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Package,
   Plug,
+  RefreshCw,
   Search,
   ShoppingBag,
   ShieldCheck,
@@ -16,12 +17,13 @@ import { Drawer, Modal } from "../components/ui/overlays";
 import { Badge, Button, Card, EmptyState, InputBase, cn } from "../components/ui/primitives";
 import { EntityIcon } from "../components/ui/entity-icon";
 import { ContainerCreateModal } from "../components/containers/ContainerCreate";
+import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/containers/ContainerUpdateModal";
 import { emptyContainerAdvanced } from "../components/containers/ContainerAdvancedFields";
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { useToast } from "../app/ToastProvider";
 import { useApp } from "../app/AppDataProvider";
-import type { AppCatalogEntry, ContainerCreateOptions, ContainerTemplate, PluginEvent } from "../lib/types";
+import type { AppCatalogEntry, Container, ContainerCreateOptions, ContainerTemplate, PluginEvent } from "../lib/types";
 
 const PAGE_SIZE = 48;
 
@@ -66,6 +68,7 @@ export function AppsPage() {
   const [installPreset, setInstallPreset] = useState<ContainerCreateOptions | null>(null);
   const [pluginTarget, setPluginTarget] = useState<AppCatalogEntry | null>(null);
   const [pluginRun, setPluginRun] = useState<{ running: boolean; lines: string[]; error: string } | null>(null);
+  const [updateRun, setUpdateRun] = useState<ContainerUpdateRun | null>(null);
 
   const catalog = useQuery({
     queryKey: ["apps-catalog", deferredQuery, kind, category, order, offset],
@@ -80,6 +83,23 @@ export function AppsPage() {
       setSelected(null);
     },
     onError: (error: Error) => toast({ kind: "error", title: t("Could not load the application template"), description: error.message }),
+  });
+
+  const checkUpdates = useMutation({
+    mutationFn: api.checkContainerUpdates,
+    onSuccess: (checks) => {
+      const available = checks.filter((check) => check.update).length;
+      const failed = checks.filter((check) => check.error).length;
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({
+        kind: available ? "warning" : "success",
+        title: available ? t("{count} updates available", { count: available }) : t("All images are up to date"),
+        description:
+          (checks.length === 1 ? t("1 image checked") : t("{count} images checked", { count: checks.length })) +
+          (failed ? (failed === 1 ? t(" · 1 could not be checked") : t(" · {count} could not be checked", { count: failed })) : ""),
+      });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Update check failed"), description: error.message }),
   });
 
   const pluginInstall = useMutation({
@@ -135,7 +155,7 @@ export function AppsPage() {
   };
 
   const installedContainers = useMemo(() => {
-    const map = new Map<string, { name: string; image: string; repository: string; updateAvailable: boolean }>();
+    const map = new Map<string, Container>();
     for (const container of snapshot?.containers ?? []) {
       const keys = [container.name, container.repository, container.image, container.image.split(":")[0]];
       for (const key of keys) {
@@ -156,6 +176,29 @@ export function AppsPage() {
     return (snapshot?.containers ?? []).find((container) => container.image.toLowerCase().includes(repository));
   };
 
+  const runUpdate = async (container: Container) => {
+    setUpdateRun({
+      names: [container.name], index: 0, startedAt: Date.now(),
+      events: [], running: true, error: "", done: false,
+    });
+    let streamError = "";
+    try {
+      await api.updateContainer(container.id, (event) => {
+        if (event.error) streamError = event.message;
+        setUpdateRun((current) => (current ? { ...current, events: [...current.events.slice(-40), event] } : current));
+      });
+      if (streamError) throw new Error(streamError);
+      setUpdateRun((current) => (current ? { ...current, running: false, done: true } : current));
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({ kind: "success", title: t("{name} updated", { name: container.name }) });
+    } catch (error) {
+      setUpdateRun((current) => (current ? { ...current, running: false, error: (error as Error).message } : current));
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    }
+  };
+
+  const selectedInstalled = selected ? installedFor(selected) : undefined;
+
   return (
     <>
       <PageHeader
@@ -167,6 +210,11 @@ export function AppsPage() {
             <Badge tone="accent" dot>{t("Community Applications")}</Badge>
             {catalog.data?.updatedAt ? <span className="chip">{t("Feed updated {time}", { time: new Date(catalog.data.updatedAt).toLocaleDateString() })}</span> : null}
           </>
+        }
+        actions={
+          <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} loading={checkUpdates.isPending} onClick={() => checkUpdates.mutate()}>
+            {t("Check updates")}
+          </Button>
         }
       />
 
@@ -297,19 +345,26 @@ export function AppsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-2 text-[9.5px] text-subtle">
               {t("Aurora never installs an application without an explicit review.")}
-              {(() => {
-                const installed = installedFor(selected);
-                if (!installed) return null;
-                return (
-                  <Badge tone={installed.updateAvailable ? "warning" : "success"}>
-                    {installed.updateAvailable ? t("Update available") : t("Installed")}
-                  </Badge>
-                );
-              })()}
+              {selectedInstalled ? (
+                <Badge tone={selectedInstalled.updateAvailable ? "warning" : "success"}>
+                  {selectedInstalled.updateAvailable ? t("Update available") : t("Installed")}
+                </Badge>
+              ) : null}
             </span>
             <div className="flex gap-2">
               {selected.support ? <Button variant="secondary" icon={<ExternalLink className="size-3.5" />} onClick={() => window.open(selected.support, "_blank", "noopener")}>{t("Support")}</Button> : null}
-              <Button variant="primary" icon={selected.kind === "plugin" ? <Plug className="size-3.5" /> : <Package className="size-3.5" />} loading={template.isPending} onClick={install}>
+              {selectedInstalled?.updateAvailable ? (
+                <Button
+                  variant="primary"
+                  icon={<RefreshCw className="size-3.5" />}
+                  loading={Boolean(updateRun?.running)}
+                  disabled={Boolean(updateRun?.running)}
+                  onClick={() => void runUpdate(selectedInstalled)}
+                >
+                  {t("Update container")}
+                </Button>
+              ) : null}
+              <Button variant={selectedInstalled?.updateAvailable ? "secondary" : "primary"} icon={selected.kind === "plugin" ? <Plug className="size-3.5" /> : <Package className="size-3.5" />} loading={template.isPending} onClick={install}>
                 {selected.kind === "plugin" ? t("Install plugin") : t("Review & install")}
               </Button>
             </div>
@@ -324,6 +379,11 @@ export function AppsPage() {
               <Info label={t("Downloads")} value={formatDownloads(selected.downloads)} />
               <Info label={t("Updated")} value={selected.date || "—"} />
             </div>
+            {selectedInstalled?.updateAvailable ? (
+              <p className="rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-soft)] px-3 py-2.5 text-[10.5px] leading-relaxed text-muted">
+                {t("The last update check found a newer image digest. Updating pulls it and recreates {name} with its current settings.", { name: selectedInstalled.name })}
+              </p>
+            ) : null}
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 p-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Overview")}</p>
               <p className="mt-2 whitespace-pre-line text-[11px] leading-relaxed text-muted">{selected.overview || t("No description provided.")}</p>
@@ -370,6 +430,13 @@ export function AppsPage() {
           {pluginRun?.error ? <p className="text-[10px] text-[var(--danger)]">{pluginRun.error}</p> : null}
         </div>
       </Modal>
+
+      <ContainerUpdateModal
+        run={updateRun}
+        onClose={() => {
+          if (!updateRun?.running) setUpdateRun(null);
+        }}
+      />
 
       <ContainerCreateModal open={Boolean(installPreset)} onClose={() => setInstallPreset(null)} preset={installPreset} />
     </>

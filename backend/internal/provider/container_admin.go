@@ -611,19 +611,23 @@ func (l *Live) checkImageUpdate(ctx context.Context, image string) model.ImageCh
 		result.Error = err.Error()
 		return result
 	}
-	local, err := l.localImageDigest(ctx, image)
+	locals, err := l.localImageDigests(ctx, image)
 	if err != nil {
 		result.Error = err.Error()
 		return result
 	}
-	result.Local = local
-	if local == "" {
+	if len(locals) > 0 {
+		result.Local = locals[len(locals)-1]
+	}
+	if len(locals) == 0 {
 		result.Error = "local image has no repository digest"
 		return result
 	}
 	if ref.digest != "" {
 		result.Remote = ref.digest
-		result.Update = ref.digest != local
+		result.Update = !digestListContains(locals, ref.digest)
+		slog.Debug("image update check", "image", image, "local", result.Local,
+			"remote", result.Remote, "update", result.Update)
 		l.setImageUpdate(image, result.Update)
 		return result
 	}
@@ -635,30 +639,45 @@ func (l *Live) checkImageUpdate(ctx context.Context, image string) model.ImageCh
 		return result
 	}
 	result.Remote = remote
-	result.Update = remote != "" && remote != local
+	// Docker stores the manifest digest it pulled; some registries answer HEAD
+	// with the index digest while the daemon kept a platform digest (or the
+	// reverse). Matching any known RepoDigest avoids false update badges.
+	result.Update = remote != "" && !digestListContains(locals, remote)
+	slog.Debug("image update check", "image", image, "local", result.Local,
+		"remote", result.Remote, "update", result.Update)
 	l.setImageUpdate(image, result.Update)
 	return result
 }
 
-func (l *Live) localImageDigest(ctx context.Context, image string) (string, error) {
+func digestListContains(digests []string, remote string) bool {
+	for _, digest := range digests {
+		if digest == remote {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Live) localImageDigests(ctx context.Context, image string) ([]string, error) {
 	raw, err := l.dockerDo(ctx, http.MethodGet, "/images/"+url.PathEscape(image)+"/json", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var inspect struct {
 		RepoDigests []string `json:"RepoDigests"`
 	}
 	if err := json.Unmarshal(raw, &inspect); err != nil {
-		return "", fmt.Errorf("decode image inspect: %w", err)
+		return nil, fmt.Errorf("decode image inspect: %w", err)
 	}
-	if len(inspect.RepoDigests) == 0 {
-		return "", nil
+	digests := make([]string, 0, len(inspect.RepoDigests))
+	for _, value := range inspect.RepoDigests {
+		index := strings.Index(value, "@sha256:")
+		if index < 0 {
+			continue
+		}
+		digests = append(digests, value[index+1:])
 	}
-	digest := inspect.RepoDigests[len(inspect.RepoDigests)-1]
-	if index := strings.Index(digest, "@sha256:"); index >= 0 {
-		return digest[index+1:], nil
-	}
-	return "", nil
+	return digests, nil
 }
 
 func (l *Live) webHTTPClient() *http.Client {

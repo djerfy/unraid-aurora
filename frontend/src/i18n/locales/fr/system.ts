@@ -310,6 +310,8 @@ const system: Record<string, string> = {
   "Bridge": "Pont",
   "Bridge, model and MAC address. Leave the MAC empty to let libvirt generate one. NAT and user interfaces are preserved.": "Pont, modèle et adresse MAC. Laissez la MAC vide pour que libvirt en génère une. Les interfaces NAT et utilisateur sont conservées.",
   "Browse Community Applications for Docker containers and plugins, then review every setting before installing.": "Parcourez Community Applications pour les conteneurs Docker et les plugins, puis vérifiez chaque réglage avant l'installation.",
+  "Update container": "Mettre à jour le conteneur",
+  "The last update check found a newer image digest. Updating pulls it and recreates {name} with its current settings.": "La dernière vérification a trouvé un digest d’image plus récent. La mise à jour télécharge l’image et recrée {name} avec ses paramètres actuels.",
   "CPU limit (cores)": "Limite CPU (cœurs)",
   "CPU pinning": "Épinglage CPU",
   "Capabilities to add": "Capacités à ajouter",

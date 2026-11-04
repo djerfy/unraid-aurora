@@ -427,6 +427,10 @@ The **Applications** page browses the official Community Applications feed:
 - **Review & install** downloads the Unraid template, opens the normal container form with every
   field prefilled, and waits for an explicit **Create & start**;
 - plugins are installed through the official plugin manager after a separate confirmation warning;
+- installed applications show **Installed** or **Update available**. That badge comes from the last
+  Docker image update check, not from the feed date; use **Check updates** to refresh it;
+- when a newer digest is found, **Update container** pulls the image and recreates the container with
+  its current settings, exactly like the Docker page;
 - Aurora never executes a Docker template or plugin without that review step.
 
 ![Applications](screenshots/apps.png)
