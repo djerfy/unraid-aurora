@@ -106,6 +106,8 @@ live SSE metrics.
 - **Settings → Notifications** can drop messages below a minimum importance, mute specific Unraid
   sources (for example `docker` or `vm`), and toggle event categories (array, disks, Docker, VMs,
   mover, plugins, UPS, system) before they reach Discord, ntfy or a webhook.
+- Aurora also generates its own event alerts for parity start/stop, container state changes,
+  unhealthy disks and unexpected VM shutdowns; the same category filters apply.
 
 ---
 
