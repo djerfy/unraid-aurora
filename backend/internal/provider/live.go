@@ -189,6 +189,16 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 func (l *Live) Name() string { return "live" }
 
 func (l *Live) Snapshot(ctx context.Context) (model.Snapshot, error) {
+	return l.snapshot(ctx, false)
+}
+
+// SnapshotLight skips the plugin and notification scans. The UI loads those two
+// collections from their dedicated endpoints so the first paint is cheaper.
+func (l *Live) SnapshotLight(ctx context.Context) (model.Snapshot, error) {
+	return l.snapshot(ctx, true)
+}
+
+func (l *Live) snapshot(ctx context.Context, light bool) (model.Snapshot, error) {
 	// Reuse the hub's last sample when it is fresh: the SSE sampler already
 	// owns the delta counters and the handler replaces Metrics with the same
 	// value. Fall back to a direct sample on a cold start.
@@ -228,8 +238,10 @@ func (l *Live) Snapshot(ctx context.Context) (model.Snapshot, error) {
 	run(func() { vms, _ = l.VMs(ctx) })
 	run(func() { network, _ = l.Network(ctx) })
 	run(func() { users, _ = l.Users(ctx) })
-	run(func() { plugins, _ = l.Plugins(ctx) })
-	run(func() { notifications, _ = l.Notifications(ctx) })
+	if !light {
+		run(func() { plugins, _ = l.Plugins(ctx) })
+		run(func() { notifications, _ = l.Notifications(ctx) })
+	}
 	run(func() { gpus, _ = l.GPUs(ctx) })
 	run(func() { history, _ = l.History(ctx) })
 	run(func() { ups, _ = l.UPS(ctx) })

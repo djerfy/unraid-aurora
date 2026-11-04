@@ -1349,7 +1349,7 @@
           "System"
         ],
         "summary": "Load the full application snapshot",
-        "description": "Full snapshot, hub metrics and history",
+        "description": "Full snapshot, hub metrics and history; `?light=1` skips plugins/notifications",
         "operationId": "get_bootstrap",
         "security": [
           {
@@ -1390,7 +1390,20 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "light",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Skip plugin and notification scans."
+          }
+        ]
       }
     },
     "/api/v1/config-history": {

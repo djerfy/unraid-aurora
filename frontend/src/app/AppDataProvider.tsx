@@ -49,12 +49,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const authenticated = sessionQuery.data?.authenticated ?? false;
 
   const bootstrapQuery = useQuery({
-    queryKey: ["bootstrap"],
-    queryFn: api.bootstrap,
+    queryKey: ["bootstrap", "light"],
+    queryFn: () => api.bootstrap(true),
     enabled: authenticated,
     refetchInterval: 12_000,
     staleTime: 4_000,
     placeholderData: (previous) => previous,
+  });
+  const pluginsQuery = useQuery({
+    queryKey: ["plugins"],
+    queryFn: api.plugins,
+    enabled: authenticated,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const notificationsQuery = useQuery({
+    queryKey: ["notifications"],
+    queryFn: api.notifications,
+    enabled: authenticated,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
 
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -102,14 +116,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
   }, [authenticated]);
 
+  const snapshot = useMemo(() => {
+    const base = bootstrapQuery.data;
+    if (!base) return null;
+    return {
+      ...base,
+      plugins: pluginsQuery.data ?? base.plugins,
+      notifications: notificationsQuery.data ?? base.notifications,
+    };
+  }, [bootstrapQuery.data, notificationsQuery.data, pluginsQuery.data]);
+
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["session"] });
     void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    void queryClient.invalidateQueries({ queryKey: ["plugins"] });
+    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }, [queryClient]);
 
   const value = useMemo<AppDataValue>(
     () => ({
-      snapshot: bootstrapQuery.data ?? null,
+      snapshot,
       session: sessionQuery.data ?? null,
       isLoading: sessionQuery.isLoading || (authenticated && bootstrapQuery.isLoading),
       error: (sessionQuery.error as Error | null) ?? (bootstrapQuery.error as Error | null),
@@ -119,7 +145,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       refresh,
     }),
     [
-      bootstrapQuery.data,
+      snapshot,
       bootstrapQuery.error,
       bootstrapQuery.isLoading,
       sessionQuery.data,

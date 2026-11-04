@@ -111,7 +111,7 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 | POST | `/auth/revoke-all` | session | Invalidate every session |
 | GET | `/auth/sessions` | session | List active sessions and the current device |
 | DELETE | `/auth/sessions/{nonce}` | session | Revoke one session by nonce |
-| GET | `/bootstrap` | viewer+ | Full snapshot, hub metrics and history |
+| GET | `/bootstrap` | viewer+ | Full snapshot, hub metrics and history; `?light=1` skips plugins/notifications |
 | GET | `/events` | viewer+ | SSE metrics stream |
 | GET | `/system` | viewer+ | System identity, CPU, memory, sensors |
 | GET | `/settings` | admin | UI and integration settings (secrets redacted for tokens) |
@@ -120,6 +120,9 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 `GET /bootstrap` returns `Snapshot`: system, array, disks, shares, pools,
 containers, VMs, network, users, plugins, notifications, GPUs, UPS, settings,
 metrics, history and `serverTime`. Collections are always arrays, never `null`.
+`?light=1` omits plugins and notifications; the UI loads them from
+`GET /plugins` and `GET /notifications` so first paint is cheaper. JSON reads
+are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 
 ### Array, disks, shares and pools
 

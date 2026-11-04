@@ -144,7 +144,19 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	ctx, cancel := s.serverContext()
 	defer cancel()
-	snap, err := s.provider.Snapshot(ctx)
+	var snap model.Snapshot
+	var err error
+	if r.URL.Query().Get("light") == "1" {
+		if light, ok := s.provider.(interface {
+			SnapshotLight(context.Context) (model.Snapshot, error)
+		}); ok {
+			snap, err = light.SnapshotLight(ctx)
+		} else {
+			snap, err = s.provider.Snapshot(ctx)
+		}
+	} else {
+		snap, err = s.provider.Snapshot(ctx)
+	}
 	if err != nil {
 		s.fail(w, err)
 		return

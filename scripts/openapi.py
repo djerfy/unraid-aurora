@@ -200,6 +200,8 @@ def parameters_for(path: str, method: str) -> list[dict]:
         ],
     }
     params.extend(query.get(path, []))
+    if path == "/api/v1/bootstrap":
+        params.append({"name": "light", "in": "query", "schema": {"type": "string", "enum": ["1"]}, "description": "Skip plugin and notification scans."})
     return params
 
 

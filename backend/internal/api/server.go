@@ -210,6 +210,7 @@ func (s *Server) Handler() http.Handler {
 	handler = s.accessLog(handler)
 	handler = s.recoverPanic(handler)
 	handler = s.auditMutations(handler)
+	handler = s.compress(handler)
 	return handler
 }
 
