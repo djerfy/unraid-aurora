@@ -13,6 +13,9 @@ import (
 
 func networkTestProvider(t *testing.T, content string) *Live {
 	t.Helper()
+	previous := networkNICSource
+	networkNICSource = func() []string { return []string{"br0", "br1", "eth0", "eth1"} }
+	t.Cleanup(func() { networkNICSource = previous })
 	boot := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(boot, "config"), 0o755); err != nil {
 		t.Fatal(err)

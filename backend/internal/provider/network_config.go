@@ -37,6 +37,9 @@ type networkLine struct {
 	isKV  bool
 }
 
+// networkNICSource is a variable so tests do not depend on the host NICs.
+var networkNICSource = sortedNetworkNICs
+
 // NetworkConfig reads every interface stored in network.cfg.
 func (l *Live) NetworkConfig(ctx context.Context) (model.NetworkConfig, error) {
 	_ = ctx
@@ -50,7 +53,7 @@ func (l *Live) NetworkConfig(ctx context.Context) (model.NetworkConfig, error) {
 
 func decodeNetworkConfig(lines []networkLine) model.NetworkConfig {
 	indexed := networkIsIndexed(lines)
-	cfg := model.NetworkConfig{AvailableNICs: sortedNetworkNICs(), DNS: networkDNS(lines)}
+	cfg := model.NetworkConfig{AvailableNICs: networkNICSource(), DNS: networkDNS(lines)}
 	if indexed {
 		cfg.Format = "indexed"
 		for _, index := range networkIndices(lines) {
