@@ -104,10 +104,13 @@ type TrivyStatus struct {
 // TrivyScan is one in-flight image scan (queued or running). The task monitor
 // uses it to surface scans that do not change the install/database status.
 type TrivyScan struct {
-	Image     string    `json:"image"`
-	ImageID   string    `json:"imageId,omitempty"`
-	StartedAt time.Time `json:"startedAt"`
-	Running   bool      `json:"running"`
+	Image      string     `json:"image"`
+	ImageID    string     `json:"imageId,omitempty"`
+	Status     string     `json:"status"`
+	StartedAt  time.Time  `json:"startedAt"`
+	FinishedAt *time.Time `json:"finishedAt,omitempty"`
+	Running    bool       `json:"running"`
+	Error      string     `json:"error,omitempty"`
 }
 
 // TrivyVersion is a release published by the Trivy project.

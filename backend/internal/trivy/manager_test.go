@@ -282,10 +282,29 @@ func TestScansReportsQueuedAndRunning(t *testing.T) {
 	if len(scans) != 2 {
 		t.Fatalf("scans = %+v", scans)
 	}
-	if scans[0].Image != "linuxserver/jackett:latest" || !scans[0].Running {
+	if scans[0].Image != "linuxserver/jackett:latest" || !scans[0].Running || scans[0].Status != "running" {
 		t.Fatalf("oldest scan should come first: %+v", scans)
 	}
-	if scans[1].Image != "bitnami/mongodb:latest" || scans[1].Running {
+	if scans[1].Image != "bitnami/mongodb:latest" || scans[1].Running || scans[1].Status != "queued" {
 		t.Fatalf("queued scan should be reported as queued: %+v", scans)
+	}
+}
+
+func TestScansIncludesRecentlyFinished(t *testing.T) {
+	now := time.Now()
+	manager := &Manager{scanning: map[string]scanActivity{}, recentScans: []scanRecord{
+		{image: "redis:7", started: now.Add(-time.Minute), finished: now, status: "completed"},
+		{image: "old:1", started: now.Add(-2 * time.Hour), finished: now.Add(-time.Hour), status: "completed"},
+		{image: "broken:1", started: now.Add(-2 * time.Minute), finished: now.Add(-time.Minute), status: "failed", err: "boom"},
+	}}
+	scans := manager.Scans()
+	if len(scans) != 2 {
+		t.Fatalf("expired scans must be dropped: %+v", scans)
+	}
+	if scans[0].Image != "broken:1" || scans[0].Status != "failed" || scans[0].Error != "boom" {
+		t.Fatalf("failed scan missing: %+v", scans)
+	}
+	if scans[1].Image != "redis:7" || scans[1].Status != "completed" || scans[1].FinishedAt == nil {
+		t.Fatalf("completed scan missing: %+v", scans)
 	}
 }

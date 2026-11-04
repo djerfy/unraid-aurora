@@ -79,6 +79,7 @@ type Manager struct {
 	versions           []model.TrivyVersion
 	versionsAt         time.Time
 	scanning           map[string]scanActivity
+	recentScans        []scanRecord
 
 	queue      chan scanJob
 	workerOnce sync.Once
@@ -356,6 +357,7 @@ func (m *Manager) EnqueueScan(image, imageID string, force bool) bool {
 	}
 	m.scanning[key] = scanActivity{image: image, imageID: imageID, started: time.Now()}
 	m.mu.Unlock()
+	slog.Debug("trivy scan queued", "image", image, "imageID", imageID, "force", force)
 	select {
 	case m.queue <- scanJob{key: key, image: image, imageID: imageID}:
 		return true
@@ -839,11 +841,13 @@ func (m *Manager) worker() {
 				m.mu.Unlock()
 				continue
 			}
+			started := time.Now()
 			m.mu.Lock()
 			m.scanning[job.key] = scanActivity{
-				image: job.image, imageID: job.imageID, started: time.Now(), running: true,
+				image: job.image, imageID: job.imageID, started: started, running: true,
 			}
 			m.mu.Unlock()
+			slog.Debug("trivy scan started", "image", job.image, "imageID", job.imageID)
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 			detail, err := m.scan(ctx, job.image, job.imageID)
 			if errors.Is(err, errDatabaseNotReady) {
@@ -864,8 +868,24 @@ func (m *Manager) worker() {
 				slog.Warn("scan container image", "image", job.image, "error", err)
 			}
 			m.saveScan(job.key, job.image, job.imageID, detail)
+			record := scanRecord{
+				image: job.image, imageID: job.imageID,
+				started: started, finished: time.Now(), status: "completed",
+			}
+			if err != nil {
+				record.status = "failed"
+				record.err = err.Error()
+				slog.Warn("trivy scan failed", "image", job.image, "duration", record.finished.Sub(started), "error", err)
+			} else {
+				slog.Info("trivy scan finished", "image", job.image,
+					"findings", detail.Total, "duration", record.finished.Sub(started))
+			}
 			m.mu.Lock()
 			delete(m.scanning, job.key)
+			m.recentScans = append(m.recentScans, record)
+			if len(m.recentScans) > maxRecentScans {
+				m.recentScans = m.recentScans[len(m.recentScans)-maxRecentScans:]
+			}
 			m.mu.Unlock()
 			cancel()
 		}
@@ -1195,14 +1215,43 @@ type scanActivity struct {
 	running bool
 }
 
-// Scans returns the in-flight image scans, oldest first.
+// scanRecord is a finished scan kept briefly so the task monitor can show it
+// even when it completed between two polls.
+type scanRecord struct {
+	image    string
+	imageID  string
+	started  time.Time
+	finished time.Time
+	status   string
+	err      string
+}
+
+const maxRecentScans = 20
+
+// Scans returns in-flight scans and the scans that finished recently, oldest
+// first. Short manual scans would otherwise never appear in the task monitor.
 func (m *Manager) Scans() []model.TrivyScan {
 	m.mu.Lock()
-	out := make([]model.TrivyScan, 0, len(m.scanning))
+	out := make([]model.TrivyScan, 0, len(m.scanning)+len(m.recentScans))
 	for _, activity := range m.scanning {
+		status := "queued"
+		if activity.running {
+			status = "running"
+		}
 		out = append(out, model.TrivyScan{
-			Image: activity.image, ImageID: activity.imageID,
+			Image: activity.image, ImageID: activity.imageID, Status: status,
 			StartedAt: activity.started, Running: activity.running,
+		})
+	}
+	cutoff := time.Now().Add(-30 * time.Minute)
+	for _, record := range m.recentScans {
+		if record.finished.Before(cutoff) {
+			continue
+		}
+		finished := record.finished
+		out = append(out, model.TrivyScan{
+			Image: record.image, ImageID: record.imageID, Status: record.status,
+			StartedAt: record.started, FinishedAt: &finished, Error: record.err,
 		})
 	}
 	m.mu.Unlock()

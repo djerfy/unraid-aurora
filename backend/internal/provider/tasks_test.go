@@ -48,9 +48,11 @@ func TestTasksShowsTrivyImageScans(t *testing.T) {
 		shareUsageStarted: map[string]time.Time{},
 		shareUsageErrors:  map[string]string{},
 		trivyScans: func() []model.TrivyScan {
+			finished := now
 			return []model.TrivyScan{
-				{Image: "linuxserver/jackett:latest", StartedAt: now, Running: true},
-				{Image: "bitnami/mongodb:latest", StartedAt: now.Add(-time.Minute)},
+				{Image: "linuxserver/jackett:latest", Status: "running", StartedAt: now, Running: true},
+				{Image: "bitnami/mongodb:latest", Status: "queued", StartedAt: now.Add(-time.Minute)},
+				{Image: "redis:7", Status: "completed", StartedAt: now.Add(-2 * time.Minute), FinishedAt: &finished},
 			}
 		},
 	}
@@ -72,5 +74,9 @@ func TestTasksShowsTrivyImageScans(t *testing.T) {
 	}
 	if running.Command != "trivy image linuxserver/jackett:latest" {
 		t.Fatalf("unexpected command: %q", running.Command)
+	}
+	completed, ok := byName["redis:7"]
+	if !ok || completed.Status != "completed" || completed.FinishedAt == nil || completed.Duration != 120 {
+		t.Fatalf("completed scan is missing: %+v", completed)
 	}
 }

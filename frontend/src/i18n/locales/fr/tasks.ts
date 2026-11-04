@@ -39,5 +39,7 @@ const tasks: Record<string, string> = {
   "Scanning image layers for vulnerabilities": "Analyse des couches de l’image à la recherche de vulnérabilités",
   "Waiting for the Trivy worker": "En attente du worker Trivy",
   "automatic after pull or manual": "automatique après téléchargement ou manuel",
+  "Scan complete": "Scan terminé",
+  "Scan failed": "Scan en échec",
 };
 export default tasks;

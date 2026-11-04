@@ -113,15 +113,22 @@ func trivyScanTask(scan model.TrivyScan) model.Task {
 	if name == "" {
 		name = scan.ImageID
 	}
-	status := "queued"
+	status := scan.Status
 	detail := "Waiting for the Trivy worker"
-	if scan.Running {
-		status = "running"
+	switch status {
+	case "running":
 		detail = "Scanning image layers for vulnerabilities"
+	case "completed":
+		detail = "Scan complete"
+	case "failed":
+		detail = "Scan failed"
+	case "":
+		status = "queued"
 	}
 	started := scan.StartedAt
 	task := model.Task{
-		ID: "trivy-scan:" + name, Name: name, Category: "security", Status: status,
+		ID: "trivy-scan:" + name + ":" + started.UTC().Format(time.RFC3339), Name: name,
+		Category: "security", Status: status,
 		Description: "Trivy image vulnerability scan",
 		Command:     "trivy image " + name,
 		Trigger:     "automatic after pull or manual",
@@ -129,6 +136,18 @@ func trivyScanTask(scan model.TrivyScan) model.Task {
 	}
 	if !started.IsZero() {
 		task.StartedAt = &started
+	}
+	if scan.FinishedAt != nil {
+		finished := *scan.FinishedAt
+		task.FinishedAt = &finished
+		task.UpdatedAt = &finished
+		task.Duration = int64(finished.Sub(started).Seconds())
+	}
+	if status == "completed" {
+		task.Progress = 100
+	}
+	if scan.Error != "" {
+		task.Error = scan.Error
 	}
 	return task
 }
