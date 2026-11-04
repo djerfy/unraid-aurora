@@ -164,6 +164,10 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	if latest := s.hub.Latest(); latest.T > 0 {
 		snap.Metrics = latest
 	}
+	if r.URL.Query().Get("light") == "1" {
+		snap.GPUs = s.hub.LatestGPUs()
+		snap.UPS = s.hub.LatestUPS()
+	}
 	snap.Settings = settingsForRequest(r, snap.Settings)
 	snap.History = s.hub.History()
 	elapsed := time.Since(started)

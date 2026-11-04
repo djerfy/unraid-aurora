@@ -242,9 +242,11 @@ func (l *Live) snapshot(ctx context.Context, light bool) (model.Snapshot, error)
 		run(func() { plugins, _ = l.Plugins(ctx) })
 		run(func() { notifications, _ = l.Notifications(ctx) })
 	}
-	run(func() { gpus, _ = l.GPUs(ctx) })
-	run(func() { history, _ = l.History(ctx) })
-	run(func() { ups, _ = l.UPS(ctx) })
+	if !light {
+		run(func() { gpus, _ = l.GPUs(ctx) })
+		run(func() { history, _ = l.History(ctx) })
+		run(func() { ups, _ = l.UPS(ctx) })
+	}
 	run(func() { settings, _ = l.Settings(ctx) })
 	wg.Wait()
 

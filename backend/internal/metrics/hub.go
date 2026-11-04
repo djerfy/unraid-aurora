@@ -22,6 +22,10 @@ type Hub struct {
 	archive     []model.MetricPoint
 	archivePath string
 	lastArchive time.Time
+	gpus        []model.GPU
+	ups         model.UPS
+	gpusAt      time.Time
+	upsAt       time.Time
 	subs        map[chan model.Metrics]struct{}
 }
 
@@ -51,17 +55,51 @@ func (h *Hub) Run(ctx context.Context, interval time.Duration) {
 		interval = 2 * time.Second
 	}
 	ticker := time.NewTicker(interval)
+	eventTicker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
+	defer eventTicker.Stop()
 
 	h.sample(ctx)
+	h.sampleEvents(ctx)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			h.sample(ctx)
+		case <-eventTicker.C:
+			h.sampleEvents(ctx)
 		}
 	}
+}
+
+// sampleEvents refreshes the slower host inventories used by the light
+// bootstrap path. They are not part of the 2 s metrics frame.
+func (h *Hub) sampleEvents(ctx context.Context) {
+	if gpus, err := h.provider.GPUs(ctx); err == nil {
+		h.mu.Lock()
+		h.gpus = append([]model.GPU(nil), gpus...)
+		h.gpusAt = time.Now()
+		h.mu.Unlock()
+	}
+	if ups, err := h.provider.UPS(ctx); err == nil {
+		h.mu.Lock()
+		h.ups = ups
+		h.upsAt = time.Now()
+		h.mu.Unlock()
+	}
+}
+
+func (h *Hub) LatestGPUs() []model.GPU {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return append([]model.GPU(nil), h.gpus...)
+}
+
+func (h *Hub) LatestUPS() model.UPS {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.ups
 }
 
 func (h *Hub) sample(ctx context.Context) {

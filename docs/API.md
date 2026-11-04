@@ -123,8 +123,9 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 `GET /bootstrap` returns `Snapshot`: system, array, disks, shares, pools,
 containers, VMs, network, users, plugins, notifications, GPUs, UPS, settings,
 metrics, history and `serverTime`. Collections are always arrays, never `null`.
-`?light=1` omits plugins and notifications; the UI loads them from
-`GET /plugins` and `GET /notifications` so first paint is cheaper. JSON reads
+`?light=1` omits plugins, notifications, GPUs, UPS and history. The UI loads
+plugins/notifications from their dedicated endpoints and the remaining fields
+from the SSE hub, so first paint is cheaper without extra host probes. JSON reads
 are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 
 ### Array, disks, shares and pools
