@@ -1,6 +1,7 @@
 import about from "./about";
 import audit from "./audit";
 import scripts from "./scripts";
+import system from "./system";
 import zfs from "./zfs";
 import ups from "./ups";
 import balance from "./balance";
@@ -54,4 +55,5 @@ export const fr: Record<string, string> = {
   ...scripts,
   ...zfs,
   ...ups,
+  ...system,
 };

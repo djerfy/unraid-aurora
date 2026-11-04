@@ -91,6 +91,127 @@ func (f *fakeProvider) SaveStorageLayout(ctx context.Context, layout model.Stora
 	return nil
 }
 
+func (f *fakeProvider) NetworkConfig(ctx context.Context) (model.NetworkConfig, error) {
+	return model.NetworkConfig{
+		Format: "indexed",
+		Interfaces: []model.NetworkInterfaceConfig{{
+			Index: 0, Interface: "br0", IPAddr: "192.168.1.10", Netmask: "255.255.255.0",
+			Gateway: "192.168.1.1", MTU: 1500,
+		}},
+	}, nil
+}
+
+func (f *fakeProvider) SaveNetworkConfig(ctx context.Context, cfg model.NetworkConfig, clientIP string, acknowledge bool) (model.NetworkConfig, error) {
+	if len(cfg.Interfaces) > 0 && cfg.Interfaces[0].IPAddr == "10.0.0.1" {
+		return cfg, provider.ErrNetworkLockout
+	}
+	return cfg, nil
+}
+
+func (f *fakeProvider) SetNetworkInterfaceState(ctx context.Context, name string, up bool) error {
+	if name == "missing" {
+		return errors.New("not configured")
+	}
+	return nil
+}
+
+func (f *fakeProvider) TrivyStatus(ctx context.Context) (model.TrivyStatus, error) {
+	return model.TrivyStatus{Enabled: true, Installed: true, Version: "0.76.1", DBReady: true, DBUpdateHour: 3}, nil
+}
+
+func (f *fakeProvider) TrivyVersions(ctx context.Context) ([]model.TrivyVersion, error) {
+	return []model.TrivyVersion{{Version: "0.76.1", Name: "v0.76.1"}}, nil
+}
+
+func (f *fakeProvider) StartTrivyInstall(version string) error { return nil }
+
+func (f *fakeProvider) StartTrivyDBUpdate() error { return nil }
+
+func (f *fakeProvider) AppsCatalog(ctx context.Context, query, kind, category, order string, limit, offset int) (model.AppCatalogPage, error) {
+	return model.AppCatalogPage{
+		Entries: []model.AppCatalogEntry{{
+			ID: "https://example.test/template.xml", Name: "Example", Kind: "docker",
+			Repository: "example/app:latest", Categories: []string{"Tools"}, TemplateURL: "https://example.test/template.xml",
+		}},
+		Total: 1, Categories: []string{"Tools"},
+	}, nil
+}
+
+func (f *fakeProvider) AppTemplate(ctx context.Context, templateURL string) (model.ContainerTemplate, error) {
+	return model.ContainerTemplate{Name: "example", Image: "example/app:latest", Network: "bridge", Ports: []model.Port{}, Volumes: []model.ContainerVolume{}, Env: []model.ContainerEnv{}}, nil
+}
+
+func (f *fakeProvider) AppIcon(ctx context.Context, iconURL string) ([]byte, string, error) {
+	return []byte{0x89, 0x50, 0x4e, 0x47}, "image/png", nil
+}
+
+func (f *fakeProvider) SchedulerState(ctx context.Context) (model.SchedulerState, error) {
+	return model.SchedulerState{Settings: model.SchedulerSettings{}}, nil
+}
+
+func (f *fakeProvider) PreviewScheduler(settings model.SchedulerSettings) (model.SchedulerPreview, error) {
+	return model.SchedulerPreview{Files: []model.SchedulerPreviewFile{{Path: "/tmp/test.cron", Content: "test"}}}, nil
+}
+
+func (f *fakeProvider) ApplyScheduler(ctx context.Context, settings model.SchedulerSettings) error {
+	return nil
+}
+
+func (f *fakeProvider) UpdateDisplaySettings(ctx context.Context, settings model.SystemDisplaySettings) error {
+	return nil
+}
+
+func (f *fakeProvider) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error) {
+	return model.VMAdvancedConfig{VCPUs: 2, MemoryMB: 2048, Networks: []model.VMNetworkConfig{{Bridge: "br0", Model: "virtio"}}}, nil
+}
+
+func (f *fakeProvider) UpdateVMAdvanced(ctx context.Context, id string, cfg model.VMAdvancedConfig) error {
+	return nil
+}
+
+func (f *fakeProvider) VMHostDevices(ctx context.Context) ([]model.VMHostDevice, error) {
+	return []model.VMHostDevice{{Type: "pci", Address: "0000:01:00.0", Name: "Test GPU"}}, nil
+}
+
+func (f *fakeProvider) CloneVM(ctx context.Context, id string, opts model.VMCloneOptions) (model.VM, error) {
+	return model.VM{ID: "vm-clone", Name: opts.Name}, nil
+}
+
+func (f *fakeProvider) ResizeVMDisk(ctx context.Context, id string, opts model.VMDiskResizeOptions) error {
+	return nil
+}
+
+func (f *fakeProvider) ContainerSecurity(ctx context.Context, id string) (model.ContainerSecurityDetail, error) {
+	return model.ContainerSecurityDetail{ContainerSecurity: model.ContainerSecurity{Enabled: true, Available: true, Critical: 1, Total: 1}}, nil
+}
+
+func (f *fakeProvider) SecurityOverview(ctx context.Context) (model.SecurityOverview, error) {
+	return model.SecurityOverview{
+		Enabled: true,
+		Images: []model.SecurityImage{{
+			Image: "linuxserver/plex:latest", ImageID: "sha256:abc",
+			Containers: []model.SecurityContainerRef{{ID: "abc", Name: "plex", State: "running"}},
+			Security:   model.ContainerSecurity{Enabled: true, Available: true, Critical: 1, Total: 1},
+			Vulnerabilities: []model.ContainerVulnerability{{
+				ID: "CVE-2026-0001", Package: "openssl", Severity: "CRITICAL",
+			}},
+		}},
+		Totals: model.SecurityTotals{Images: 1, ScannedImages: 1, Containers: 1, ScannedContainers: 1, Critical: 1, Total: 1},
+	}, nil
+}
+
+func (f *fakeProvider) ScanContainer(ctx context.Context, id string) error { return nil }
+
+func (f *fakeProvider) ScanAllContainers(ctx context.Context) (int, error) { return 2, nil }
+
+func (f *fakeProvider) OSStatus(ctx context.Context) (model.OSStatus, error) {
+	return model.OSStatus{Version: "7.2.4", Branch: "stable"}, nil
+}
+
+func (f *fakeProvider) UnraidAPIStatus(ctx context.Context) (model.UnraidAPIStatus, error) {
+	return model.UnraidAPIStatus{Installed: true, Running: true, State: "online", Version: "4.36.1"}, nil
+}
+
 func (f *fakeProvider) Perform(ctx context.Context, action model.Action) error {
 	if action.Kind == provider.ActionArrayStart {
 		return nil

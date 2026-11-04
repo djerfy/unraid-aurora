@@ -16,6 +16,7 @@ import (
 	"aurora/internal/auth"
 	"aurora/internal/config"
 	"aurora/internal/metrics"
+	"aurora/internal/model"
 	"aurora/internal/provider"
 	"aurora/internal/webui"
 )
@@ -28,6 +29,7 @@ type Server struct {
 	log      *slog.Logger
 	started  time.Time
 	audit    *audit.Log
+	tokens   *tokenStore
 }
 
 func New(cfg config.Config, p provider.Provider, hub *metrics.Hub, authManager *auth.Manager, log *slog.Logger) *Server {
@@ -37,18 +39,29 @@ func New(cfg config.Config, p provider.Provider, hub *metrics.Hub, authManager *
 		log:     log,
 		started: time.Now(),
 		audit:   audit.New(cfg.ConfigDir),
+		tokens:  newTokenStore(cfg.ConfigDir),
 	}
 }
 
 func (s *Server) Handler() http.Handler {
 	api := http.NewServeMux()
+	api.HandleFunc("GET /api/docs", s.apiDocs)
+	api.HandleFunc("GET /api/openapi.json", s.openAPISpec)
 	api.HandleFunc("GET /api/v1/health", s.health)
 	api.HandleFunc("GET /api/v1/auth/session", s.session)
 	api.HandleFunc("POST /api/v1/auth/login", s.login)
 	api.HandleFunc("POST /api/v1/auth/logout", s.logout)
+	api.HandleFunc("POST /api/v1/auth/revoke-all", s.revokeAllSessions)
 
 	api.HandleFunc("GET /api/v1/bootstrap", s.bootstrap)
 	api.HandleFunc("GET /api/v1/system", s.system)
+	api.HandleFunc("GET /api/v1/apps", s.appsCatalog)
+	api.HandleFunc("GET /api/v1/apps/template", s.appTemplate)
+	api.HandleFunc("GET /api/v1/apps/icon", s.appIcon)
+	api.HandleFunc("GET /api/v1/system/scheduler", s.schedulerState)
+	api.HandleFunc("POST /api/v1/system/scheduler/preview", s.schedulerPreview)
+	api.HandleFunc("PUT /api/v1/system/scheduler", s.schedulerApply)
+	api.HandleFunc("PUT /api/v1/system/display", s.displaySettingsApply)
 	api.HandleFunc("GET /api/v1/array", s.array)
 	api.HandleFunc("POST /api/v1/array/start", s.startArray)
 	api.HandleFunc("POST /api/v1/array/stop", s.stopArray)
@@ -67,8 +80,13 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/docker/containers/{id}/connections", s.containerConnections)
 	api.HandleFunc("GET /api/v1/docker/containers/{id}/icon", s.containerIcon)
 	api.HandleFunc("GET /api/v1/docker/containers/{id}/config", s.containerConfig)
+	api.HandleFunc("GET /api/v1/docker/security", s.securityOverview)
+	api.HandleFunc("GET /api/v1/docker/containers/{id}/security", s.containerSecurity)
+	api.HandleFunc("POST /api/v1/docker/containers/{id}/scan", s.scanContainer)
+	api.HandleFunc("POST /api/v1/docker/scan-all", s.scanAllContainers)
 	api.HandleFunc("PUT /api/v1/docker/containers/{id}/config", s.updateContainerConfig)
 	api.HandleFunc("POST /api/v1/docker/containers", s.createContainer)
+	api.HandleFunc("POST /api/v1/docker/containers/bulk", s.bulkContainerAction)
 	api.HandleFunc("POST /api/v1/docker/containers/{id}/update", s.updateContainerImage)
 	api.HandleFunc("PUT /api/v1/docker/containers/{id}/autostart", s.containerAutostart)
 	api.HandleFunc("DELETE /api/v1/docker/containers/{id}", s.removeContainer)
@@ -77,7 +95,12 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/docker/check-updates", s.checkContainerUpdates)
 	api.HandleFunc("GET /api/v1/vms", s.vms)
 	api.HandleFunc("POST /api/v1/vms", s.createVM)
+	api.HandleFunc("GET /api/v1/vms/host-devices", s.vmHostDevices)
 	api.HandleFunc("GET /api/v1/vms/{id}/icon", s.vmIcon)
+	api.HandleFunc("GET /api/v1/vms/{id}/advanced", s.vmAdvanced)
+	api.HandleFunc("PUT /api/v1/vms/{id}/advanced", s.updateVMAdvanced)
+	api.HandleFunc("POST /api/v1/vms/{id}/clone", s.cloneVM)
+	api.HandleFunc("POST /api/v1/vms/{id}/resize", s.resizeVMDisk)
 	api.HandleFunc("GET /api/v1/vms/{id}/console", s.vmConsole)
 	api.HandleFunc("PUT /api/v1/vms/{id}/autostart", s.vmAutostart)
 	api.HandleFunc("GET /api/v1/vms/{id}/xml", s.vmXML)
@@ -87,6 +110,22 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/vms/{id}/snapshots/{snapshot}/revert", s.restoreVMSnapshot)
 	api.HandleFunc("DELETE /api/v1/vms/{id}/snapshots/{snapshot}", s.deleteVMSnapshot)
 	api.HandleFunc("GET /api/v1/network", s.network)
+	api.HandleFunc("GET /api/v1/network/config", s.networkConfig)
+	api.HandleFunc("PUT /api/v1/network/config", s.saveNetworkConfig)
+	api.HandleFunc("POST /api/v1/network/apply", s.applyNetworkConfig)
+	api.HandleFunc("POST /api/v1/network/revert", s.revertNetworkConfig)
+	api.HandleFunc("POST /api/v1/network/interfaces/{name}/{action}", s.networkInterfaceAction)
+	api.HandleFunc("GET /api/v1/system/os", s.osStatus)
+	api.HandleFunc("POST /api/v1/system/os/check", s.osCheck)
+	api.HandleFunc("POST /api/v1/system/os/update", s.osUpdate)
+	api.HandleFunc("POST /api/v1/system/os/restore", s.osRestore)
+	api.HandleFunc("GET /api/v1/trivy", s.trivyStatus)
+	api.HandleFunc("GET /api/v1/trivy/versions", s.trivyVersions)
+	api.HandleFunc("POST /api/v1/trivy/install", s.trivyInstall)
+	api.HandleFunc("POST /api/v1/trivy/db/update", s.trivyDBUpdate)
+	api.HandleFunc("GET /api/v1/unraid-api", s.unraidAPIStatus)
+	api.HandleFunc("GET /api/v1/unraid-api/logs", s.unraidAPILogs)
+	api.HandleFunc("POST /api/v1/unraid-api/{action}", s.unraidAPIAction)
 	api.HandleFunc("GET /api/v1/users", s.users)
 	api.HandleFunc("POST /api/v1/users", s.createUser)
 	api.HandleFunc("PUT /api/v1/users/{name}", s.updateUser)
@@ -100,8 +139,12 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("DELETE /api/v1/plugins/{name}", s.removePlugin)
 	api.HandleFunc("GET /api/v1/notifications", s.notifications)
 	api.HandleFunc("GET /api/v1/audit", s.auditLog)
+	api.HandleFunc("GET /api/v1/tokens", s.apiTokens)
+	api.HandleFunc("POST /api/v1/tokens", s.createAPIToken)
+	api.HandleFunc("DELETE /api/v1/tokens/{id}", s.revokeAPIToken)
 	api.HandleFunc("GET /api/v1/user-scripts", s.userScripts)
 	api.HandleFunc("GET /api/v1/user-scripts/{id}", s.userScript)
+	api.HandleFunc("PUT /api/v1/user-scripts/{id}", s.updateUserScript)
 	api.HandleFunc("POST /api/v1/user-scripts/{id}/run", s.runUserScript)
 	api.HandleFunc("GET /api/v1/zfs/pools", s.zfsPools)
 	api.HandleFunc("POST /api/v1/zfs/pools/{name}/scrub", s.zfsScrub)
@@ -168,10 +211,116 @@ func (s *Server) Handler() http.Handler {
 	return handler
 }
 
+type tokenPrincipal struct {
+	Name     string
+	Role     string
+	ReadOnly bool
+}
+
+// tokenRoleAllows applies the token role policy. Viewers are read-only,
+// operators can run day-to-day workload and array actions, and admins retain
+// full control over host configuration.
+func tokenRoleAllows(role, method, path string) bool {
+	if handled, allowed := sensitiveReadAllows(role, path); handled {
+		return allowed
+	}
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return true
+	}
+	switch role {
+	case TokenRoleAdmin:
+		return true
+	case TokenRoleOperator:
+		for _, prefix := range []string{
+			"/api/v1/actions",
+			"/api/v1/array/",
+			"/api/v1/docker/",
+			"/api/v1/vms/",
+			"/api/v1/mover",
+			"/api/v1/balance/",
+			"/api/v1/disks/",
+		} {
+			if strings.HasPrefix(path, prefix) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// sensitiveReadAllows keeps secrets and privileged consoles away from tokens
+// that are only meant to read dashboards. It applies to every method so a PUT
+// on the same resource follows the same role floor.
+func sensitiveReadAllows(role, path string) (bool, bool) {
+	adminOnly := func() (bool, bool) { return true, role == TokenRoleAdmin }
+	operator := func() (bool, bool) { return true, role == TokenRoleAdmin || role == TokenRoleOperator }
+	switch {
+	case path == "/api/v1/terminal":
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/user-scripts/"):
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/config-history"):
+		return adminOnly()
+	case path == "/api/v1/settings", path == "/api/v1/audit", path == "/api/v1/ups/settings", path == "/api/v1/logs", path == "/api/v1/unraid-api/logs":
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/config/export"), path == "/api/v1/tools/flash-backup", path == "/api/v1/tools/diagnostics":
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/users"):
+		if strings.HasSuffix(path, "/icon") {
+			return false, false
+		}
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/vms/") && (strings.HasSuffix(path, "/console") || strings.HasSuffix(path, "/xml") || strings.HasSuffix(path, "/advanced")):
+		return operator()
+	case strings.HasPrefix(path, "/api/v1/docker/containers/") && strings.HasSuffix(path, "/config"):
+		return operator()
+	}
+	return false, false
+}
+
+func redactSettings(settings model.Settings) model.Settings {
+	settings.DiscordWebhook = ""
+	settings.NtfyURL = ""
+	settings.WebhookURL = ""
+	settings.WebhookHeaders = nil
+	settings.WebhookBody = ""
+	return settings
+}
+
+func settingsForRequest(r *http.Request, settings model.Settings) model.Settings {
+	if principal, ok := r.Context().Value(tokenContextKey{}).(tokenPrincipal); ok && principal.Role != TokenRoleAdmin {
+		return redactSettings(settings)
+	}
+	return settings
+}
+
+type tokenContextKey struct{}
+
 func (s *Server) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublic(r.URL.Path) {
 			next.ServeHTTP(w, r)
+			return
+		}
+		if raw := bearerToken(r); raw != "" {
+			token, ok := s.tokens.validate(raw)
+			if !ok {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "API token is invalid")
+				return
+			}
+			if !tokenRoleAllows(token.Role, r.Method, r.URL.Path) {
+				if token.Role == TokenRoleViewer {
+					writeError(w, http.StatusForbidden, "read_only_token", "this API token is read-only")
+				} else {
+					writeError(w, http.StatusForbidden, "token_forbidden", "this API token is not allowed to perform this action")
+				}
+				return
+			}
+			ctx := context.WithValue(r.Context(), tokenContextKey{}, tokenPrincipal{Name: token.Name, Role: token.Role, ReadOnly: token.ReadOnly})
+			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
 		if _, ok := s.auth.FromRequest(r); !ok {
@@ -180,6 +329,24 @@ func (s *Server) authenticate(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func bearerToken(r *http.Request) string {
+	header := r.Header.Get("Authorization")
+	if !strings.HasPrefix(header, "Bearer ") {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+}
+
+func (s *Server) auditUser(r *http.Request) string {
+	if principal, ok := r.Context().Value(tokenContextKey{}).(tokenPrincipal); ok {
+		return "token:" + principal.Name
+	}
+	if sess, ok := s.sessionUser(r); ok {
+		return sess.User
+	}
+	return "anonymous"
 }
 
 func isPublic(path string) bool {
@@ -198,6 +365,10 @@ func (s *Server) csrf(next http.Handler) http.Handler {
 			return
 		}
 		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if bearerToken(r) != "" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -279,12 +450,17 @@ func (s *Server) accessLog(next http.Handler) http.Handler {
 }
 
 func (s *Server) prometheus(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.MetricsToken == "" {
-		http.NotFound(w, r)
-		return
-	}
+	authorized := false
 	header := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if header == "" || subtle.ConstantTimeCompare([]byte(header), []byte(s.cfg.MetricsToken)) != 1 {
+	if s.cfg.MetricsToken != "" && header != "" && subtle.ConstantTimeCompare([]byte(header), []byte(s.cfg.MetricsToken)) == 1 {
+		authorized = true
+	}
+	if !authorized {
+		if _, ok := s.tokens.validate(header); ok {
+			authorized = true
+		}
+	}
+	if !authorized {
 		writeError(w, http.StatusUnauthorized, "unauthorized", "metrics token is invalid")
 		return
 	}
@@ -331,10 +507,7 @@ func (s *Server) auditMutations(next http.Handler) http.Handler {
 		}
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(sw, r)
-		user := "anonymous"
-		if sess, ok := s.sessionUser(r); ok {
-			user = sess.User
-		}
+		user := s.auditUser(r)
 		s.audit.Record(audit.Entry{
 			Time: time.Now(), User: user, Method: r.Method, Path: r.URL.Path,
 			Status: sw.status, Remote: auth.ClientIP(r),

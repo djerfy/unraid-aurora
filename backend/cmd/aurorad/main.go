@@ -107,6 +107,7 @@ func main() {
 	hub := metrics.NewHub(p, filepath.Join(cfg.ConfigDir, "metrics-archive.json"))
 	go hub.Run(ctx, 2*time.Second)
 	go notify.Run(ctx, p, log)
+	go p.Start(ctx)
 
 	authManager := auth.New(cfg.SessionTTL)
 	srv := &http.Server{

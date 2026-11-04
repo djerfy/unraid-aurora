@@ -247,38 +247,41 @@ type Port struct {
 }
 
 type Container struct {
-	ID              string           `json:"id"`
-	Name            string           `json:"name"`
-	Image           string           `json:"image"`
-	Repository      string           `json:"repository"`
-	Tag             string           `json:"tag"`
-	Version         string           `json:"version"`
-	State           string           `json:"state"`
-	Status          string           `json:"status"`
-	Uptime          int64            `json:"uptime"`
-	Autostart       bool             `json:"autostart"`
-	Network         string           `json:"network"`
-	IP              string           `json:"ip"`
-	Ports           []Port           `json:"ports"`
-	Mounts          []ContainerMount `json:"mounts"`
-	CPU             float64          `json:"cpu"`
-	Memory          uint64           `json:"memory"`
-	MemoryLimit     uint64           `json:"memoryLimit"`
-	NetworkRx       uint64           `json:"networkRx"`
-	NetworkTx       uint64           `json:"networkTx"`
-	NetworkRxRate   uint64           `json:"networkRxRate"`
-	NetworkTxRate   uint64           `json:"networkTxRate"`
-	BlockRead       uint64           `json:"blockRead"`
-	BlockWrite      uint64           `json:"blockWrite"`
-	BlockReadRate   uint64           `json:"blockReadRate"`
-	BlockWriteRate  uint64           `json:"blockWriteRate"`
-	Color           string           `json:"color"`
-	Category        string           `json:"category"`
-	UpdateAvailable bool             `json:"updateAvailable"`
-	Created         time.Time        `json:"created"`
-	Icon            string           `json:"icon"`
-	WebUI           string           `json:"webUi"`
-	RestartPolicy   string           `json:"restartPolicy"`
+	ID              string            `json:"id"`
+	Name            string            `json:"name"`
+	Image           string            `json:"image"`
+	ImageID         string            `json:"imageId"`
+	Repository      string            `json:"repository"`
+	Tag             string            `json:"tag"`
+	Version         string            `json:"version"`
+	State           string            `json:"state"`
+	Status          string            `json:"status"`
+	Health          string            `json:"health"`
+	Uptime          int64             `json:"uptime"`
+	Autostart       bool              `json:"autostart"`
+	Network         string            `json:"network"`
+	IP              string            `json:"ip"`
+	Ports           []Port            `json:"ports"`
+	Mounts          []ContainerMount  `json:"mounts"`
+	CPU             float64           `json:"cpu"`
+	Memory          uint64            `json:"memory"`
+	MemoryLimit     uint64            `json:"memoryLimit"`
+	NetworkRx       uint64            `json:"networkRx"`
+	NetworkTx       uint64            `json:"networkTx"`
+	NetworkRxRate   uint64            `json:"networkRxRate"`
+	NetworkTxRate   uint64            `json:"networkTxRate"`
+	BlockRead       uint64            `json:"blockRead"`
+	BlockWrite      uint64            `json:"blockWrite"`
+	BlockReadRate   uint64            `json:"blockReadRate"`
+	BlockWriteRate  uint64            `json:"blockWriteRate"`
+	Color           string            `json:"color"`
+	Category        string            `json:"category"`
+	UpdateAvailable bool              `json:"updateAvailable"`
+	Created         time.Time         `json:"created"`
+	Icon            string            `json:"icon"`
+	WebUI           string            `json:"webUi"`
+	RestartPolicy   string            `json:"restartPolicy"`
+	Security        ContainerSecurity `json:"security"`
 }
 
 type ContainerConnection struct {
@@ -312,6 +315,40 @@ type ContainerEnv struct {
 	Value string `json:"value"`
 }
 
+type ContainerDevice struct {
+	HostPath      string `json:"hostPath"`
+	ContainerPath string `json:"containerPath"`
+	Permissions   string `json:"permissions"`
+}
+
+type ContainerUlimit struct {
+	Name string `json:"name"`
+	Soft int64  `json:"soft"`
+	Hard int64  `json:"hard"`
+}
+
+// ContainerAdvanced groups the structured Docker options that the official
+// webGUI usually stores in ExtraParams.
+type ContainerAdvanced struct {
+	MacAddress     string            `json:"macAddress,omitempty"`
+	Hostname       string            `json:"hostname,omitempty"`
+	Devices        []ContainerDevice `json:"devices"`
+	CapAdd         []string          `json:"capAdd"`
+	CapDrop        []string          `json:"capDrop"`
+	Sysctls        map[string]string `json:"sysctls"`
+	Ulimits        []ContainerUlimit `json:"ulimits"`
+	Labels         map[string]string `json:"labels"`
+	ExtraHosts     []string          `json:"extraHosts"`
+	Tmpfs          []string          `json:"tmpfs"`
+	DNS            []string          `json:"dns"`
+	DNSSearch      []string          `json:"dnsSearch"`
+	MemoryLimit    int64             `json:"memoryLimit,omitempty"`
+	NanoCPUs       int64             `json:"nanoCpus,omitempty"`
+	CPUSet         string            `json:"cpuSet,omitempty"`
+	PidsLimit      int64             `json:"pidsLimit,omitempty"`
+	ReadOnlyRootfs bool              `json:"readOnlyRootfs,omitempty"`
+}
+
 type ContainerTemplate struct {
 	ID            string            `json:"id"`
 	Name          string            `json:"name"`
@@ -324,6 +361,7 @@ type ContainerTemplate struct {
 	Ports         []Port            `json:"ports"`
 	Volumes       []ContainerVolume `json:"volumes"`
 	Env           []ContainerEnv    `json:"env"`
+	Advanced      ContainerAdvanced `json:"advanced"`
 	Modified      time.Time         `json:"modified"`
 }
 
@@ -338,6 +376,7 @@ type ContainerCreateOptions struct {
 	Icon          string            `json:"icon"`
 	WebUI         string            `json:"webUi"`
 	Privileged    bool              `json:"privileged"`
+	Advanced      ContainerAdvanced `json:"advanced"`
 }
 
 type ContainerUpdateEvent struct {
@@ -371,6 +410,7 @@ type ContainerConfig struct {
 	Ports         []Port            `json:"ports"`
 	Volumes       []ContainerVolume `json:"volumes"`
 	Env           []ContainerEnv    `json:"env"`
+	Advanced      ContainerAdvanced `json:"advanced"`
 }
 
 type VM struct {
@@ -441,6 +481,9 @@ type UserScript struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Schedule    string `json:"schedule"`
+	Frequency   string `json:"frequency"`
+	Cron        string `json:"cron"`
+	Content     string `json:"content,omitempty"`
 }
 
 type VMCreateOptions struct {
@@ -645,6 +688,8 @@ type MoverRun struct {
 
 type MoverStatus struct {
 	Running         bool       `json:"running"`
+	ProgressEnabled bool       `json:"progressEnabled"`
+	ProgressSource  string     `json:"progressSource"`
 	Total           uint64     `json:"total"`
 	Remain          uint64     `json:"remain"`
 	Progress        float64    `json:"progress"`
@@ -740,20 +785,28 @@ type StorageLayout struct {
 }
 
 type Settings struct {
-	Theme           string `json:"theme"`
-	Accent          string `json:"accent"`
-	Density         string `json:"density"`
-	RefreshInterval int    `json:"refreshInterval"`
-	Language        string `json:"language"`
-	ServerName      string `json:"serverName"`
-	AutoUpdate      bool   `json:"autoUpdate"`
-	EmailAlerts     bool   `json:"emailAlerts"`
-	PushAlerts      bool   `json:"pushAlerts"`
-	DiscordWebhook  string `json:"discordWebhook"`
-	NtfyURL         string `json:"ntfyUrl"`
-	WebhookURL      string `json:"webhookUrl"`
-	Telemetry       bool   `json:"telemetry"`
-	TemperatureUnit string `json:"temperatureUnit"`
+	Theme               string            `json:"theme"`
+	Accent              string            `json:"accent"`
+	Density             string            `json:"density"`
+	RefreshInterval     int               `json:"refreshInterval"`
+	Language            string            `json:"language"`
+	ServerName          string            `json:"serverName"`
+	AutoUpdate          bool              `json:"autoUpdate"`
+	EmailAlerts         bool              `json:"emailAlerts"`
+	PushAlerts          bool              `json:"pushAlerts"`
+	DiscordWebhook      string            `json:"discordWebhook"`
+	NtfyURL             string            `json:"ntfyUrl"`
+	WebhookURL          string            `json:"webhookUrl"`
+	WebhookMethod       string            `json:"webhookMethod"`
+	WebhookHeaders      map[string]string `json:"webhookHeaders"`
+	WebhookBody         string            `json:"webhookBody"`
+	NotifyMinImportance string            `json:"notifyMinImportance"`
+	NotifyMutedSources  []string          `json:"notifyMutedSources"`
+	Telemetry           bool              `json:"telemetry"`
+	TemperatureUnit     string            `json:"temperatureUnit"`
+	TrivyEnabled        bool              `json:"trivyEnabled"`
+	TrivyVersion        string            `json:"trivyVersion"`
+	TrivyDBUpdateHour   int               `json:"trivyDbUpdateHour"`
 }
 
 type LogLine struct {

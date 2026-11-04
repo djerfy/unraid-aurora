@@ -99,6 +99,8 @@ export type MoverRun = {
 
 export type MoverStatus = {
   running: boolean;
+  progressEnabled: boolean;
+  progressSource: string;
   total: number;
   remain: number;
   progress: number;
@@ -264,6 +266,38 @@ export type ContainerMount = {
   readOnly: boolean;
 };
 
+export type ContainerDevice = {
+  hostPath: string;
+  containerPath: string;
+  permissions: string;
+};
+
+export type ContainerUlimit = {
+  name: string;
+  soft: number;
+  hard: number;
+};
+
+export type ContainerAdvanced = {
+  macAddress: string;
+  hostname: string;
+  devices: ContainerDevice[];
+  capAdd: string[];
+  capDrop: string[];
+  sysctls: Record<string, string>;
+  ulimits: ContainerUlimit[];
+  labels: Record<string, string>;
+  extraHosts: string[];
+  tmpfs: string[];
+  dns: string[];
+  dnsSearch: string[];
+  memoryLimit: number;
+  nanoCpus: number;
+  cpuSet: string;
+  pidsLimit: number;
+  readOnlyRootfs: boolean;
+};
+
 export type ContainerTemplate = {
   id: string;
   name: string;
@@ -276,6 +310,7 @@ export type ContainerTemplate = {
   ports: Port[];
   volumes: ContainerVolume[];
   env: ContainerEnv[];
+  advanced: ContainerAdvanced;
   modified: string;
 };
 
@@ -290,6 +325,7 @@ export type ContainerCreateOptions = {
   icon: string;
   webUi: string;
   privileged: boolean;
+  advanced: ContainerAdvanced;
 };
 
 export type ContainerUpdateEvent = {
@@ -317,17 +353,116 @@ export type ContainerConfig = {
   ports: Port[];
   volumes: ContainerVolume[];
   env: ContainerEnv[];
+  advanced: ContainerAdvanced;
+};
+
+export type ContainerVulnerability = {
+  id: string;
+  package: string;
+  installedVersion: string;
+  fixedVersion: string;
+  severity: string;
+  title: string;
+  target: string;
+  type: string;
+  url: string;
+};
+
+export type ContainerSecurity = {
+  enabled: boolean;
+  available: boolean;
+  scanning: boolean;
+  stale: boolean;
+  scannedAt?: string;
+  trivyVersion?: string;
+  dbUpdatedAt?: string;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  unknown: number;
+  total: number;
+  error?: string;
+  image?: string;
+  imageId?: string;
+};
+
+export type ContainerSecurityDetail = ContainerSecurity & {
+  vulnerabilities: ContainerVulnerability[];
+};
+
+export type SecurityContainerRef = {
+  id: string;
+  name: string;
+  state: string;
+};
+
+export type SecurityImage = {
+  image: string;
+  imageId?: string;
+  containers: SecurityContainerRef[];
+  security: ContainerSecurity;
+  vulnerabilities: ContainerVulnerability[];
+};
+
+export type SecurityTotals = {
+  images: number;
+  scannedImages: number;
+  containers: number;
+  scannedContainers: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  unknown: number;
+  total: number;
+  scanning: number;
+  failed: number;
+  stale: number;
+  lastScanAt?: string;
+};
+
+export type SecurityOverview = {
+  enabled: boolean;
+  images: SecurityImage[];
+  totals: SecurityTotals;
+};
+
+export type TrivyStatus = {
+  enabled: boolean;
+  installed: boolean;
+  runtimeReady: boolean;
+  version: string;
+  dbReady: boolean;
+  javaDbReady: boolean;
+  dbUpdatedAt?: string;
+  dbSize: number;
+  javaDbSize: number;
+  dbUpdateHour: number;
+  installing: boolean;
+  updatingDb: boolean;
+  stage?: string;
+  error?: string;
+};
+
+export type TrivyVersion = {
+  version: string;
+  name: string;
+  publishedAt: string;
+  prerelease: boolean;
 };
 
 export type Container = {
   id: string;
   name: string;
   image: string;
+  imageId: string;
   repository: string;
   tag: string;
   version: string;
   state: string;
   status: string;
+  health: string;
   uptime: number;
   autostart: boolean;
   network: string;
@@ -352,6 +487,7 @@ export type Container = {
   icon: string;
   webUi: string;
   restartPolicy: string;
+  security: ContainerSecurity;
 };
 
 export type VMCreateOptions = {
@@ -391,6 +527,112 @@ export type VM = {
   consolePort: number;
   consoleWebSocket: number;
   consoleKeyboard: boolean;
+};
+
+export type AppCatalogEntry = {
+  id: string;
+  name: string;
+  kind: "docker" | "plugin" | string;
+  repository?: string;
+  registry?: string;
+  network?: string;
+  icon?: string;
+  webUi?: string;
+  overview?: string;
+  category?: string;
+  categories: string[];
+  support?: string;
+  project?: string;
+  readMe?: string;
+  templateUrl?: string;
+  pluginUrl?: string;
+  author?: string;
+  repo?: string;
+  date?: string;
+  requires?: string;
+  extraParams?: string;
+  privileged: boolean;
+  downloads: number;
+  pluginVersion?: string;
+};
+
+export type AppCatalogPage = {
+  entries: AppCatalogEntry[];
+  total: number;
+  categories: string[];
+  updatedAt?: string;
+  cached: boolean;
+};
+
+export type SchedulerJob = {
+  mode: string;
+  hour: number;
+  minute: number;
+  day: number;
+  dayOfMonth: number;
+  month: number;
+  intervalHours: number;
+};
+
+export type ParitySchedule = SchedulerJob & { writeCorrections: boolean };
+export type MoverSchedule = SchedulerJob & { logging: boolean; progress: boolean };
+export type TrimSchedule = SchedulerJob;
+
+export type SchedulerSettings = {
+  parity: ParitySchedule;
+  mover: MoverSchedule;
+  trim: TrimSchedule;
+};
+
+export type SystemDisplaySettings = {
+  dateFormat: string;
+  timeFormat: string;
+};
+
+export type SystemSettings = {
+  timeZone: string;
+  ntpEnabled: boolean;
+  ntpServers: string[];
+  currentTime: string;
+  display: SystemDisplaySettings;
+};
+
+export type SchedulerState = {
+  settings: SchedulerSettings;
+  system: SystemSettings;
+};
+
+export type SchedulerPreviewFile = {
+  path: string;
+  content: string;
+  diff?: string;
+  existed: boolean;
+  delete: boolean;
+};
+
+export type SchedulerPreview = {
+  files: SchedulerPreviewFile[];
+  warnings: string[];
+};
+
+export type VMAdvancedConfig = {
+  vcpus: number;
+  memoryMB: number;
+  cpuSet: string;
+  networks: { bridge: string; model: string; mac: string }[];
+  soundModel: string;
+  hostDevices: { type: string; address?: string; vendor?: string; product?: string }[];
+};
+
+export type VMHostDevice = {
+  type: string;
+  address?: string;
+  vendor?: string;
+  product?: string;
+  name: string;
+  driver?: string;
+  iommuGroup?: string;
+  class?: string;
 };
 
 export type Notification = {
@@ -652,8 +894,16 @@ export type Settings = {
   discordWebhook: string;
   ntfyUrl: string;
   webhookUrl: string;
+  webhookMethod: string;
+  webhookHeaders: Record<string, string>;
+  webhookBody: string;
+  notifyMinImportance: string;
+  notifyMutedSources: string[];
   telemetry: boolean;
   temperatureUnit: "celsius" | "fahrenheit" | string;
+  trivyEnabled: boolean;
+  trivyVersion: string;
+  trivyDbUpdateHour: number;
 };
 
 export type UPSSettings = {
@@ -698,6 +948,17 @@ export type UserScript = {
   name: string;
   description: string;
   schedule: string;
+  frequency?: string;
+  cron?: string;
+};
+
+export type APIToken = {
+  id: string;
+  name: string;
+  role: "viewer" | "operator" | "admin";
+  readOnly: boolean;
+  created: string;
+  lastUsed: string;
 };
 
 export type AuditEntry = {
@@ -782,3 +1043,66 @@ export type ActionKind =
   | "notification.ack"
   | "notification.ackall"
   | "notification.archive";
+
+export type OSStatus = {
+  version: string;
+  branch: string;
+  latest?: string;
+  latestName?: string;
+  updateAvailable: boolean;
+  eligible: boolean;
+  changelog?: string;
+  changelogPretty?: string;
+  releaseDate?: string;
+  checkedAt?: string;
+  checkError?: string;
+  rebootRequired: boolean;
+  rebootType?: string;
+  rebootVersion?: string;
+  previousVersion?: string;
+  previousDate?: string;
+  restoreAvailable: boolean;
+  thirdPartyDrivers: boolean;
+};
+
+export type UnraidAPIStatus = {
+  installed: boolean;
+  running: boolean;
+  state: string;
+  version: string;
+  raw: string;
+  config?: string;
+  logLevel?: string;
+};
+
+export type NetworkInterfaceConfig = {
+  index: number;
+  interface: string;
+  physicalNic: string;
+  state: string;
+  useDhcp: boolean;
+  ipAddr: string;
+  netmask: string;
+  gateway: string;
+  useMtu: boolean;
+  mtu: number;
+  bonding: boolean;
+  bondName: string;
+  bondNics: string[];
+  bondMode: string;
+  bondMiiMon: number;
+  bridging: boolean;
+  bridgeName: string;
+  bridgeNics: string[];
+  bridgeStp: boolean;
+  bridgeFd: number;
+  lockoutRisk: boolean;
+};
+
+export type NetworkConfiguration = {
+  interfaces: NetworkInterfaceConfig[];
+  dns: string[];
+  availableNics: string[];
+  format: string;
+  backup?: string;
+};

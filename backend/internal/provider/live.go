@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	trivymanager "aurora/internal/trivy"
 )
 
 // Live reads the real Unraid host: state INI files written by emhttpd, procfs,
@@ -55,6 +56,22 @@ type Live struct {
 	pluginUpdates   map[string]pluginUpdate
 	pluginCheckedAt time.Time
 
+	appsMu         sync.Mutex
+	appsEntries    []model.AppCatalogEntry
+	appsCategories []string
+	appsFetchedAt  time.Time
+	appsFeedAt     time.Time
+
+	osMu sync.Mutex
+
+	trivyManager *trivymanager.Manager
+
+	apiMu        sync.Mutex
+	apiVersion   string
+	apiVersionAt time.Time
+	apiConfig    string
+	apiConfigAt  time.Time
+
 	mountBase      string
 	balanceMu      sync.Mutex
 	balance        *balanceRuntime
@@ -65,18 +82,30 @@ type Live struct {
 	vmCPU          map[string]vmCPUSample
 	vmCache        []model.VM
 	vmCacheAt      time.Time
+	gpuMu          sync.Mutex
+	gpuCache       []model.GPU
+	gpuCacheAt     time.Time
+	upsMu          sync.Mutex
+	upsCache       model.UPS
+	upsCacheAt     time.Time
 
-	moverMu        sync.Mutex
-	moverActive    bool
-	moverStarted   time.Time
-	moverStopped   bool
-	moverLast      model.MoverStatus
-	moverHistory   []model.MoverRun
-	moverFiles     []string
-	moverSeen      map[string]bool
-	moverOutput    string
-	moverStop      chan struct{}
-	moverCloseOnce sync.Once
+	moverMu              sync.Mutex
+	moverActive          bool
+	moverStarted         time.Time
+	moverStopped         bool
+	moverLast            model.MoverStatus
+	moverHistory         []model.MoverRun
+	moverFiles           []string
+	moverSeen            map[string]bool
+	moverOutput          string
+	moverOutputOffset    int64
+	moverCandidates      map[string]int64
+	moverScannedLists    map[string]int64
+	moverCandidateTotal  uint64
+	moverCandidateRemain uint64
+	moverSyslogOffset    int64
+	moverStop            chan struct{}
+	moverCloseOnce       sync.Once
 
 	raplLast map[string]raplReading
 	raplAt   time.Time
@@ -114,6 +143,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		settings: model.Settings{
 			Theme: "dark", Accent: "ember", Density: "comfortable",
 			RefreshInterval: 5, Language: "en", TemperatureUnit: "celsius",
+			TrivyDBUpdateHour: 3,
 		},
 		containerStats: map[string]cachedContainerStats{},
 		imageUpdates:   map[string]bool{},
@@ -121,6 +151,14 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		vmCPU:          map[string]vmCPUSample{},
 		moverStop:      make(chan struct{}),
 		moverSeen:      map[string]bool{},
+	}
+	trivyDir := strings.TrimSpace(os.Getenv("AURORA_TRIVY_DIR"))
+	if trivyDir == "" && configDir != "" {
+		trivyDir = filepath.Join(configDir, "trivy")
+	}
+	if trivyDir != "" {
+		l.trivyManager = trivymanager.New(trivyDir)
+		l.trivyManager.SetDockerSocket(dockerSocket)
 	}
 	l.migrateDurableState()
 	l.loadSettings()
@@ -151,24 +189,55 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 func (l *Live) Name() string { return "live" }
 
 func (l *Live) Snapshot(ctx context.Context) (model.Snapshot, error) {
-	sys, _ := l.System(ctx)
-	arr, _ := l.Array(ctx)
-	disks, _ := l.Disks(ctx)
-	shares, _ := l.Shares(ctx)
-	pools, _ := l.Pools(ctx)
-	containers, _ := l.Containers(ctx)
-	vms, _ := l.VMs(ctx)
-	network, _ := l.Network(ctx)
-	users, _ := l.Users(ctx)
-	plugins, _ := l.Plugins(ctx)
-	notifications, _ := l.Notifications(ctx)
-	gpus, _ := l.GPUs(ctx)
-	metrics, _ := l.Metrics(ctx)
-	history, _ := l.History(ctx)
-	ups, _ := l.UPS(ctx)
-	settings, _ := l.Settings(ctx)
+	// Reuse the hub's last sample when it is fresh: the SSE sampler already
+	// owns the delta counters and the handler replaces Metrics with the same
+	// value. Fall back to a direct sample on a cold start.
+	metrics, ok := l.cachedMetrics()
+	if !ok || time.Since(time.Unix(metrics.T, 0)) > 6*time.Second {
+		metrics, _ = l.Metrics(ctx)
+	}
+	var (
+		sys           model.System
+		arr           model.Array
+		disks         []model.Disk
+		shares        []model.Share
+		containers    []model.Container
+		vms           []model.VM
+		network       model.Network
+		users         []model.User
+		plugins       []model.Plugin
+		notifications []model.Notification
+		gpus          []model.GPU
+		history       []model.MetricPoint
+		ups           model.UPS
+		settings      model.Settings
+	)
+	var wg sync.WaitGroup
+	run := func(fn func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fn()
+		}()
+	}
+	run(func() { sys = l.system(ctx, metrics) })
+	run(func() { arr, _ = l.Array(ctx) })
+	run(func() { disks, _ = l.Disks(ctx) })
+	run(func() { shares, _ = l.Shares(ctx) })
+	run(func() { containers, _ = l.Containers(ctx) })
+	run(func() { vms, _ = l.VMs(ctx) })
+	run(func() { network, _ = l.Network(ctx) })
+	run(func() { users, _ = l.Users(ctx) })
+	run(func() { plugins, _ = l.Plugins(ctx) })
+	run(func() { notifications, _ = l.Notifications(ctx) })
+	run(func() { gpus, _ = l.GPUs(ctx) })
+	run(func() { history, _ = l.History(ctx) })
+	run(func() { ups, _ = l.UPS(ctx) })
+	run(func() { settings, _ = l.Settings(ctx) })
+	wg.Wait()
+
 	snap := model.Snapshot{
-		System: sys, Array: arr, Disks: disks, Shares: shares, Pools: pools,
+		System: sys, Array: arr, Disks: disks, Shares: shares, Pools: poolsFromDisks(disks),
 		Containers: containers, VMs: vms, Network: network, Users: users,
 		Plugins: plugins, Notifications: notifications, GPUs: gpus, UPS: ups,
 		Settings: settings, Metrics: metrics, History: history,
@@ -227,10 +296,14 @@ func emptyIfNil[T any](values []T) []T {
 }
 
 func (l *Live) System(ctx context.Context) (model.System, error) {
+	metrics, _ := l.Metrics(ctx)
+	return l.system(ctx, metrics), nil
+}
+
+func (l *Live) system(ctx context.Context, metrics model.Metrics) model.System {
 	varIni, _ := parseINI(filepath.Join(l.stateDir, "var.ini"))
 	cpuInfo := readCPUInfo()
 	mem := readMemory()
-	metrics, _ := l.Metrics(ctx)
 
 	version := ""
 	if ini, err := parseINI("/etc/unraid-version"); err == nil {
@@ -285,7 +358,7 @@ func (l *Live) System(ctx context.Context) (model.System, error) {
 		sys.Temperatures = []model.Temperature{{Label: "CPU package", Value: temp, Max: 95}}
 	}
 	sys.Temperatures = append(sys.Temperatures, readBoardTemps()...)
-	return sys, nil
+	return sys
 }
 
 func (l *Live) Array(ctx context.Context) (model.Array, error) {
@@ -458,6 +531,10 @@ func (l *Live) Shares(ctx context.Context) ([]model.Share, error) {
 
 func (l *Live) Pools(ctx context.Context) ([]model.Pool, error) {
 	disks, _ := l.Disks(ctx)
+	return poolsFromDisks(disks), nil
+}
+
+func poolsFromDisks(disks []model.Disk) []model.Pool {
 	byPool := map[string]*model.Pool{}
 	for _, d := range disks {
 		if d.Type != "Cache" || d.Pool == "" {
@@ -481,7 +558,7 @@ func (l *Live) Pools(ctx context.Context) ([]model.Pool, error) {
 		out = append(out, *p)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out, nil
+	return out
 }
 
 func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
@@ -490,6 +567,7 @@ func (l *Live) Containers(ctx context.Context) ([]model.Container, error) {
 		return nil, err
 	}
 	l.enrichContainerStats(ctx, containers)
+	l.enrichContainerSecurity(ctx, containers)
 	return containers, nil
 }
 
@@ -553,9 +631,9 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		color := colorFor(name)
 		network, ip := pickContainerNetwork(c.NetworkSettings.Networks)
 		out = append(out, model.Container{
-			ID: c.ID, Name: name, Image: c.Image, Repository: repo, Tag: tag,
+			ID: c.ID, Name: name, Image: c.Image, ImageID: c.ImageID, Repository: repo, Tag: tag,
 			Network: network, IP: ip, Mounts: containerMounts(c.Mounts),
-			State: c.State, Status: c.Status, Autostart: autostart[name],
+			State: c.State, Status: c.Status, Health: dockerHealth(c.Status), Autostart: autostart[name],
 			Uptime: dockerStatusUptime(c.Status),
 			Ports:  ports, Color: color, Created: time.Unix(c.Created, 0),
 			Icon: c.Labels["net.unraid.docker.icon"], WebUI: c.Labels["net.unraid.docker.webui"],
@@ -790,6 +868,9 @@ func (l *Live) Settings(ctx context.Context) (model.Settings, error) {
 }
 
 func (l *Live) SaveSettings(ctx context.Context, s model.Settings) error {
+	if s.TrivyDBUpdateHour < 0 || s.TrivyDBUpdateHour > 23 {
+		s.TrivyDBUpdateHour = 3
+	}
 	l.mu.Lock()
 	l.settings = s
 	l.mu.Unlock()
@@ -800,7 +881,11 @@ func (l *Live) SaveSettings(ctx context.Context, s model.Settings) error {
 	if err != nil {
 		return err
 	}
-	return l.saveConfigFile("settings.json", raw)
+	if err := l.saveConfigFile("settings.json", raw); err != nil {
+		return err
+	}
+	l.applyTrivySettings(s)
+	return nil
 }
 
 func (l *Live) loadSettings() {
@@ -811,6 +896,12 @@ func (l *Live) loadSettings() {
 	var s model.Settings
 	if json.Unmarshal(raw, &s) != nil {
 		return
+	}
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) == nil {
+		if _, ok := fields["trivyDbUpdateHour"]; !ok {
+			s.TrivyDBUpdateHour = 3
+		}
 	}
 	if s.Theme != "" {
 		l.settings = s
@@ -847,6 +938,16 @@ func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 	}
 	l.collected = metrics
 	return metrics, nil
+}
+
+// cachedMetrics returns the last sample produced by the SSE hub or History.
+func (l *Live) cachedMetrics() (model.Metrics, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.collected.T == 0 {
+		return model.Metrics{}, false
+	}
+	return l.collected, true
 }
 
 func (l *Live) History(ctx context.Context) ([]model.MetricPoint, error) {
@@ -1029,6 +1130,9 @@ func (l *Live) Close() error {
 		l.balance.cancel()
 	}
 	l.balanceMu.Unlock()
+	if l.trivyManager != nil {
+		l.trivyManager.Close()
+	}
 	return nil
 }
 

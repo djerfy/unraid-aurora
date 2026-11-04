@@ -56,7 +56,9 @@ export function Topbar({
     return () => document.removeEventListener("mousedown", onClick);
   }, [notifOpen]);
 
-  const notifications = snapshot?.notifications ?? [];
+  // Archived notifications stay out of the navbar; they remain available in
+  // the Notifications page.
+  const notifications = (snapshot?.notifications ?? []).filter((item) => !item.archived);
   const unread = notifications.filter((n) => !n.read);
 
   const signOut = async () => {

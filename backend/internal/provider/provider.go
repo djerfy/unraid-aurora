@@ -35,6 +35,11 @@ type Provider interface {
 	SetVMAutostart(ctx context.Context, id string, enabled bool) error
 	VMXML(ctx context.Context, id string) (string, error)
 	CreateVM(ctx context.Context, opts model.VMCreateOptions) (model.VM, error)
+	VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error)
+	UpdateVMAdvanced(ctx context.Context, id string, cfg model.VMAdvancedConfig) error
+	VMHostDevices(ctx context.Context) ([]model.VMHostDevice, error)
+	CloneVM(ctx context.Context, id string, opts model.VMCloneOptions) (model.VM, error)
+	ResizeVMDisk(ctx context.Context, id string, opts model.VMDiskResizeOptions) error
 	UpdateVMXML(ctx context.Context, id, raw string) error
 	VMSnapshots(ctx context.Context, id string) ([]model.VMSnapshot, error)
 	CreateVMSnapshot(ctx context.Context, id, name, description string) error
@@ -65,6 +70,7 @@ type Provider interface {
 	DeleteZFSSnapshot(ctx context.Context, dataset, name string) error
 	UserScript(ctx context.Context, id string) (string, error)
 	RunUserScript(ctx context.Context, id string) (string, error)
+	UpdateUserScript(ctx context.Context, id, content, frequency, cron string) error
 	GPUs(ctx context.Context) ([]model.GPU, error)
 	StartArray(ctx context.Context, opts model.ArrayStartOptions) error
 	StopArray(ctx context.Context) error
@@ -75,6 +81,33 @@ type Provider interface {
 	StopMover(ctx context.Context) error
 	VMIcon(ctx context.Context, id string) ([]byte, string, error)
 	Network(ctx context.Context) (model.Network, error)
+	NetworkConfig(ctx context.Context) (model.NetworkConfig, error)
+	SaveNetworkConfig(ctx context.Context, cfg model.NetworkConfig, clientIP string, acknowledge bool) (model.NetworkConfig, error)
+	SetNetworkInterfaceState(ctx context.Context, name string, up bool) error
+	RevertNetworkConfig(ctx context.Context) (string, error)
+	ApplyNetworkConfig(ctx context.Context) error
+	OSStatus(ctx context.Context) (model.OSStatus, error)
+	CheckOSUpdate(ctx context.Context) (model.OSStatus, error)
+	InstallOSUpdate(ctx context.Context, report func(model.PluginEvent)) error
+	RestorePreviousOS(ctx context.Context) (string, error)
+	UnraidAPIStatus(ctx context.Context) (model.UnraidAPIStatus, error)
+	UnraidAPIAction(ctx context.Context, action string) (string, error)
+	UnraidAPILogs(ctx context.Context, lines int) ([]model.LogLine, error)
+	TrivyStatus(ctx context.Context) (model.TrivyStatus, error)
+	TrivyVersions(ctx context.Context) ([]model.TrivyVersion, error)
+	StartTrivyInstall(version string) error
+	StartTrivyDBUpdate() error
+	AppsCatalog(ctx context.Context, query, kind, category, order string, limit, offset int) (model.AppCatalogPage, error)
+	AppTemplate(ctx context.Context, templateURL string) (model.ContainerTemplate, error)
+	AppIcon(ctx context.Context, iconURL string) ([]byte, string, error)
+	SchedulerState(ctx context.Context) (model.SchedulerState, error)
+	PreviewScheduler(settings model.SchedulerSettings) (model.SchedulerPreview, error)
+	ApplyScheduler(ctx context.Context, settings model.SchedulerSettings) error
+	UpdateDisplaySettings(ctx context.Context, settings model.SystemDisplaySettings) error
+	ContainerSecurity(ctx context.Context, id string) (model.ContainerSecurityDetail, error)
+	SecurityOverview(ctx context.Context) (model.SecurityOverview, error)
+	ScanContainer(ctx context.Context, id string) error
+	ScanAllContainers(ctx context.Context) (int, error)
 	Users(ctx context.Context) ([]model.User, error)
 	UserIcon(ctx context.Context, name string) ([]byte, string, error)
 	ShareConfig(ctx context.Context, name string) (model.ShareConfig, error)

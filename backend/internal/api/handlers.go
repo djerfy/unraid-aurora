@@ -98,7 +98,19 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+func (s *Server) revokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.sessionUser(r); !ok {
+		writeError(w, http.StatusForbidden, "session_required", "signing out all sessions requires a signed-in session")
+		return
+	}
+	s.auth.RevokeAll()
+	http.SetCookie(w, s.auth.ClearCookie())
+	s.log.Warn("all sessions revoked", "user", s.auditUser(r))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
 	ctx, cancel := s.serverContext()
 	defer cancel()
 	snap, err := s.provider.Snapshot(ctx)
@@ -109,7 +121,11 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	if latest := s.hub.Latest(); latest.T > 0 {
 		snap.Metrics = latest
 	}
+	snap.Settings = settingsForRequest(r, snap.Settings)
 	snap.History = s.hub.History()
+	elapsed := time.Since(started)
+	w.Header().Set("Server-Timing", fmt.Sprintf("bootstrap;dur=%.1f", float64(elapsed.Microseconds())/1000))
+	s.log.Debug("bootstrap snapshot", "duration", elapsed, "containers", len(snap.Containers), "vms", len(snap.VMs), "disks", len(snap.Disks))
 	writeJSON(w, http.StatusOK, snap)
 }
 
@@ -1048,6 +1064,28 @@ func (s *Server) userScript(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"content": v})
 }
 
+func (s *Server) updateUserScript(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Content   string `json:"content"`
+		Frequency string `json:"frequency"`
+		Cron      string `json:"cron"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.UpdateUserScript(ctx, r.PathValue("id"), body.Content, body.Frequency, body.Cron); err != nil {
+		writeError(w, http.StatusBadRequest, "user_script_update_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) runUserScript(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.ReadOnly {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
@@ -1168,6 +1206,50 @@ func (s *Server) mover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, status)
+}
+
+func (s *Server) bulkContainerAction(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Action  string   `json:"action"`
+		Targets []string `json:"targets"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	kind := "container." + strings.ToLower(strings.TrimSpace(body.Action))
+	switch kind {
+	case provider.ActionContainerStart, provider.ActionContainerStop, provider.ActionContainerRestart:
+	default:
+		writeError(w, http.StatusUnprocessableEntity, "invalid_action", "action must be start, stop or restart")
+		return
+	}
+	if len(body.Targets) == 0 || len(body.Targets) > 100 {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_targets", "between 1 and 100 containers are required")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	succeeded := []string{}
+	failed := []map[string]string{}
+	for _, target := range body.Targets {
+		target = strings.TrimSpace(target)
+		if target == "" || len(target) > 128 {
+			failed = append(failed, map[string]string{"target": target, "error": "invalid container name"})
+			continue
+		}
+		if err := s.provider.Perform(ctx, model.Action{Kind: kind, Target: target}); err != nil {
+			s.log.Warn("bulk container action failed", "kind", kind, "target", target, "error", err)
+			failed = append(failed, map[string]string{"target": target, "error": err.Error()})
+			continue
+		}
+		succeeded = append(succeeded, target)
+	}
+	s.log.Info("bulk container action", "kind", kind, "succeeded", len(succeeded), "failed", len(failed))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": len(failed) == 0, "succeeded": succeeded, "failed": failed})
 }
 
 func (s *Server) startMover(w http.ResponseWriter, r *http.Request) {
@@ -1348,7 +1430,7 @@ func (s *Server) getSettings(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, v)
+	writeJSON(w, http.StatusOK, settingsForRequest(r, v))
 }
 
 func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
@@ -1545,6 +1627,27 @@ func validateSettings(s *model.Settings) error {
 	default:
 		return fmt.Errorf("temperature unit must be celsius or fahrenheit")
 	}
+	switch strings.ToLower(strings.TrimSpace(s.NotifyMinImportance)) {
+	case "", "info", "normal", "warning", "alert", "critical", "error":
+		s.NotifyMinImportance = strings.ToLower(strings.TrimSpace(s.NotifyMinImportance))
+	default:
+		return fmt.Errorf("notification importance must be info, normal, warning, alert or critical")
+	}
+	if len(s.NotifyMutedSources) > 50 {
+		return fmt.Errorf("too many muted notification sources")
+	}
+	muted := make([]string, 0, len(s.NotifyMutedSources))
+	for _, source := range s.NotifyMutedSources {
+		source = strings.TrimSpace(source)
+		if source == "" {
+			continue
+		}
+		if len(source) > 64 {
+			return fmt.Errorf("notification source is too long")
+		}
+		muted = append(muted, source)
+	}
+	s.NotifyMutedSources = muted
 	return nil
 }
 

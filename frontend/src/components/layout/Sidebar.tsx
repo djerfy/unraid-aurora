@@ -34,7 +34,7 @@ export function Sidebar({
   const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const unread = snapshot?.notifications.filter((n) => !n.read).length ?? 0;
+  const unread = snapshot?.notifications.filter((n) => !n.read && !n.archived).length ?? 0;
 
   const signOut = async () => {
     try {
@@ -257,7 +257,7 @@ export function MobileSidebar({
 }) {
   const { snapshot } = useApp();
   const { t } = useI18n();
-  const unread = snapshot?.notifications.filter((n) => !n.read).length ?? 0;
+  const unread = snapshot?.notifications.filter((n) => !n.read && !n.archived).length ?? 0;
   if (!open) return null;
 
   return (

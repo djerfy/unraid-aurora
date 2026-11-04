@@ -1,12 +1,15 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell, BootScreen, ErrorScreen } from "./components/layout/AppShell";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useApp } from "./app/AppDataProvider";
 import { PAGE_META } from "./components/layout/nav";
 import { useI18n } from "./i18n";
 import { DashboardPage } from "./pages/Dashboard";
 import { StoragePage } from "./pages/Storage";
 import { DockerPage } from "./pages/Docker";
+import { AppsPage } from "./pages/Apps";
+import { SchedulerPage } from "./pages/Scheduler";
 import { VMsPage } from "./pages/VMs";
 import { VMConsolePage } from "./pages/VMConsole";
 import { NetworkPage } from "./pages/Network";
@@ -48,6 +51,7 @@ export default function App() {
   return (
     <>
       <TitleSync />
+      <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
@@ -56,6 +60,8 @@ export default function App() {
           <Route path="/storage" element={<StoragePage />} />
           <Route path="/zfs" element={<Navigate to="/storage?tab=zfs" replace />} />
           <Route path="/docker" element={<DockerPage />} />
+          <Route path="/apps" element={<AppsPage />} />
+          <Route path="/scheduler" element={<SchedulerPage />} />
           <Route path="/docker/terminal/:id" element={<TerminalPage />} />
           <Route path="/vms" element={<VMsPage />} />
           <Route path="/vms/console/:id" element={<VMConsolePage />} />
@@ -78,6 +84,7 @@ export default function App() {
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </ErrorBoundary>
     </>
   );
 }
