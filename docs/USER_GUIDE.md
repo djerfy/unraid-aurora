@@ -673,7 +673,9 @@ can itself be reverted.
 
 - **Settings → UPS** shows battery/load/runtime, edits the apcupsd shutdown policy, and can write the
   NUT plugin connection, thresholds and monitor password before restarting its service.
-- **Storage → ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
+- **Storage → ZFS** lists pools and datasets, starts a scrub, creates datasets with compression,
+  quota and recordsize, edits their properties, deletes them, and creates, rolls back, clones or
+  deletes dataset snapshots.
 - **User scripts** lists the User Scripts plugin inventory, shows and edits the source, runs a script
   as root and returns its output. The schedule editor writes the plugin's `schedule.json` and cron
   fragment: disabled, hourly, daily, weekly, monthly, array start/stop, first array start, or a

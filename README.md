@@ -285,7 +285,7 @@ Deep dives:
 | Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, guided hardware editor (CPU pinning, network/MAC, sound, virtiofs shared folders, PCI/USB passthrough with IOMMU groups), live USB passthrough, clone, vDisk expansion, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console with clipboard paste |
 | Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart, and guarded per-interface editing (DHCP/static, DNS, MTU, bonding, bridging) with live state, link up/down, backups, revert and delayed apply |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
-| ZFS | Pools, datasets, scrub and snapshots |
+| ZFS | Pools, datasets with compression/quota/recordsize, scrub and snapshot create/rollback/clone |
 | UPS | Battery telemetry, apcupsd shutdown policy and NUT connection/threshold settings |
 | User scripts | User Scripts plugin inventory, source editing, root execution output and plugin-native schedules (hourly/daily/weekly/monthly, array start/stop, first boot, custom cron) |
 | Audit log | Durable record of every mutating API call, filterable by method/status/user, exportable as CSV, with configurable retention |
