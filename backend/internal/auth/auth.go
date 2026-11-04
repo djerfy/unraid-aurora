@@ -44,6 +44,7 @@ type Session struct {
 	User  string `json:"u"`
 	Exp   int64  `json:"exp"`
 	Nonce string `json:"n"`
+	Epoch int64  `json:"e"`
 }
 
 type failureBucket struct {
@@ -63,6 +64,7 @@ type Manager struct {
 
 	mu       sync.Mutex
 	failures map[string]*failureBucket
+	epoch    int64
 }
 
 // Option customises the shadow backend. The defaults read the host through
@@ -99,6 +101,7 @@ func New(ttl time.Duration, opts ...Option) *Manager {
 		lookup:   lookupShadow,
 		verify:   verifyShadowHash,
 		failures: map[string]*failureBucket{},
+		epoch:    time.Now().UnixNano(),
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -131,6 +134,7 @@ func (m *Manager) Login(username, password, ip string) (string, Session, error) 
 		User:  username,
 		Exp:   time.Now().Add(m.ttl).Unix(),
 		Nonce: randomToken(12),
+		Epoch: m.currentEpoch(),
 	}
 	token, err := m.sign(session)
 	if err != nil {
@@ -157,10 +161,26 @@ func (m *Manager) Verify(token string) (Session, bool) {
 	if json.Unmarshal(raw, &s) != nil {
 		return Session{}, false
 	}
-	if s.Exp < time.Now().Unix() || s.User == "" {
+	if s.Exp < time.Now().Unix() || s.User == "" || s.Epoch != m.currentEpoch() {
 		return Session{}, false
 	}
 	return s, true
+}
+
+// RevokeAll invalidates every signed-in session by rotating the session epoch.
+// Existing cookies fail verification immediately; a new login receives the
+// current epoch.
+func (m *Manager) RevokeAll() int64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.epoch = time.Now().UnixNano()
+	return m.epoch
+}
+
+func (m *Manager) currentEpoch() int64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.epoch
 }
 
 func (m *Manager) sign(s Session) (string, error) {

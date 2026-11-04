@@ -77,6 +77,11 @@ const tools: Record<string, string> = {
     "Redémarrez Aurora pour appliquer la configuration importée.",
   "Configuration import failed": "Échec de l'import de la configuration",
   "{size} MB archive.": "Archive de {size} Mo.",
+  "Export CSV": "Exporter en CSV",
+  "Export redacted configuration": "Exporter la configuration expurgée",
+  "Redacted support export": "Export de support expurgé",
+  "Settings, layout and histories with credentials and webhook URLs removed.": "Réglages, disposition et historiques sans identifiants ni URL de webhook.",
+  "Redacted configuration exported": "Configuration expurgée exportée",
 };
 
 export default tools;

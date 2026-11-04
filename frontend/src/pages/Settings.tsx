@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
+  Activity,
   Check,
   Cpu,
+  Download,
   ExternalLink,
   Info,
   KeyRound,
@@ -12,12 +14,15 @@ import {
   Monitor,
   Moon,
   Palette,
+  Plus,
   RotateCcw,
   Save,
+  ScanSearch,
   Server,
   ShieldCheck,
   SlidersHorizontal,
   Sun,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -25,6 +30,7 @@ import {
   Badge,
   Button,
   Card,
+  IconButton,
   Switch,
   cn,
 } from "../components/ui/primitives";
@@ -33,15 +39,22 @@ import { useTheme, type Accent, type ThemeMode } from "../app/ThemeProvider";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
 import { UPSView } from "./UPS";
+import { OSUpdatePanel } from "../components/system/OSUpdatePanel";
+import { UnraidAPIPanel } from "../components/system/UnraidAPIPanel";
+import { TrivyPanel } from "../components/system/TrivyPanel";
 import { api } from "../lib/api";
 import { formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
 
 const SECTIONS = [
-  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "general", label: "General", icon: SlidersHorizontal },
+  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "trivy", label: "Image scanning", icon: ScanSearch },
   { id: "ups", label: "UPS", icon: BatteryCharging },
+  { id: "os", label: "Unraid OS", icon: Download },
+  { id: "unraid-api", label: "Unraid API", icon: Activity },
+  { id: "api", label: "API tokens", icon: KeyRound },
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "about", label: "About", icon: Info },
 ];
@@ -61,11 +74,14 @@ export function SettingsPage() {
   const { t, setLocale } = useI18n();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [section, setSection] = useState("appearance");
+  const [section, setSection] = useState("general");
   const [draft, setDraft] = useState<Settings | null>(snapshot?.settings ?? null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
+  const [tokenName, setTokenName] = useState("");
+  const [tokenRole, setTokenRole] = useState<"viewer" | "operator" | "admin">("viewer");
+  const [newToken, setNewToken] = useState("");
 
   if (!snapshot) return null;
   const settings = draft ?? snapshot.settings;
@@ -98,11 +114,32 @@ export function SettingsPage() {
     }
   };
 
+  const tokens = useQuery({ queryKey: ["api-tokens"], queryFn: api.apiTokens, enabled: section === "api" });
+  const createToken = useMutation({
+    mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole),
+    onSuccess: (result) => {
+      setNewToken(result.secret);
+      setTokenName("");
+      void queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+      toast({ kind: "success", title: t("API token created") });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not create the API token"), description: error.message }),
+  });
+  const revokeToken = useMutation({
+    mutationFn: (id: string) => api.revokeAPIToken(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+      toast({ kind: "success", title: t("API token revoked") });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not revoke the API token"), description: error.message }),
+  });
+
   const save = async () => {
     setSaving(true);
     try {
       await api.saveSettings(settings);
       await queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      void queryClient.invalidateQueries({ queryKey: ["trivy-status"] });
       setSaved(true);
       toast({ kind: "success", title: t("Settings saved"), description: t("Your preferences are now active.") });
       window.setTimeout(() => setSaved(false), 2400);
@@ -127,6 +164,15 @@ export function SettingsPage() {
     queryClient.removeQueries({ queryKey: ["bootstrap"] });
     navigate("/login");
   };
+
+  const revokeAll = useMutation({
+    mutationFn: api.revokeAllSessions,
+    onSuccess: async () => {
+      toast({ kind: "success", title: t("All sessions revoked"), description: t("Sign in again on every device.") });
+      await signOut();
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not revoke sessions"), description: error.message }),
+  });
 
   return (
     <>
@@ -357,6 +403,27 @@ export function SettingsPage() {
             <Card className="card-pad">
               <CardTitle title={t("Notifications")} description={t("Choose which channels receive alerts from your server.")} />
               <div className="mt-2 divide-y divide-line">
+                <SettingsRow label={t("Minimum importance")} description={t("Ignore Unraid notifications below this level.")}>
+                  <select
+                    value={settings.notifyMinImportance || ""}
+                    onChange={(event) => update("notifyMinImportance", event.target.value)}
+                    aria-label={t("Minimum importance")}
+                    className="h-9 w-40 rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+                  >
+                    <option value="">{t("All")}</option>
+                    <option value="info">{t("Info")}</option>
+                    <option value="normal">{t("Normal")}</option>
+                    <option value="warning">{t("Warning")}</option>
+                    <option value="alert">{t("Alert")}</option>
+                    <option value="critical">{t("Critical")}</option>
+                  </select>
+                </SettingsRow>
+                <SettingsRow label={t("Muted sources")} description={t("Comma-separated Unraid notification sources to ignore, for example docker, vm.")}>
+                  <MutedSourcesField
+                    value={settings.notifyMutedSources ?? []}
+                    onChange={(value) => update("notifyMutedSources", value)}
+                  />
+                </SettingsRow>
                 <SettingsRow label={t("Email alerts")} description={t("Send warnings and alerts to the address configured in Unraid.")}>
                   <Switch checked={settings.emailAlerts} onChange={(value) => update("emailAlerts", value)} label={t("Email alerts")} />
                 </SettingsRow>
@@ -383,15 +450,82 @@ export function SettingsPage() {
                     className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
                   />
                 </SettingsRow>
-                <SettingsRow label={t("Generic webhook")} description={t("JSON payload posted to any compatible endpoint.")}>
-                  <input
-                    value={settings.webhookUrl}
-                    onChange={(event) => update("webhookUrl", event.target.value)}
-                    placeholder="https://example.com/aurora"
-                    aria-label={t("Generic webhook")}
-                    className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
-                  />
-                </SettingsRow>
+                <div className="py-3.5">
+                  <p className="text-[11.5px] font-medium text-soft">{t("Generic webhook")}</p>
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-subtle">{t("Send a custom request to any HTTP endpoint.")}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <select
+                      value={settings.webhookMethod || "POST"}
+                      onChange={(event) => update("webhookMethod", event.target.value)}
+                      aria-label={t("Webhook method")}
+                      className="h-9 w-24 rounded-[7px] border border-line bg-[var(--surface-2)] px-2 font-mono text-[10px] text-soft outline-none focus:border-[var(--accent-line)]"
+                    >
+                      {["POST", "GET", "PUT", "DELETE"].map((method) => <option key={method} value={method}>{method}</option>)}
+                    </select>
+                    <input
+                      value={settings.webhookUrl}
+                      onChange={(event) => update("webhookUrl", event.target.value)}
+                      placeholder="https://example.com/aurora"
+                      aria-label={t("Generic webhook URL")}
+                      className="h-9 min-w-0 flex-1 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                    />
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Headers")}</p>
+                      <Button size="sm" variant="ghost" icon={<Plus className="size-3" />} onClick={() => update("webhookHeaders", { ...(settings.webhookHeaders ?? {}), "": "" })}>
+                        {t("Add header")}
+                      </Button>
+                    </div>
+                    <div className="mt-1 space-y-1.5">
+                      {Object.entries(settings.webhookHeaders ?? {}).map(([key, value], index) => (
+                        <div key={index} className="flex flex-col gap-1.5 sm:flex-row sm:gap-2">
+                          <input
+                            value={key}
+                            onChange={(event) => {
+                              const next = Object.entries(settings.webhookHeaders ?? {});
+                              next[index] = [event.target.value, value];
+                              update("webhookHeaders", Object.fromEntries(next.filter(([name]) => name)));
+                            }}
+                            placeholder="Authorization"
+                            aria-label={t("Header name")}
+                            className="h-8 w-full rounded-md border border-line bg-[var(--surface-2)] px-2 font-mono text-[9.5px] text-ink outline-none focus:border-[var(--accent-line)] sm:w-40"
+                          />
+                          <input
+                            value={value}
+                            onChange={(event) => {
+                              const next = Object.entries(settings.webhookHeaders ?? {});
+                              next[index] = [key, event.target.value];
+                              update("webhookHeaders", Object.fromEntries(next.filter(([name]) => name)));
+                            }}
+                            placeholder="Bearer …"
+                            aria-label={t("Header value")}
+                            className="h-8 w-full min-w-0 rounded-md border border-line bg-[var(--surface-2)] px-2 font-mono text-[9.5px] text-ink outline-none focus:border-[var(--accent-line)] sm:flex-1"
+                          />
+                          <IconButton label={t("Remove header")} size="sm" onClick={() => {
+                            const next = Object.entries(settings.webhookHeaders ?? {}).filter((_, item) => item !== index);
+                            update("webhookHeaders", Object.fromEntries(next));
+                          }}>
+                            <Trash2 className="size-3.5" />
+                          </IconButton>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Body template")}</p>
+                    <textarea
+                      value={settings.webhookBody}
+                      onChange={(event) => update("webhookBody", event.target.value)}
+                      placeholder={'{"title":"{title}","body":"{description}"}'}
+                      aria-label={t("Body template")}
+                      className="mt-1 h-24 w-full resize-y rounded-lg border border-line bg-[var(--surface-2)] p-2.5 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+                    />
+                    <p className="mt-1 text-[9px] text-subtle">
+                      {t("Placeholders: {title}, {subject}, {description}, {importance}, {source}, {timestamp}")}
+                    </p>
+                  </div>
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
                 <span className="flex min-w-0 items-start gap-2">
@@ -405,7 +539,78 @@ export function SettingsPage() {
             </Card>
           ) : null}
 
+          {section === "trivy" ? (
+            <TrivyPanel
+              enabled={settings.trivyEnabled ?? false}
+              version={settings.trivyVersion ?? ""}
+              hour={settings.trivyDbUpdateHour ?? 3}
+              onEnabledChange={(value) => update("trivyEnabled", value)}
+              onVersionChange={(value) => update("trivyVersion", value)}
+              onHourChange={(value) => update("trivyDbUpdateHour", value)}
+            />
+          ) : null}
+
           {section === "ups" ? <UPSView /> : null}
+
+          {section === "os" ? <OSUpdatePanel /> : null}
+
+          {section === "unraid-api" ? <UnraidAPIPanel /> : null}
+
+          {section === "api" ? (
+            <Card className="card-pad">
+              <CardTitle title={t("API tokens")} description={t("Create scoped bearer tokens for automation and Prometheus scraping.")} />
+              {newToken ? (
+                <div className="mt-4 rounded-xl border border-[var(--success-soft)] bg-[var(--success-soft)] p-3">
+                  <p className="text-[11px] font-medium text-[var(--success)]">{t("Copy this token now. It will not be shown again.")}</p>
+                  <div className="mt-2 flex gap-2">
+                    <code className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-line bg-[var(--surface)] px-2 py-1.5 font-mono text-[10px] text-soft">{newToken}</code>
+                    <Button size="sm" variant="secondary" onClick={() => { void navigator.clipboard.writeText(newToken); toast({ kind: "info", title: t("Token copied") }); }}>{t("Copy")}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setNewToken("")}>{t("Dismiss")}</Button>
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-4 flex flex-wrap items-end gap-2 border-b border-line pb-4">
+                <label className="min-w-[220px] flex-1">
+                  <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Token name")}</span>
+                  <input value={tokenName} onChange={(event) => setTokenName(event.target.value)} placeholder="home-assistant" className="h-9 w-full rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[11px] text-ink outline-none focus:border-[var(--accent-line)]" />
+                </label>
+                <label className="min-w-[150px]">
+                  <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Role")}</span>
+                  <select
+                    value={tokenRole}
+                    onChange={(event) => setTokenRole(event.target.value as "viewer" | "operator" | "admin")}
+                    aria-label={t("Role")}
+                    className="h-9 w-full rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+                  >
+                    <option value="viewer">{t("Viewer")}</option>
+                    <option value="operator">{t("Operator")}</option>
+                    <option value="admin">{t("Admin")}</option>
+                  </select>
+                </label>
+                <Button variant="primary" loading={createToken.isPending} disabled={!tokenName.trim()} onClick={() => createToken.mutate()}>{t("Create token")}</Button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {tokens.isLoading ? <p className="text-[10.5px] text-muted">{t("Loading API tokens…")}</p> : tokens.isError ? <p className="text-[10.5px] text-[var(--danger)]">{(tokens.error as Error).message}</p> : tokens.data?.length ? tokens.data.map((token) => (
+                  <div key={token.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-[var(--surface-2)]/40 px-3 py-2">
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-soft">{token.name}</span>
+                    <Badge tone={token.role === "viewer" ? "info" : token.role === "operator" ? "warning" : "danger"}>
+                      {t(token.role === "viewer" ? "Viewer" : token.role === "operator" ? "Operator" : "Admin")}
+                    </Badge>
+                    <span className="text-[9px] text-subtle">{token.lastUsed ? new Date(token.lastUsed).toLocaleString() : t("Never used")}</span>
+                    <IconButton label={t("Revoke token")} size="sm" onClick={() => { if (window.confirm(t("Revoke API token {name}?", { name: token.name }))) revokeToken.mutate(token.id); }}><Trash2 className="size-3.5" /></IconButton>
+                  </div>
+                )) : <p className="text-[10.5px] text-subtle">{t("No API tokens yet.")}</p>}
+              </div>
+              <p className="mt-3 text-[9.5px] leading-relaxed text-subtle">{t("Use a token as Authorization: Bearer <token>. Viewers can only read, operators can manage containers, VMs, array and mover actions, and admins control everything. Token management itself requires a signed-in session.")}</p>
+              <p className="mt-2 text-[9.5px] leading-relaxed text-subtle">
+                {t("Browse every endpoint and role in the")}{" "}
+                <a href="/api/docs" target="_blank" rel="noreferrer" className="text-[var(--accent)] underline decoration-dotted underline-offset-2">
+                  {t("API reference")}
+                </a>
+                .
+              </p>
+            </Card>
+          ) : null}
 
           {section === "security" ? (
             <>
@@ -431,6 +636,23 @@ export function SettingsPage() {
                   <p className="text-[11px] text-muted">{t("You will be returned to the sign-in screen.")}</p>
                   <Button variant="danger" icon={<LogOut className="size-3.5" />} onClick={() => void signOut()}>
                     {t("Sign out")}
+                  </Button>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
+                  <div>
+                    <p className="text-[11px] font-medium text-soft">{t("Sign out everywhere")}</p>
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-subtle">
+                      {t("Invalidate every Aurora session, including this browser. Useful after a token or password leak.")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    loading={revokeAll.isPending}
+                    onClick={() => {
+                      if (window.confirm(t("Sign out every session?"))) revokeAll.mutate();
+                    }}
+                  >
+                    {t("Revoke all sessions")}
                   </Button>
                 </div>
               </Card>
@@ -546,6 +768,22 @@ function Select({
         </option>
       ))}
     </select>
+  );
+}
+
+function MutedSourcesField({ value, onChange }: { value: string[]; onChange: (value: string[]) => void }) {
+  const [text, setText] = useState(value.join(", "));
+  return (
+    <input
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        onChange(event.target.value.split(",").map((item) => item.trim()).filter(Boolean));
+      }}
+      placeholder="docker, vm"
+      aria-label="Muted sources"
+      className="h-9 w-72 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
+    />
   );
 }
 

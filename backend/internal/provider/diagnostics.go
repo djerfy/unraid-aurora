@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"aurora/internal/redact"
 )
 
 const (
@@ -38,7 +40,7 @@ func (l *Live) Diagnostics(ctx context.Context) ([]byte, error) {
 	writeText := func(name string, text string) { write(name, []byte(text)) }
 
 	writeText("README.txt", fmt.Sprintf(
-		"Aurora diagnostics\nGenerated: %s\nHostname: %s\n",
+		"Aurora diagnostics\nGenerated: %s\nHostname: %s\nSecrets and credentials are redacted.\n",
 		time.Now().Format(time.RFC3339), hostname(),
 	))
 
@@ -97,6 +99,11 @@ func (l *Live) writeDiagnosticsFiles(write func(string, []byte), prefix, directo
 		data, err := os.ReadFile(filepath.Join(directory, entry.Name()))
 		if err != nil {
 			continue
+		}
+		if extension == ".json" {
+			data = redact.JSON(data)
+		} else {
+			data = redact.Config(data)
 		}
 		write(prefix+"/"+entry.Name(), data)
 	}

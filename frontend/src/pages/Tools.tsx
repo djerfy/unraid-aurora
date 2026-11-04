@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, Archive, Download, FileArchive, Server, Upload, Wrench } from "lucide-react";
+import { Activity, Archive, Download, FileArchive, Server, ShieldCheck, Upload, Wrench } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Badge, Button, Card } from "../components/ui/primitives";
 import { useApp } from "../app/AppDataProvider";
@@ -16,7 +16,7 @@ const INCLUDED = [
   "libvirt virtual machines",
   "Unraid state files (var.ini, disks.ini, shares.ini, …)",
   "Unraid configuration files (disk.cfg, ident.cfg, share.cfg, docker.cfg)",
-  "Aurora settings, image update status and mover history",
+  "Aurora settings, image update status and mover history (credentials redacted)",
   "Installed plugin list",
   "Tails of syslog, docker.log and libvirtd.log",
 ];
@@ -26,7 +26,7 @@ export function ToolsPage() {
   const { toast } = useToast();
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [backupBusy, setBackupBusy] = useState<"flash" | "config" | null>(null);
+  const [backupBusy, setBackupBusy] = useState<"flash" | "config" | "redacted" | null>(null);
   const [importing, setImporting] = useState(false);
 
   if (!snapshot) return null;
@@ -84,11 +84,15 @@ export function ToolsPage() {
     }
   };
 
-  const exportConfig = async () => {
-    setBackupBusy("config");
+  const exportConfig = async (redacted = false) => {
+    setBackupBusy(redacted ? "redacted" : "config");
     try {
-      const size = await saveBlob(api.configExport(), "aurora-config.zip");
-      toast({ kind: "success", title: t("Aurora configuration exported"), description: t("{size} KB archive.", { size: Math.round(size / 1024) }) });
+      const size = await saveBlob(api.configExport(redacted), redacted ? "aurora-config-redacted.zip" : "aurora-config.zip");
+      toast({
+        kind: "success",
+        title: t(redacted ? "Redacted configuration exported" : "Aurora configuration exported"),
+        description: t("{size} KB archive.", { size: Math.round(size / 1024) }),
+      });
     } catch (error) {
       toast({ kind: "error", title: t("Configuration export failed"), description: (error as Error).message });
     } finally {
@@ -208,7 +212,7 @@ export function ToolsPage() {
         <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
           {t("Download the whole flash drive, export Aurora configuration, or restore a previous Aurora configuration archive.")}
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">
             <p className="text-[11px] font-medium text-soft">{t("Flash drive")}</p>
             <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Full /boot archive. It contains secrets such as WireGuard keys and credentials.")}</p>
@@ -221,6 +225,13 @@ export function ToolsPage() {
             <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Settings, storage layout, histories and audit log.")}</p>
             <Button size="sm" variant="secondary" className="mt-3" icon={<Download className="size-3.5" />} loading={backupBusy === "config"} onClick={() => void exportConfig()}>
               {t("Export configuration")}
+            </Button>
+          </div>
+          <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">
+            <p className="text-[11px] font-medium text-soft">{t("Redacted support export")}</p>
+            <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">{t("Settings, layout and histories with credentials and webhook URLs removed.")}</p>
+            <Button size="sm" variant="secondary" className="mt-3" icon={<ShieldCheck className="size-3.5" />} loading={backupBusy === "redacted"} onClick={() => void exportConfig(true)}>
+              {t("Export redacted configuration")}
             </Button>
           </div>
           <div className="rounded-xl border border-line bg-[var(--surface-2)]/40 p-3">

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, Search, ShieldCheck } from "lucide-react";
+import { ClipboardList, Download, Search, ShieldCheck } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
-import { Badge, Card, InputBase } from "../components/ui/primitives";
+import { Badge, Button, Card, InputBase } from "../components/ui/primitives";
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { formatDateTime } from "../lib/format";
@@ -30,6 +30,20 @@ export function AuditPage() {
 
   const actions = (audit.data ?? []).filter((entry) => entry.method !== "GET").length;
 
+  const download = () => {
+    const escape = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
+    const rows = [["time", "user", "method", "path", "status", "remote"], ...(audit.data ?? []).map((entry) => [
+      entry.time, entry.user, entry.method, entry.path, entry.status, entry.remote,
+    ])];
+    const csv = rows.map((row) => row.map(escape).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `aurora-audit-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <PageHeader
@@ -40,6 +54,9 @@ export function AuditPage() {
           <>
             <Badge tone="accent" dot>{t("{count} actions", { count: actions })}</Badge>
             <span className="chip">{t("Last 300 entries")}</span>
+            <Button size="sm" variant="secondary" icon={<Download className="size-3.5" />} onClick={download} disabled={!audit.data?.length}>
+              {t("Export CSV")}
+            </Button>
           </>
         }
       />

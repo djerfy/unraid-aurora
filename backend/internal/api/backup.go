@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"aurora/internal/redact"
 )
 
 var configImportFiles = map[string]bool{
@@ -21,16 +23,27 @@ var configImportFiles = map[string]bool{
 }
 
 func (s *Server) flashBackup(w http.ResponseWriter, r *http.Request) {
-	s.writeZip(w, "aurora-flash-backup", s.cfg.BootDir, nil)
+	s.writeZip(w, "aurora-flash-backup", s.cfg.BootDir, func(rel string) bool {
+		// Trivy is large and regenerable; keep it out of flash backups.
+		return !strings.HasPrefix(filepath.ToSlash(rel), "config/aurora/trivy/")
+	}, false)
 }
 
 func (s *Server) configExport(w http.ResponseWriter, r *http.Request) {
-	s.writeZip(w, "aurora-config", s.cfg.ConfigDir, func(rel string) bool {
+	redacted := r.URL.Query().Get("redact") == "1"
+	name := "aurora-config"
+	if redacted {
+		name = "aurora-config-redacted"
+	}
+	s.writeZip(w, name, s.cfg.ConfigDir, func(rel string) bool {
+		if strings.HasPrefix(rel, "trivy/") || rel == "api-tokens.json" || rel == "metrics-archive.json" {
+			return false
+		}
 		return configImportFiles[rel] || strings.HasSuffix(rel, ".json")
-	})
+	}, redacted)
 }
 
-func (s *Server) writeZip(w http.ResponseWriter, name, root string, include func(string) bool) {
+func (s *Server) writeZip(w http.ResponseWriter, name, root string, include func(string) bool, redactData bool) {
 	if root == "" {
 		writeError(w, http.StatusBadRequest, "empty_root", "directory is not configured")
 		return
@@ -67,6 +80,19 @@ func (s *Server) writeZip(w http.ResponseWriter, name, root string, include func
 		}
 		header.Name = filepath.ToSlash(rel)
 		header.Method = zip.Deflate
+		if redactData && strings.HasSuffix(strings.ToLower(rel), ".json") {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+			header = &zip.FileHeader{Name: header.Name, Method: zip.Deflate, Modified: info.ModTime()}
+			writer, err := zw.CreateHeader(header)
+			if err != nil {
+				return nil
+			}
+			_, _ = writer.Write(redact.JSON(data))
+			return nil
+		}
 		writer, err := zw.CreateHeader(header)
 		if err != nil {
 			return nil

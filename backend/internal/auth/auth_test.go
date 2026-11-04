@@ -140,3 +140,25 @@ func TestParseShadowLineExpiry(t *testing.T) {
 		t.Fatalf("valid account rejected: %v", err)
 	}
 }
+
+func TestRevokeAllInvalidatesSessions(t *testing.T) {
+	manager := fixtureManager(time.Hour, sha512Hash)
+	token, _, err := manager.Login("root", "secret", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := manager.Verify(token); !ok {
+		t.Fatal("session was rejected before revocation")
+	}
+	manager.RevokeAll()
+	if _, ok := manager.Verify(token); ok {
+		t.Fatal("session was accepted after revocation")
+	}
+	fresh, _, err := manager.Login("root", "secret", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := manager.Verify(fresh); !ok {
+		t.Fatal("session issued after revocation was rejected")
+	}
+}

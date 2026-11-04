@@ -43,8 +43,12 @@ func poll(ctx context.Context, p provider.Provider, seen map[string]bool, first 
 		if *first {
 			continue
 		}
+		message := FromModel(notification)
+		if !Allowed(settings, message) {
+			continue
+		}
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		if err := Send(ctx, settings, FromModel(notification)); err != nil {
+		if err := Send(ctx, settings, message); err != nil {
 			log.Warn("forward notification", "id", notification.ID, "error", err)
 		}
 		cancel()

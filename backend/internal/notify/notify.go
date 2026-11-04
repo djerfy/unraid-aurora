@@ -51,7 +51,7 @@ func Send(ctx context.Context, settings model.Settings, message Message) error {
 		}
 	}
 	if settings.WebhookURL != "" {
-		if err := sendWebhook(ctx, settings.WebhookURL, message); err != nil {
+		if err := sendWebhook(ctx, settings, message); err != nil {
 			errs = append(errs, "webhook: "+err.Error())
 		}
 	}
@@ -79,12 +79,65 @@ func sendDiscord(ctx context.Context, endpoint string, message Message) error {
 	return postJSON(ctx, endpoint, map[string]string{"content": content})
 }
 
-func sendWebhook(ctx context.Context, endpoint string, message Message) error {
-	return postJSON(ctx, endpoint, map[string]any{
-		"title": message.Title, "subject": message.Subject, "description": message.Description,
-		"importance": message.Importance, "source": message.Source,
-		"timestamp": message.Timestamp.UTC().Format(time.RFC3339),
-	})
+func sendWebhook(ctx context.Context, settings model.Settings, message Message) error {
+	endpoint := strings.TrimSpace(settings.WebhookURL)
+	parsed, err := url.Parse(endpoint)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return errors.New("invalid webhook URL")
+	}
+	method := strings.ToUpper(strings.TrimSpace(settings.WebhookMethod))
+	switch method {
+	case "", "POST":
+		method = http.MethodPost
+	case http.MethodGet, http.MethodPut, http.MethodDelete:
+	default:
+		return errors.New("webhook method must be GET, POST, PUT or DELETE")
+	}
+	body := settings.WebhookBody
+	if strings.TrimSpace(body) == "" {
+		body = fmt.Sprintf(`{"title":%q,"subject":%q,"description":%q,"importance":%q,"source":%q,"timestamp":%q}`,
+			message.Title, message.Subject, message.Description, message.Importance, message.Source,
+			message.Timestamp.UTC().Format(time.RFC3339))
+	} else {
+		body = replaceWebhookPlaceholders(body, message)
+	}
+	var reader io.Reader
+	if method != http.MethodGet || strings.TrimSpace(settings.WebhookBody) != "" {
+		reader = strings.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, parsed.String(), reader)
+	if err != nil {
+		return err
+	}
+	if reader != nil {
+		contentType := "application/json"
+		if settings.WebhookHeaders != nil && settings.WebhookHeaders["Content-Type"] != "" {
+			contentType = settings.WebhookHeaders["Content-Type"]
+		} else if !strings.HasPrefix(strings.TrimSpace(body), "{") && !strings.HasPrefix(strings.TrimSpace(body), "[") {
+			contentType = "text/plain; charset=utf-8"
+		}
+		req.Header.Set("Content-Type", contentType)
+	}
+	for key, value := range settings.WebhookHeaders {
+		if strings.TrimSpace(key) == "" || strings.EqualFold(key, "Content-Type") {
+			continue
+		}
+		req.Header.Set(key, replaceWebhookPlaceholders(value, message))
+	}
+	return doRequest(req)
+}
+
+func replaceWebhookPlaceholders(template string, message Message) string {
+	replacements := map[string]string{
+		"{title}": message.Title, "{subject}": message.Subject, "{description}": message.Description,
+		"{importance}": message.Importance, "{source}": message.Source,
+		"{timestamp}": message.Timestamp.UTC().Format(time.RFC3339),
+	}
+	out := template
+	for key, value := range replacements {
+		out = strings.ReplaceAll(out, key, value)
+	}
+	return out
 }
 
 func sendNtfy(ctx context.Context, endpoint string, message Message) error {
@@ -160,4 +213,28 @@ func ntfyPriority(importance string) string {
 	default:
 		return "default"
 	}
+}
+
+var importanceRank = map[string]int{
+	"info": 0, "normal": 1, "warning": 2, "alert": 3, "critical": 4, "error": 4,
+}
+
+// Allowed applies the user's notification filters before a message is sent.
+// Unknown importance values are treated as normal so a new Unraid level is not
+// silently dropped.
+func Allowed(settings model.Settings, message Message) bool {
+	minimum := importanceRank[strings.ToLower(strings.TrimSpace(settings.NotifyMinImportance))]
+	rank, ok := importanceRank[strings.ToLower(strings.TrimSpace(message.Importance))]
+	if !ok {
+		rank = importanceRank["normal"]
+	}
+	if rank < minimum {
+		return false
+	}
+	for _, source := range settings.NotifyMutedSources {
+		if strings.EqualFold(strings.TrimSpace(source), strings.TrimSpace(message.Source)) {
+			return false
+		}
+	}
+	return true
 }
