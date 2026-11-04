@@ -1259,6 +1259,17 @@ func (s *Server) runUserScript(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	values, err := s.provider.Tasks(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, values)
+}
+
 func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
 	filter := audit.Filter{
 		Method:      strings.TrimSpace(r.URL.Query().Get("method")),

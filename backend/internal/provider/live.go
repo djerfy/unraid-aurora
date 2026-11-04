@@ -116,6 +116,8 @@ type Live struct {
 	shareUsageMu         sync.Mutex
 	shareUsage           map[string]shareUsageEntry
 	shareUsageRefreshing map[string]bool
+	shareUsageStarted    map[string]time.Time
+	shareUsageErrors     map[string]string
 	shareUsageSem        chan struct{}
 }
 
@@ -158,6 +160,8 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 		moverSeen:            map[string]bool{},
 		shareUsage:           map[string]shareUsageEntry{},
 		shareUsageRefreshing: map[string]bool{},
+		shareUsageStarted:    map[string]time.Time{},
+		shareUsageErrors:     map[string]string{},
 		shareUsageSem:        make(chan struct{}, 2),
 	}
 	trivyDir := strings.TrimSpace(os.Getenv("AURORA_TRIVY_DIR"))

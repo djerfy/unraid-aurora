@@ -1,0 +1,20 @@
+const tasks: Record<string, string> = {
+  "Tasks": "Tâches",
+  "Background work running on this server: share scans, mover, balance and Trivy.": "Travaux d’arrière-plan sur ce serveur : scans de shares, mover, balance et Trivy.",
+  "{count} running": "{count} en cours",
+  "{count} queued": "{count} en attente",
+  "{count} failed": "{count} en échec",
+  "Loading tasks…": "Chargement des tâches…",
+  "No background tasks": "Aucune tâche d’arrière-plan",
+  "Share scans, mover runs, balance jobs and Trivy operations appear here.": "Les scans de shares, les runs du mover, les jobs de balance et les opérations Trivy apparaissent ici.",
+  "Status": "Statut",
+  "Task": "Tâche",
+  "Category": "Catégorie",
+  "Started": "Démarré",
+  "Updated": "Mis à jour",
+  "Progress": "Progression",
+  "Queued": "En attente",
+  "storage": "stockage",
+  "security": "sécurité",
+};
+export default tasks;

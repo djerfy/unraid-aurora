@@ -298,6 +298,7 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | POST | `/tokens` | session | Create `{name,role,expiresInDays,scopes}` → secret once |
 | DELETE | `/tokens/{id}` | session | Revoke a token |
 | GET | `/audit?limit=&method=&statusClass=&user=` | admin | Mutation audit (newest first, max 500) |
+| GET | `/tasks` | viewer+ | Background tasks: share scans, mover, balance, Trivy |
 | GET | `/notifications` | viewer+ | Inbox and archive |
 | POST | `/notifications/test` | admin | Test outbound channels |
 

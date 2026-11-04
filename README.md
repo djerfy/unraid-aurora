@@ -295,6 +295,7 @@ Deep dives:
 | Plugins | Real .plg metadata, update checks, streamed update/install/remove through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
 | Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) with credentials redacted, redacted configuration export, host summary |
+| Tasks | Background share scans, mover, balance and Trivy operations with status and progress |
 | Configuration history | `$AURORA_CONFIG_DIR/config-history` (backup files, metas, unified diffs) |
 | Balance | Mounts under `/mnt`, `statfs`, `du`; copy → verify → delete pipeline |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |

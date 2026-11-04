@@ -18,6 +18,7 @@ type Provider interface {
 	Disks(ctx context.Context) ([]model.Disk, error)
 	Shares(ctx context.Context) ([]model.Share, error)
 	RefreshShareUsage(ctx context.Context, name string) (int, error)
+	Tasks(ctx context.Context) ([]model.Task, error)
 	Pools(ctx context.Context) ([]model.Pool, error)
 	Containers(ctx context.Context) ([]model.Container, error)
 	ContainerLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)

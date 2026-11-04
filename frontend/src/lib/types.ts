@@ -1158,3 +1158,16 @@ export type NUTSettings = {
   passwordSet: boolean;
   monitorPassword?: string;
 };
+
+export type Task = {
+  id: string;
+  name: string;
+  category: string;
+  status: string;
+  detail: string;
+  progress: number;
+  startedAt?: string | null;
+  updatedAt?: string | null;
+  finishedAt?: string | null;
+  error?: string;
+};

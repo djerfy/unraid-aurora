@@ -144,6 +144,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("DELETE /api/v1/plugins/{name}", s.removePlugin)
 	api.HandleFunc("GET /api/v1/notifications", s.notifications)
 	api.HandleFunc("GET /api/v1/audit", s.auditLog)
+	api.HandleFunc("GET /api/v1/tasks", s.tasks)
 	api.HandleFunc("GET /api/v1/tokens", s.apiTokens)
 	api.HandleFunc("POST /api/v1/tokens", s.createAPIToken)
 	api.HandleFunc("DELETE /api/v1/tokens/{id}", s.revokeAPIToken)

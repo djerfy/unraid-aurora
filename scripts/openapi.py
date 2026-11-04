@@ -304,6 +304,7 @@ RESPONSE_SCHEMAS = {
     ("GET", "/api/v1/balance/status"): ref("BalanceJob"),
     ("GET", "/api/v1/balance/history"): array_of("BalanceJob"),
     ("GET", "/api/v1/audit"): array_of("AuditEntry"),
+    ("GET", "/api/v1/tasks"): array_of("Task"),
     ("GET", "/api/v1/tokens"): array_of("APIToken"),
     ("POST", "/api/v1/tokens"): {"type": "object", "properties": {"token": ref("APIToken"), "secret": {"type": "string"}}},
     ("GET", "/api/v1/system/scheduler"): ref("SchedulerState"),
@@ -510,6 +511,7 @@ def build_spec() -> dict:
                     "type": "object",
                     "properties": {"ok": {"type": "boolean"}, "succeeded": {"type": "array", "items": {"type": "string"}}, "failed": {"type": "array", "items": {"type": "object", "properties": {"target": {"type": "string"}, "error": {"type": "string"}}}}},
                 },
+                "Task": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "category": {"type": "string"}, "status": {"type": "string", "enum": ["running", "queued", "completed", "failed"]}, "detail": {"type": "string"}, "progress": {"type": "number"}, "startedAt": {"type": ["string", "null"], "format": "date-time"}, "updatedAt": {"type": ["string", "null"], "format": "date-time"}, "finishedAt": {"type": ["string", "null"], "format": "date-time"}, "error": {"type": "string"}}},
                 "AuditEntry": {
                     "type": "object",
                     "properties": {"time": {"type": "string", "format": "date-time"}, "user": {"type": "string"}, "method": {"type": "string"}, "path": {"type": "string"}, "status": {"type": "integer"}, "remote": {"type": "string"}},

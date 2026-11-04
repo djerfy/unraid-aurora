@@ -20,6 +20,7 @@ import { PluginsPage } from "./pages/Plugins";
 import { LogsHubPage } from "./pages/LogsHub";
 import { TerminalPage } from "./pages/Terminal";
 import { ToolsPage } from "./pages/Tools";
+import { TasksPage } from "./pages/Tasks";
 import { UserScriptsPage } from "./pages/UserScripts";
 import { BalancePage } from "./pages/Balance";
 import { SettingsPage } from "./pages/Settings";
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/logs" element={<LogsHubPage />} />
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
           <Route path="/history" element={<Navigate to="/logs?tab=history" replace />} />
           <Route path="/audit" element={<Navigate to="/logs?tab=audit" replace />} />
           <Route path="/scripts" element={<UserScriptsPage />} />

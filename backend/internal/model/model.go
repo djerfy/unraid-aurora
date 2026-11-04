@@ -854,6 +854,19 @@ type Settings struct {
 	TrivyDBUpdateHour   int               `json:"trivyDbUpdateHour"`
 }
 
+type Task struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Category   string     `json:"category"`
+	Status     string     `json:"status"`
+	Detail     string     `json:"detail"`
+	Progress   float64    `json:"progress"`
+	StartedAt  *time.Time `json:"startedAt,omitempty"`
+	UpdatedAt  *time.Time `json:"updatedAt,omitempty"`
+	FinishedAt *time.Time `json:"finishedAt,omitempty"`
+	Error      string     `json:"error,omitempty"`
+}
+
 type LogLine struct {
 	Time    time.Time `json:"time"`
 	Level   string    `json:"level"`

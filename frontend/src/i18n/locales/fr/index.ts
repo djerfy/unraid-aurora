@@ -24,6 +24,7 @@ import settings from "./settings";
 import storage from "./storage";
 import terminal from "./terminal";
 import tools from "./tools";
+import tasks from "./tasks";
 import users from "./users";
 import vms from "./vms";
 
@@ -44,6 +45,7 @@ export const fr: Record<string, string> = {
   ...logs,
   ...terminal,
   ...tools,
+  ...tasks,
   ...history,
   ...balance,
   ...settings,

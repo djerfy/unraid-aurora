@@ -687,6 +687,8 @@ can itself be reverted.
   as root and returns its output. The schedule editor writes the plugin's `schedule.json` and cron
   fragment: disabled, hourly, daily, weekly, monthly, array start/stop, first array start, or a
   five-field custom cron expression. Unraid's `update_cron` helper is invoked after a change.
+- **Tasks** lists background work: share usage scans, mover runs, balance jobs and Trivy
+  operations, with status, progress and last update.
 - The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. The audit tab records
   every mutating API call with user, method, path, status and remote address, filters by method,
   status class or user, and exports the visible entries as CSV. The in-memory log keeps 5000 entries

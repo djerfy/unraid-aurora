@@ -75,6 +75,7 @@ export const api = {
   plugins: () => request<import("./types").Plugin[]>("/api/v1/plugins"),
   notifications: () => request<import("./types").Notification[]>("/api/v1/notifications"),
   serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
+  tasks: () => request<import("./types").Task[]>("/api/v1/tasks"),
   auditLog: (limit = 200, filters: { method?: string; statusClass?: number; user?: string } = {}) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (filters.method) params.set("method", filters.method);

@@ -116,6 +116,7 @@ func (l *Live) RefreshShareUsage(ctx context.Context, name string) (int, error) 
 			continue
 		}
 		l.shareUsageRefreshing[shareName] = true
+		l.shareUsageStarted[shareName] = time.Now()
 		l.shareUsageMu.Unlock()
 		started++
 		go l.refreshShareUsage(shareName)
@@ -134,6 +135,7 @@ func (l *Live) scheduleShareUsage(shares []model.Share) {
 			continue
 		}
 		l.shareUsageRefreshing[share.Name] = true
+		l.shareUsageStarted[share.Name] = time.Now()
 		l.shareUsageMu.Unlock()
 		go l.refreshShareUsage(share.Name)
 	}
@@ -145,6 +147,7 @@ func (l *Live) refreshShareUsage(name string) {
 	defer func() {
 		l.shareUsageMu.Lock()
 		delete(l.shareUsageRefreshing, name)
+		delete(l.shareUsageStarted, name)
 		l.shareUsageMu.Unlock()
 	}()
 	paths := l.sharePaths(name)
@@ -178,11 +181,13 @@ func (l *Live) refreshShareUsage(name string) {
 		entry := l.shareUsage[name]
 		entry.Updated = time.Now()
 		l.shareUsage[name] = entry
+		l.shareUsageErrors[name] = "no readable share path"
 		l.saveShareUsageLocked()
 		l.shareUsageMu.Unlock()
 		return
 	}
 	l.shareUsage[name] = shareUsageEntry{Used: total, Updated: time.Now()}
+	delete(l.shareUsageErrors, name)
 	l.saveShareUsageLocked()
 	l.shareUsageMu.Unlock()
 }
