@@ -109,7 +109,7 @@ func main() {
 	go notify.Run(ctx, p, log)
 	go p.Start(ctx)
 
-	authManager := auth.New(cfg.SessionTTL)
+	authManager := auth.New(cfg.SessionTTL, auth.WithPersistence(cfg.ConfigDir))
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           api.New(cfg, p, hub, authManager, log).Handler(),

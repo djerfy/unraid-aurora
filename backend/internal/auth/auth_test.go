@@ -190,3 +190,31 @@ func TestSessionInventoryAndRevocation(t *testing.T) {
 		t.Fatal("revoked session is still listed")
 	}
 }
+
+func TestSessionsSurviveRestart(t *testing.T) {
+	dir := t.TempDir()
+	options := []Option{
+		WithShadowLookup(func(username string) (string, error) {
+			if username == "root" {
+				return sha512Hash, nil
+			}
+			return "", errors.New("no entry")
+		}),
+		WithPasswordVerifier(verifyShadowHash),
+		WithPersistence(dir),
+	}
+	first := New(time.Hour, options...)
+	token, _, err := first.Login("root", "secret", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := New(time.Hour, options...)
+	if _, ok := second.Verify(token); !ok {
+		t.Fatal("session did not survive a restart")
+	}
+	second.RevokeAll()
+	third := New(time.Hour, options...)
+	if _, ok := third.Verify(token); ok {
+		t.Fatal("revoked session survived a restart")
+	}
+}

@@ -26,9 +26,10 @@ Aurora accepts two kinds of credentials.
    HMAC-SHA256.
 3. Mutating requests using the cookie must also send `X-Aurora-Request: aurora`.
    Cross-origin requests are rejected unless the `Origin` host matches.
-4. Sessions last `AURORA_SESSION_TTL` (24 h by default). `POST
-   /api/v1/auth/revoke-all` rotates the session epoch and invalidates every
-   existing cookie, including the caller's.
+4. Sessions last `AURORA_SESSION_TTL` (24 h by default). The HMAC secret and the
+   session registry live in the Aurora config directory, so signed-in devices
+   survive an Aurora restart. `POST /api/v1/auth/revoke-all` rotates the session
+   epoch and invalidates every existing cookie, including the caller's.
 
 Login failures are rate limited: three failed attempts from one address trigger
 a 15 minute cooldown, matching the Unraid webGUI.

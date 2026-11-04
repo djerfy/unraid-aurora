@@ -642,10 +642,11 @@ can itself be reverted.
   forwarded after Aurora starts.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Viewers can only
   read, operators manage containers, VMs, array and mover actions, and admins control everything.
-  Tokens can expire after 30, 90 or 365 days (or never). The secret is shown once; token management
-  itself requires a signed-in session. The **Security** section lists active sessions with their IP
-  and last activity, allows revoking one session, and **Revoke all sessions** invalidates every Aurora
-  cookie, including the current browser.
+  Tokens can expire after 30, 90 or 365 days (or never) and can be limited to specific scopes.
+  The secret is shown once; token management itself requires a signed-in session. The **Security**
+  section lists active sessions with their IP and last activity, allows revoking one session, and
+  **Revoke all sessions** invalidates every Aurora cookie, including the current browser. Sessions
+  survive an Aurora restart because the signing key and registry are persisted in the config directory.
 - **Unraid OS**: current version and branch, update check against `releases.unraid.net`, release
   notes, streamed installation through the official plugin manager, and a downgrade that restores
   the boot files kept in `/boot/previous`. A reboot is required to boot the new or restored version.

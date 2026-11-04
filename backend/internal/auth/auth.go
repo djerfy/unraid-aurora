@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -82,10 +83,12 @@ type Manager struct {
 	lookup shadowLookupFunc
 	verify passwordVerifyFunc
 
-	mu       sync.Mutex
-	failures map[string]*failureBucket
-	epoch    int64
-	sessions map[string]sessionRecord
+	mu          sync.Mutex
+	failures    map[string]*failureBucket
+	epoch       int64
+	sessions    map[string]sessionRecord
+	persistDir  string
+	lastPersist time.Time
 }
 
 // Option customises the shadow backend. The defaults read the host through
@@ -108,6 +111,19 @@ func WithPasswordVerifier(fn func(password, hash string) error) Option {
 		if fn != nil {
 			m.verify = fn
 		}
+	}
+}
+
+// WithPersistence loads the HMAC secret and session registry from dir so
+// sessions survive an Aurora restart. The directory must be private (0750).
+func WithPersistence(dir string) Option {
+	return func(m *Manager) {
+		if strings.TrimSpace(dir) == "" {
+			return
+		}
+		m.persistDir = dir
+		m.loadSecret()
+		m.loadSessions()
 	}
 }
 
@@ -167,6 +183,7 @@ func (m *Manager) Login(username, password, ip string) (string, Session, error) 
 		User: session.User, IP: ip, Created: time.Now(),
 		LastSeen: time.Now(), Expires: time.Unix(session.Exp, 0),
 	}
+	m.saveSessionsLocked()
 	m.mu.Unlock()
 	return token, session, nil
 }
@@ -200,6 +217,9 @@ func (m *Manager) Verify(token string) (Session, bool) {
 	}
 	record.LastSeen = time.Now()
 	m.sessions[s.Nonce] = record
+	if time.Since(m.lastPersist) > 30*time.Second {
+		m.saveSessionsLocked()
+	}
 	m.mu.Unlock()
 	return s, true
 }
@@ -233,6 +253,7 @@ func (m *Manager) RevokeSession(nonce string) bool {
 		return false
 	}
 	delete(m.sessions, nonce)
+	m.saveSessionsLocked()
 	return true
 }
 
@@ -244,7 +265,88 @@ func (m *Manager) RevokeAll() int64 {
 	defer m.mu.Unlock()
 	m.epoch = time.Now().UnixNano()
 	m.sessions = map[string]sessionRecord{}
+	m.saveSessionsLocked()
 	return m.epoch
+}
+
+func (m *Manager) secretPath() string {
+	if m.persistDir == "" {
+		return ""
+	}
+	return filepath.Join(m.persistDir, "auth-secret")
+}
+
+func (m *Manager) sessionsPath() string {
+	if m.persistDir == "" {
+		return ""
+	}
+	return filepath.Join(m.persistDir, "auth-sessions.json")
+}
+
+func (m *Manager) loadSecret() {
+	path := m.secretPath()
+	if path == "" {
+		return
+	}
+	if raw, err := os.ReadFile(path); err == nil && len(raw) == 32 {
+		m.secret = append([]byte(nil), raw...)
+		return
+	}
+	if err := os.MkdirAll(m.persistDir, 0o750); err != nil {
+		return
+	}
+	_ = os.WriteFile(path, m.secret, 0o600)
+}
+
+func (m *Manager) loadSessions() {
+	path := m.sessionsPath()
+	if path == "" {
+		return
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	var file struct {
+		Epoch    int64                    `json:"epoch"`
+		Sessions map[string]sessionRecord `json:"sessions"`
+	}
+	if json.Unmarshal(raw, &file) != nil {
+		return
+	}
+	if file.Epoch > 0 {
+		m.epoch = file.Epoch
+	}
+	now := time.Now()
+	for nonce, record := range file.Sessions {
+		if now.After(record.Expires) {
+			continue
+		}
+		m.sessions[nonce] = record
+	}
+}
+
+func (m *Manager) saveSessionsLocked() {
+	path := m.sessionsPath()
+	if path == "" {
+		return
+	}
+	m.lastPersist = time.Now()
+	if err := os.MkdirAll(m.persistDir, 0o750); err != nil {
+		return
+	}
+	raw, err := json.MarshalIndent(struct {
+		Epoch    int64                    `json:"epoch"`
+		Sessions map[string]sessionRecord `json:"sessions"`
+	}{Epoch: m.epoch, Sessions: m.sessions}, "", "  ")
+	if err != nil {
+		return
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+		return
+	}
+	_ = os.Rename(tmp, path)
 }
 
 func (m *Manager) currentEpoch() int64 {
