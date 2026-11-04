@@ -774,6 +774,7 @@ func (l *Live) Network(ctx context.Context) (model.Network, error) {
 		}
 		networks.Interfaces = append(networks.Interfaces, ni)
 	}
+	networks.WireGuard = l.wireGuard(ctx)
 	return networks, nil
 }
 
