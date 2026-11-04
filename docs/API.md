@@ -109,6 +109,8 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 | POST | `/auth/login` | public | `{username,password}` → session cookie |
 | POST | `/auth/logout` | session | Clear the cookie |
 | POST | `/auth/revoke-all` | session | Invalidate every session |
+| GET | `/auth/sessions` | session | List active sessions and the current device |
+| DELETE | `/auth/sessions/{nonce}` | session | Revoke one session by nonce |
 | GET | `/bootstrap` | viewer+ | Full snapshot, hub metrics and history |
 | GET | `/events` | viewer+ | SSE metrics stream |
 | GET | `/system` | viewer+ | System identity, CPU, memory, sensors |

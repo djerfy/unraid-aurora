@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +48,25 @@ type Session struct {
 	Epoch int64  `json:"e"`
 }
 
+// SessionInfo is the safe, listable view of an active session.
+type SessionInfo struct {
+	Nonce    string    `json:"nonce"`
+	User     string    `json:"user"`
+	IP       string    `json:"ip"`
+	Created  time.Time `json:"created"`
+	LastSeen time.Time `json:"lastSeen"`
+	Expires  time.Time `json:"expires"`
+	Current  bool      `json:"current"`
+}
+
+type sessionRecord struct {
+	User     string
+	IP       string
+	Created  time.Time
+	LastSeen time.Time
+	Expires  time.Time
+}
+
 type failureBucket struct {
 	count int
 	until time.Time
@@ -65,6 +85,7 @@ type Manager struct {
 	mu       sync.Mutex
 	failures map[string]*failureBucket
 	epoch    int64
+	sessions map[string]sessionRecord
 }
 
 // Option customises the shadow backend. The defaults read the host through
@@ -102,6 +123,7 @@ func New(ttl time.Duration, opts ...Option) *Manager {
 		verify:   verifyShadowHash,
 		failures: map[string]*failureBucket{},
 		epoch:    time.Now().UnixNano(),
+		sessions: map[string]sessionRecord{},
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -140,6 +162,12 @@ func (m *Manager) Login(username, password, ip string) (string, Session, error) 
 	if err != nil {
 		return "", Session{}, err
 	}
+	m.mu.Lock()
+	m.sessions[session.Nonce] = sessionRecord{
+		User: session.User, IP: ip, Created: time.Now(),
+		LastSeen: time.Now(), Expires: time.Unix(session.Exp, 0),
+	}
+	m.mu.Unlock()
 	return token, session, nil
 }
 
@@ -164,7 +192,48 @@ func (m *Manager) Verify(token string) (Session, bool) {
 	if s.Exp < time.Now().Unix() || s.User == "" || s.Epoch != m.currentEpoch() {
 		return Session{}, false
 	}
+	m.mu.Lock()
+	record, ok := m.sessions[s.Nonce]
+	if !ok {
+		m.mu.Unlock()
+		return Session{}, false
+	}
+	record.LastSeen = time.Now()
+	m.sessions[s.Nonce] = record
+	m.mu.Unlock()
 	return s, true
+}
+
+// ListSessions returns active sessions, newest activity first.
+func (m *Manager) ListSessions(currentNonce string) []SessionInfo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now()
+	out := make([]SessionInfo, 0, len(m.sessions))
+	for nonce, record := range m.sessions {
+		if now.After(record.Expires) {
+			delete(m.sessions, nonce)
+			continue
+		}
+		out = append(out, SessionInfo{
+			Nonce: nonce, User: record.User, IP: record.IP,
+			Created: record.Created, LastSeen: record.LastSeen, Expires: record.Expires,
+			Current: nonce == currentNonce,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].LastSeen.After(out[j].LastSeen) })
+	return out
+}
+
+// RevokeSession invalidates one session by nonce.
+func (m *Manager) RevokeSession(nonce string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.sessions[nonce]; !ok {
+		return false
+	}
+	delete(m.sessions, nonce)
+	return true
 }
 
 // RevokeAll invalidates every signed-in session by rotating the session epoch.
@@ -174,6 +243,7 @@ func (m *Manager) RevokeAll() int64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.epoch = time.Now().UnixNano()
+	m.sessions = map[string]sessionRecord{}
 	return m.epoch
 }
 

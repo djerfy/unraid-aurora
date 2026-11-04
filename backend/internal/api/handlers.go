@@ -98,6 +98,36 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+func (s *Server) authSessions(w http.ResponseWriter, r *http.Request) {
+	sess, ok := s.sessionUser(r)
+	if !ok {
+		writeError(w, http.StatusForbidden, "session_required", "session inventory requires a signed-in session")
+		return
+	}
+	writeJSON(w, http.StatusOK, s.auth.ListSessions(sess.Nonce))
+}
+
+func (s *Server) revokeSession(w http.ResponseWriter, r *http.Request) {
+	sess, ok := s.sessionUser(r)
+	if !ok {
+		writeError(w, http.StatusForbidden, "session_required", "session revocation requires a signed-in session")
+		return
+	}
+	nonce := strings.TrimSpace(r.PathValue("nonce"))
+	if nonce == "" || len(nonce) > 64 {
+		writeError(w, http.StatusBadRequest, "invalid_session", "invalid session identifier")
+		return
+	}
+	if !s.auth.RevokeSession(nonce) {
+		writeError(w, http.StatusNotFound, "session_not_found", "session not found")
+		return
+	}
+	if nonce == sess.Nonce {
+		http.SetCookie(w, s.auth.ClearCookie())
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) revokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.sessionUser(r); !ok {
 		writeError(w, http.StatusForbidden, "session_required", "signing out all sessions requires a signed-in session")

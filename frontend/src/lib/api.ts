@@ -140,6 +140,9 @@ export const api = {
   logout: () => request<{ ok: boolean }>("/api/v1/auth/logout", { method: "POST", body: "{}" }),
   revokeAllSessions: () =>
     request<{ ok: boolean }>("/api/v1/auth/revoke-all", { method: "POST", body: "{}" }),
+  authSessions: () => request<import("./types").AuthSession[]>("/api/v1/auth/sessions"),
+  revokeSession: (nonce: string) =>
+    request<{ ok: boolean }>(`/api/v1/auth/sessions/${encodeURIComponent(nonce)}`, { method: "DELETE" }),
   action: (kind: ActionKind, target = "", value = "") =>
     request<{ ok: boolean }>("/api/v1/actions", {
       method: "POST",

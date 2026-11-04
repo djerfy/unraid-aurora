@@ -43,7 +43,7 @@ import { OSUpdatePanel } from "../components/system/OSUpdatePanel";
 import { UnraidAPIPanel } from "../components/system/UnraidAPIPanel";
 import { TrivyPanel } from "../components/system/TrivyPanel";
 import { api } from "../lib/api";
-import { formatMemory, formatUptime } from "../lib/format";
+import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
 
 const SECTIONS = [
@@ -116,6 +116,7 @@ export function SettingsPage() {
   };
 
   const tokens = useQuery({ queryKey: ["api-tokens"], queryFn: api.apiTokens, enabled: section === "api" });
+  const authSessions = useQuery({ queryKey: ["auth-sessions"], queryFn: api.authSessions, enabled: section === "security", refetchInterval: 30_000 });
   const createToken = useMutation({
     mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole, tokenExpiry),
     onSuccess: (result) => {
@@ -165,6 +166,19 @@ export function SettingsPage() {
     queryClient.removeQueries({ queryKey: ["bootstrap"] });
     navigate("/login");
   };
+
+  const revokeSession = useMutation({
+    mutationFn: (nonce: string) => api.revokeSession(nonce),
+    onSuccess: async (_result, nonce) => {
+      void queryClient.invalidateQueries({ queryKey: ["auth-sessions"] });
+      if ((authSessions.data ?? []).some((item) => item.nonce === nonce && item.current)) {
+        await signOut();
+        return;
+      }
+      toast({ kind: "success", title: t("Session revoked") });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not revoke the session"), description: error.message }),
+  });
 
   const revokeAll = useMutation({
     mutationFn: api.revokeAllSessions,
@@ -678,6 +692,43 @@ export function SettingsPage() {
                     {t("Revoke all sessions")}
                   </Button>
                 </div>
+              </Card>
+
+              <Card className="card-pad">
+                <CardTitle title={t("Active sessions")} description={t("Every browser currently signed in to Aurora. Sessions end when Aurora restarts.")} />
+                {authSessions.isLoading ? (
+                  <p className="mt-3 text-[10.5px] text-muted">{t("Loading sessions…")}</p>
+                ) : authSessions.isError ? (
+                  <p className="mt-3 text-[10.5px] text-[var(--danger)]">{(authSessions.error as Error).message}</p>
+                ) : (
+                  <div className="mt-3 divide-y divide-line">
+                    {(authSessions.data ?? []).map((item) => (
+                      <div key={item.nonce} className="flex flex-wrap items-center gap-3 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 text-[11px] font-medium text-soft">
+                            {item.user}
+                            {item.current ? <Badge tone="success">{t("This device")}</Badge> : null}
+                          </p>
+                          <p className="mt-0.5 text-[9.5px] text-subtle">
+                            {item.ip || "—"} · {t("Last seen {date}", { date: formatDateTime(item.lastSeen) })}
+                          </p>
+                        </div>
+                        <span className="text-[9px] text-subtle">{t("Expires {date}", { date: formatDateTime(item.expires) })}</span>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={revokeSession.isPending && revokeSession.variables === item.nonce}
+                          onClick={() => {
+                            if (window.confirm(t("Revoke this session?"))) revokeSession.mutate(item.nonce);
+                          }}
+                        >
+                          {t("Revoke")}
+                        </Button>
+                      </div>
+                    ))}
+                    {(authSessions.data ?? []).length === 0 ? <p className="py-2 text-[10.5px] text-subtle">{t("No active sessions.")}</p> : null}
+                  </div>
+                )}
               </Card>
             </>
           ) : null}

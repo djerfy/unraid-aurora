@@ -52,6 +52,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/auth/login", s.login)
 	api.HandleFunc("POST /api/v1/auth/logout", s.logout)
 	api.HandleFunc("POST /api/v1/auth/revoke-all", s.revokeAllSessions)
+	api.HandleFunc("GET /api/v1/auth/sessions", s.authSessions)
+	api.HandleFunc("DELETE /api/v1/auth/sessions/{nonce}", s.revokeSession)
 
 	api.HandleFunc("GET /api/v1/bootstrap", s.bootstrap)
 	api.HandleFunc("GET /api/v1/system", s.system)

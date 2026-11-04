@@ -302,6 +302,7 @@ RESPONSE_SCHEMAS = {
     ("POST", "/api/v1/system/scheduler/preview"): ref("SchedulerPreview"),
     ("GET", "/api/v1/health"): ref("Health"),
     ("GET", "/api/v1/auth/session"): ref("Session"),
+    ("GET", "/api/v1/auth/sessions"): array_of("AuthSession"),
     ("GET", "/api/v1/settings"): ref("Settings"),
 }
 
@@ -414,6 +415,7 @@ def build_spec() -> dict:
                     "properties": {"status": {"type": "string"}, "version": {"type": "string"}, "provider": {"type": "string"}, "uptime": {"type": "integer"}, "time": {"type": "string", "format": "date-time"}},
                 },
                 "Session": {"type": "object", "properties": {"authenticated": {"type": "boolean"}, "user": {"type": "string"}}},
+                "AuthSession": {"type": "object", "properties": {"nonce": {"type": "string"}, "user": {"type": "string"}, "ip": {"type": "string"}, "created": {"type": "string", "format": "date-time"}, "lastSeen": {"type": "string", "format": "date-time"}, "expires": {"type": "string", "format": "date-time"}, "current": {"type": "boolean"}}},
                 "Action": {
                     "type": "object",
                     "required": ["kind"],

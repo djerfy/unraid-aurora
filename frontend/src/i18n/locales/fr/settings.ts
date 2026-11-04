@@ -163,6 +163,16 @@ const settings: Record<string, string> = {
   "Expired": "Expiré",
   "Expires {date}": "Expire le {date}",
   "Never expires": "N’expire jamais",
+  "Active sessions": "Sessions actives",
+  "Every browser currently signed in to Aurora. Sessions end when Aurora restarts.": "Chaque navigateur actuellement connecté à Aurora. Les sessions se terminent au redémarrage d’Aurora.",
+  "Loading sessions…": "Chargement des sessions…",
+  "This device": "Cet appareil",
+  "Last seen {date}": "Vu le {date}",
+  "Revoke this session?": "Révoquer cette session ?",
+  "Session revoked": "Session révoquée",
+  "Could not revoke the session": "Impossible de révoquer la session",
+  "No active sessions.": "Aucune session active.",
+  "Revoke": "Révoquer",
 };
 
 export default settings;

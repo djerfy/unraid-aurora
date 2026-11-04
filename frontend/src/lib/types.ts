@@ -1107,3 +1107,13 @@ export type NetworkConfiguration = {
   format: string;
   backup?: string;
 };
+
+export type AuthSession = {
+  nonce: string;
+  user: string;
+  ip: string;
+  created: string;
+  lastSeen: string;
+  expires: string;
+  current: boolean;
+};

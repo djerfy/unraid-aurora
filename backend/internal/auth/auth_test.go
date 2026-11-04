@@ -162,3 +162,31 @@ func TestRevokeAllInvalidatesSessions(t *testing.T) {
 		t.Fatal("session issued after revocation was rejected")
 	}
 }
+
+func TestSessionInventoryAndRevocation(t *testing.T) {
+	manager := fixtureManager(time.Hour, sha512Hash)
+	firstToken, firstSession, err := manager.Login("root", "secret", "10.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondToken, secondSession, err := manager.Login("root", "secret", "10.0.0.2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions := manager.ListSessions(firstSession.Nonce)
+	if len(sessions) != 2 || !sessions[0].Current && !sessions[1].Current {
+		t.Fatalf("unexpected sessions: %+v", sessions)
+	}
+	if !manager.RevokeSession(secondSession.Nonce) {
+		t.Fatal("second session was not revoked")
+	}
+	if _, ok := manager.Verify(secondToken); ok {
+		t.Fatal("revoked session was accepted")
+	}
+	if _, ok := manager.Verify(firstToken); !ok {
+		t.Fatal("unrelated session was rejected")
+	}
+	if len(manager.ListSessions(firstSession.Nonce)) != 1 {
+		t.Fatal("revoked session is still listed")
+	}
+}
