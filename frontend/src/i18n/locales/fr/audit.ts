@@ -17,6 +17,11 @@ const audit: Record<string, string> = {
   "Path": "Chemin",
   "Status": "Statut",
   "Remote": "Distant",
+  "All methods": "Toutes les méthodes",
+  "All statuses": "Tous les statuts",
+  "2xx success": "2xx succès",
+  "4xx client errors": "4xx erreurs client",
+  "5xx server errors": "5xx erreurs serveur",
 };
 
 export default audit;

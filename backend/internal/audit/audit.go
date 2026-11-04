@@ -5,9 +5,21 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
+
+const defaultMaxEntries = 5000
+
+// Filter narrows the audit list. Zero values mean "no filter".
+type Filter struct {
+	Method      string
+	User        string
+	Status      int
+	StatusClass int
+}
 
 type Entry struct {
 	Time   time.Time `json:"time"`
@@ -19,13 +31,19 @@ type Entry struct {
 }
 
 type Log struct {
-	mu      sync.Mutex
-	path    string
-	entries []Entry
+	mu         sync.Mutex
+	path       string
+	entries    []Entry
+	maxEntries int
 }
 
 func New(dir string) *Log {
-	l := &Log{}
+	l := &Log{maxEntries: defaultMaxEntries}
+	if value := os.Getenv("AURORA_AUDIT_LIMIT"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil && parsed >= 100 && parsed <= 50000 {
+			l.maxEntries = parsed
+		}
+	}
 	if dir == "" {
 		return l
 	}
@@ -46,8 +64,8 @@ func (l *Log) Record(entry Entry) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.entries = append(l.entries, entry)
-	if len(l.entries) > 1000 {
-		l.entries = l.entries[len(l.entries)-1000:]
+	if len(l.entries) > l.maxEntries {
+		l.entries = l.entries[len(l.entries)-l.maxEntries:]
 	}
 	if l.path == "" {
 		return
@@ -67,15 +85,31 @@ func (l *Log) Record(entry Entry) {
 }
 
 func (l *Log) List(limit int) []Entry {
+	return l.ListFiltered(limit, Filter{})
+}
+
+func (l *Log) ListFiltered(limit int, filter Filter) []Entry {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if limit <= 0 || limit > len(l.entries) {
-		limit = len(l.entries)
+	if limit <= 0 || limit > l.maxEntries {
+		limit = l.maxEntries
 	}
-	out := make([]Entry, limit)
-	copy(out, l.entries[len(l.entries)-limit:])
-	for left, right := 0, len(out)-1; left < right; left, right = left+1, right-1 {
-		out[left], out[right] = out[right], out[left]
+	out := make([]Entry, 0, min(limit, len(l.entries)))
+	for index := len(l.entries) - 1; index >= 0 && len(out) < limit; index-- {
+		entry := l.entries[index]
+		if filter.Method != "" && !strings.EqualFold(filter.Method, entry.Method) {
+			continue
+		}
+		if filter.User != "" && !strings.EqualFold(filter.User, entry.User) {
+			continue
+		}
+		if filter.Status != 0 && filter.Status != entry.Status {
+			continue
+		}
+		if filter.StatusClass != 0 && entry.Status/100 != filter.StatusClass {
+			continue
+		}
+		out = append(out, entry)
 	}
 	return out
 }

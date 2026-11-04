@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode"
 
+	"aurora/internal/audit"
 	"aurora/internal/auth"
 	"aurora/internal/model"
 	"aurora/internal/notify"
@@ -1132,7 +1133,13 @@ func (s *Server) runUserScript(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.audit.List(queryInt(r, "limit", 200, 1, 500)))
+	filter := audit.Filter{
+		Method:      strings.TrimSpace(r.URL.Query().Get("method")),
+		User:        strings.TrimSpace(r.URL.Query().Get("user")),
+		Status:      queryInt(r, "status", 0, 0, 599),
+		StatusClass: queryInt(r, "statusClass", 0, 0, 5),
+	}
+	writeJSON(w, http.StatusOK, s.audit.ListFiltered(queryInt(r, "limit", 200, 1, 500), filter))
 }
 
 func (s *Server) testNotification(w http.ResponseWriter, r *http.Request) {

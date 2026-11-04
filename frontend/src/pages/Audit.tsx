@@ -17,7 +17,16 @@ function statusTone(status: number) {
 export function AuditPage() {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
-  const audit = useQuery({ queryKey: ["audit"], queryFn: () => api.auditLog(300), refetchInterval: 15_000 });
+  const [method, setMethod] = useState("");
+  const [statusClass, setStatusClass] = useState("");
+  const audit = useQuery({
+    queryKey: ["audit", method, statusClass],
+    queryFn: () => api.auditLog(300, {
+      method: method || undefined,
+      statusClass: statusClass ? Number(statusClass) : undefined,
+    }),
+    refetchInterval: 15_000,
+  });
 
   const entries = useMemo(() => {
     const list = audit.data ?? [];
@@ -67,8 +76,28 @@ export function AuditPage() {
             onChange={setQuery}
             placeholder={t("Search actions…")}
             icon={<Search className="size-3.5" />}
-            className="w-full sm:w-72"
+            className="w-full sm:w-64"
           />
+          <select
+            value={method}
+            onChange={(event) => setMethod(event.target.value)}
+            aria-label={t("Method")}
+            className="h-8 rounded-lg border border-line bg-[var(--surface-2)] px-2 text-[10px] text-soft outline-none focus:border-[var(--accent-line)]"
+          >
+            <option value="">{t("All methods")}</option>
+            {["GET", "POST", "PUT", "DELETE"].map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <select
+            value={statusClass}
+            onChange={(event) => setStatusClass(event.target.value)}
+            aria-label={t("Status")}
+            className="h-8 rounded-lg border border-line bg-[var(--surface-2)] px-2 text-[10px] text-soft outline-none focus:border-[var(--accent-line)]"
+          >
+            <option value="">{t("All statuses")}</option>
+            <option value="2">{t("2xx success")}</option>
+            <option value="4">{t("4xx client errors")}</option>
+            <option value="5">{t("5xx server errors")}</option>
+          </select>
           <span className="ml-auto flex items-center gap-1.5 text-[9.5px] text-subtle">
             <ShieldCheck className="size-3.5 text-[var(--success)]" />
             {t("Audit records are written to the Aurora config directory.")}

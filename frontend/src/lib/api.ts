@@ -73,7 +73,13 @@ async function readNDJSON<T>(body: ReadableStream<Uint8Array>, onEvent: (event: 
 export const api = {
   bootstrap: () => request<Snapshot>("/api/v1/bootstrap"),
   serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
-  auditLog: (limit = 200) => request<import("./types").AuditEntry[]>(`/api/v1/audit?limit=${limit}`),
+  auditLog: (limit = 200, filters: { method?: string; statusClass?: number; user?: string } = {}) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (filters.method) params.set("method", filters.method);
+    if (filters.statusClass) params.set("statusClass", String(filters.statusClass));
+    if (filters.user) params.set("user", filters.user);
+    return request<import("./types").AuditEntry[]>(`/api/v1/audit?${params.toString()}`);
+  },
   apiTokens: () => request<import("./types").APIToken[]>("/api/v1/tokens"),
   createAPIToken: (name: string, role: "viewer" | "operator" | "admin", expiresInDays: number) =>
     request<{ token: import("./types").APIToken; secret: string }>("/api/v1/tokens", {

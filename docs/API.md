@@ -280,7 +280,7 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | GET | `/tokens` | session | List API tokens |
 | POST | `/tokens` | session | Create `{name,role,expiresInDays}` → secret once |
 | DELETE | `/tokens/{id}` | session | Revoke a token |
-| GET | `/audit?limit=` | admin | Mutation audit (newest first, max 500) |
+| GET | `/audit?limit=&method=&statusClass=&user=` | admin | Mutation audit (newest first, max 500) |
 | GET | `/notifications` | viewer+ | Inbox and archive |
 | POST | `/notifications/test` | admin | Test outbound channels |
 

@@ -188,6 +188,9 @@ def parameters_for(path: str, method: str) -> list[dict]:
         ],
         "/api/v1/audit": [
             {"name": "limit", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 500, "default": 200}, "description": "Number of entries."},
+            {"name": "method", "in": "query", "schema": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE"]}, "description": "Filter by HTTP method."},
+            {"name": "statusClass", "in": "query", "schema": {"type": "integer", "enum": [2, 4, 5]}, "description": "Filter by status class."},
+            {"name": "user", "in": "query", "schema": {"type": "string"}, "description": "Filter by user or token name."},
         ],
         "/api/v1/metrics/history": [
             {"name": "range", "in": "query", "schema": {"type": "string", "enum": ["1h", "24h", "7d", "30d"], "default": "1h"}, "description": "History span."},
