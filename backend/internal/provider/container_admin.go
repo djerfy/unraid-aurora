@@ -54,6 +54,7 @@ func (l *Live) CreateContainer(ctx context.Context, opts model.ContainerCreateOp
 	}
 	l.setImageUpdate(opts.Image, false)
 	l.saveImageUpdates()
+	l.queueContainerScan(created.ID)
 	if err := l.syncContainerTemplate(ctx, containerTemplateData{
 		Name:          opts.Name,
 		Image:         opts.Image,
@@ -65,6 +66,8 @@ func (l *Live) CreateContainer(ctx context.Context, opts model.ContainerCreateOp
 		Icon:          opts.Icon,
 		WebUI:         opts.WebUI,
 		Privileged:    opts.Privileged,
+		Advanced:      opts.Advanced,
+		AdvancedSet:   true,
 	}); err != nil {
 		slog.Error("create container template", "container", opts.Name, "error", err)
 	}
@@ -135,6 +138,11 @@ func ValidateContainerCreateOptions(opts model.ContainerCreateOptions) error {
 			return errors.New("icon and web UI values must be single-line")
 		}
 	}
+	advanced := opts.Advanced
+	normalizeContainerAdvanced(&advanced)
+	if err := validateContainerAdvanced(advanced); err != nil {
+		return err
+	}
 	return ValidateContainerConfig(model.ContainerConfig{
 		RestartPolicy: opts.RestartPolicy,
 		Ports:         opts.Ports,
@@ -156,7 +164,7 @@ func buildContainerCreateBody(opts model.ContainerCreateOptions) map[string]any 
 		exposed[key] = map[string]any{}
 		bindings[key] = []any{map[string]any{"HostIp": "", "HostPort": fmt.Sprintf("%d", port.Host)}}
 	}
-	labels := map[string]string{"net.unraid.docker.managed": "dockerman"}
+	labels := map[string]any{"net.unraid.docker.managed": "dockerman"}
 	if opts.Icon != "" {
 		labels["net.unraid.docker.icon"] = opts.Icon
 	}
@@ -175,6 +183,14 @@ func buildContainerCreateBody(opts model.ContainerCreateOptions) map[string]any 
 		"NetworkMode":   network,
 		"Privileged":    opts.Privileged,
 		"RestartPolicy": map[string]any{"Name": opts.RestartPolicy, "MaximumRetryCount": 0},
+	}
+	applyContainerAdvanced(config, host, opts.Advanced)
+	if opts.Advanced.MacAddress != "" && network != "host" && network != "none" && !strings.HasPrefix(network, "container:") {
+		config["NetworkingConfig"] = map[string]any{
+			"EndpointsConfig": map[string]any{
+				network: map[string]any{"MacAddress": opts.Advanced.MacAddress},
+			},
+		}
 	}
 	config["HostConfig"] = host
 	return config

@@ -101,6 +101,19 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 		Ports:         []model.Port{},
 		Volumes:       []model.ContainerVolume{},
 		Env:           []model.ContainerEnv{},
+		Advanced:      parseContainerAdvanced(config, host),
+	}
+	if cfg.Advanced.MacAddress == "" {
+		if settings := childMap(inspect, "NetworkSettings"); settings != nil {
+			for _, raw := range childMap(settings, "Networks") {
+				if endpoint := mapValue(raw); endpoint != nil {
+					if address := stringValue(endpoint["MacAddress"]); address != "" {
+						cfg.Advanced.MacAddress = address
+						break
+					}
+				}
+			}
+		}
 	}
 	if policy := childMap(host, "RestartPolicy"); policy != nil {
 		cfg.RestartPolicy = stringValue(policy["Name"])
@@ -194,6 +207,20 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	// Mounts would duplicate Binds when present; Unraid stores user paths as
 	// Binds, so let the edited bind list be authoritative.
 	delete(host, "Mounts")
+	for _, key := range []string{
+		"Devices", "CapAdd", "CapDrop", "Sysctls", "Ulimits", "ExtraHosts", "Dns", "DnsSearch",
+		"Tmpfs", "Memory", "NanoCpus", "CpusetCpus", "PidsLimit", "ReadonlyRootfs",
+	} {
+		delete(host, key)
+	}
+	if labels := childMap(config, "Labels"); labels != nil {
+		for key := range labels {
+			if !strings.HasPrefix(strings.ToLower(key), "net.unraid.") {
+				delete(labels, key)
+			}
+		}
+	}
+	applyContainerAdvanced(config, host, cfg.Advanced)
 
 	body := map[string]any{}
 	for key, value := range config {
@@ -203,6 +230,13 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	if endpoints := networkEndpoints(inspect); len(endpoints) > 0 {
 		mode := stringValue(host["NetworkMode"])
 		if mode != "host" && mode != "none" && !strings.HasPrefix(mode, "container:") {
+			if cfg.Advanced.MacAddress != "" {
+				for _, raw := range endpoints {
+					if endpoint := mapValue(raw); endpoint != nil {
+						endpoint["MacAddress"] = cfg.Advanced.MacAddress
+					}
+				}
+			}
 			body["NetworkingConfig"] = map[string]any{"EndpointsConfig": endpoints}
 		}
 	}
@@ -251,6 +285,7 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	// Keep the Unraid template in sync so the official webGUI and its update
 	// scripts recreate the container with the same settings.
 	l.syncTemplateAfterUpdate(ctx, cfg)
+	l.queueContainerScan(createdInfo.ID)
 	return nil
 }
 
@@ -314,7 +349,9 @@ func ValidateContainerConfig(cfg model.ContainerConfig) error {
 			return fmt.Errorf("environment variable %s contains control characters", env.Key)
 		}
 	}
-	return nil
+	advanced := cfg.Advanced
+	normalizeContainerAdvanced(&advanced)
+	return validateContainerAdvanced(advanced)
 }
 
 func parseBind(value string) (model.ContainerVolume, bool) {

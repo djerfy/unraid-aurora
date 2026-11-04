@@ -14,6 +14,7 @@ import {
   TextField,
   validateContainerFields,
 } from "./container-form";
+import { ContainerAdvancedFields, emptyContainerAdvanced, normalizeContainerAdvanced } from "./ContainerAdvancedFields";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
 const PROTOCOLS = ["tcp", "udp", "sctp"];
@@ -33,9 +34,20 @@ const emptyOptions: ContainerCreateOptions = {
   icon: "",
   webUi: "",
   privileged: false,
+  advanced: emptyContainerAdvanced,
 };
 
-export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function cloneOptions(options: ContainerCreateOptions): ContainerCreateOptions {
+  return {
+    ...options,
+    ports: options.ports.map((port) => ({ ...port })),
+    volumes: options.volumes.map((volume) => ({ ...volume })),
+    env: options.env.map((entry) => ({ ...entry })),
+    advanced: normalizeContainerAdvanced(options.advanced),
+  };
+}
+
+export function ContainerCreateModal({ open, onClose, preset }: { open: boolean; onClose: () => void; preset?: ContainerCreateOptions | null }) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
   const { toast } = useToast();
@@ -59,10 +71,10 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
 
   useEffect(() => {
     if (!open) return;
-    setDraft({ ...emptyOptions, env: emptyOptions.env.map((entry) => ({ ...entry })) });
+    setDraft(cloneOptions(preset ?? emptyOptions));
     setTemplateID("");
     setError("");
-  }, [open]);
+  }, [open, preset]);
 
   const create = useMutation({
     mutationFn: (options: ContainerCreateOptions) => api.createContainer(options),
@@ -101,6 +113,7 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
       icon: template.icon,
       webUi: template.webUi,
       privileged: template.privileged,
+      advanced: normalizeContainerAdvanced(template.advanced),
     });
     setError("");
   };
@@ -438,6 +451,12 @@ export function ContainerCreateModal({ open, onClose }: { open: boolean; onClose
             </div>
           )}
         </section>
+
+        <ContainerAdvancedFields
+          value={draft.advanced ?? emptyContainerAdvanced}
+          privileged={draft.privileged}
+          onChange={(advanced) => update({ advanced })}
+        />
 
         {error ? (
           <div className="rounded-xl border border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-soft)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--danger)]">

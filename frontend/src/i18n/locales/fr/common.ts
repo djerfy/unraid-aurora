@@ -72,6 +72,7 @@ const common: Record<string, string> = {
   "Unknown error.": "Erreur inconnue.",
   "Dismiss notification": "Ignorer la notification",
   "Action failed": "Échec de l'action",
+  "Select": "Sélectionner",
 };
 
 export default common;

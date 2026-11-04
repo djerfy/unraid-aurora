@@ -162,6 +162,14 @@ const docker: Record<string, string> = {
     "Les commandes s'exécutent dans le conteneur. Gardez cette session privée.",
   "Click a bubble to open details and network calls.":
     "Cliquez sur une bulle pour ouvrir les détails et les appels réseau.",
+  "Cancel selection": "Annuler la sélection",
+  "Clear selection": "Effacer la sélection",
+  "Select all": "Tout sélectionner",
+  "{count} selected": "{count} sélectionné(s)",
+  "Bulk action completed": "Action groupée terminée",
+  "Bulk action failed": "Action groupée échouée",
+  "Some containers could not be updated": "Certains conteneurs n’ont pas pu être mis à jour",
+  "{count} containers updated": "{count} conteneurs mis à jour",
 };
 
 export default docker;

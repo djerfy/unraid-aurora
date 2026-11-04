@@ -22,8 +22,11 @@ import {
   Plus,
   RefreshCw,
   RotateCw,
+  ScanSearch,
   Search,
   Settings2,
+  ShieldAlert,
+  ShieldCheck,
   Square,
   Terminal,
   Trash2,
@@ -35,6 +38,8 @@ import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/con
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
 import { ContainerMap } from "../components/containers/ContainerMap";
 import { ContainerConnections } from "../components/containers/ContainerConnections";
+import { ContainerSecurityOverview } from "../components/containers/ContainerSecurityOverview";
+import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
@@ -61,7 +66,7 @@ import {
   hexToRgba,
   relativeTime,
 } from "../lib/format";
-import type { Container } from "../lib/types";
+import type { Container, ContainerSecurity, ContainerSecurityDetail } from "../lib/types";
 
 type Filter = "all" | "running" | "stopped" | "updates";
 
@@ -86,6 +91,8 @@ export function DockerPage() {
   const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<Container | null>(null);
   const [removeError, setRemoveError] = useState("");
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -96,10 +103,17 @@ export function DockerPage() {
   }, [view]);
 
   const tabParam = params.get("tab");
-  const tab = tabParam === "map" ? "map" : tabParam === "connections" ? "connections" : "containers";
+  const tab =
+    tabParam === "map"
+      ? "map"
+      : tabParam === "connections"
+        ? "connections"
+        : tabParam === "security"
+          ? "security"
+          : "containers";
   const setTab = (value: string) => {
     const next = new URLSearchParams(params);
-    if (value === "map" || value === "connections") next.set("tab", value);
+    if (value === "map" || value === "connections" || value === "security") next.set("tab", value);
     else next.delete("tab");
     setParams(next, { replace: true });
   };
@@ -213,6 +227,35 @@ export function DockerPage() {
     },
   });
 
+  const trivy = useQuery({
+    queryKey: ["trivy-status"],
+    queryFn: api.trivyStatus,
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+  });
+  const securityReady = Boolean(
+    trivy.data?.enabled &&
+    trivy.data?.installed &&
+    trivy.data?.runtimeReady &&
+    trivy.data?.dbReady &&
+    trivy.data?.javaDbReady &&
+    !trivy.data?.installing &&
+    !trivy.data?.updatingDb,
+  );
+  const scanAll = useMutation({
+    mutationFn: api.scanAllContainers,
+    onSuccess: (result) => {
+      toast({
+        kind: "info",
+        title: t("Security scans started"),
+        description: t("{count} images queued", { count: result.started }),
+      });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      void queryClient.invalidateQueries({ queryKey: ["security-overview"] });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not start the security scans"), description: error.message }),
+  });
+
   const remove = useMutation({
     mutationFn: (container: Container) => api.removeContainer(container.id),
     onSuccess: (_result, container) => {
@@ -230,6 +273,37 @@ export function DockerPage() {
 
   const totalCpu = running.reduce((sum, container) => sum + container.cpu, 0);
   const totalMemory = running.reduce((sum, container) => sum + container.memory, 0);
+
+  const bulk = useMutation({
+    mutationFn: ({ action, targets }: { action: "start" | "stop" | "restart"; targets: string[] }) =>
+      api.bulkContainerAction(action, targets),
+    onSuccess: (result) => {
+      const failed = result.failed?.length ?? 0;
+      toast({
+        kind: failed ? "warning" : "success",
+        title: failed ? t("Some containers could not be updated") : t("Bulk action completed"),
+        description: t("{count} containers updated", { count: result.succeeded?.length ?? 0 }),
+      });
+      setSelectedIds(new Set());
+      setSelecting(false);
+      void refresh();
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Bulk action failed"), description: error.message }),
+  });
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const runBulk = (action: "start" | "stop" | "restart") => {
+    const targets = containers.filter((container) => selectedIds.has(container.id)).map((container) => container.name);
+    if (targets.length) bulk.mutate({ action, targets });
+  };
 
   return (
     <>
@@ -275,6 +349,16 @@ export function DockerPage() {
             </Button>
             <Button
               variant="secondary"
+              icon={<ScanSearch className="size-3.5" />}
+              loading={scanAll.isPending}
+              disabled={!securityReady || containers.length === 0 || scanAll.isPending}
+              title={!securityReady ? t("Enable image scanning in Settings") : undefined}
+              onClick={() => scanAll.mutate()}
+            >
+              {t("Scan images")}
+            </Button>
+            <Button
+              variant="secondary"
               icon={<ArrowDownToLine className="size-3.5" />}
               loading={Boolean(updateRun?.running)}
               disabled={updates.length === 0 || Boolean(updateRun?.running)}
@@ -297,6 +381,7 @@ export function DockerPage() {
             { value: "containers", label: t("Containers"), count: containers.length },
             { value: "map", label: t("Resource map"), icon: <Network className="size-3.5" />, count: running.length },
             { value: "connections", label: t("Network calls"), icon: <Globe2 className="size-3.5" /> },
+            { value: "security", label: t("Security"), icon: <ShieldCheck className="size-3.5" /> },
           ]}
           value={tab}
           onChange={setTab}
@@ -325,6 +410,8 @@ export function DockerPage() {
         <ContainerMap containers={running} onOpen={openContainer} />
       ) : tab === "connections" ? (
         <ContainerConnections containers={running} />
+      ) : tab === "security" ? (
+        <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
       ) : (
         <>
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -347,6 +434,17 @@ export function DockerPage() {
             icon={<Search className="size-3.5" />}
             className="w-52"
           />
+          <Button
+            size="sm"
+            variant={selecting ? "primary" : "secondary"}
+            icon={<Check className="size-3.5" />}
+            onClick={() => {
+              setSelecting((value) => !value);
+              setSelectedIds(new Set());
+            }}
+          >
+            {selecting ? t("Cancel selection") : t("Select")}
+          </Button>
           <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
             <button
               type="button"
@@ -367,6 +465,31 @@ export function DockerPage() {
           </div>
         </div>
       </div>
+
+      {selecting ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--accent-line)] bg-[var(--accent-soft)] px-3 py-2">
+          <span className="text-[10.5px] font-medium text-soft">
+            {t("{count} selected", { count: selectedIds.size })}
+          </span>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set(filtered.map((container) => container.id)))}>
+            {t("Select all")}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            {t("Clear selection")}
+          </Button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="secondary" icon={<Play className="size-3" />} disabled={!selectedIds.size || bulk.isPending} onClick={() => runBulk("start")}>
+              {t("Start")}
+            </Button>
+            <Button size="sm" variant="secondary" icon={<RotateCw className="size-3" />} disabled={!selectedIds.size || bulk.isPending} onClick={() => runBulk("restart")}>
+              {t("Restart")}
+            </Button>
+            <Button size="sm" variant="danger" icon={<Square className="size-3" />} disabled={!selectedIds.size || bulk.isPending} loading={bulk.isPending} onClick={() => runBulk("stop")}>
+              {t("Stop")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {filtered.length === 0 ? (
         <Card>
@@ -395,6 +518,9 @@ export function DockerPage() {
                 setRemoving(container);
               }}
               busy={action.isPending && action.variables?.target === container.name}
+              selectable={selecting}
+              selected={selectedIds.has(container.id)}
+              onSelect={() => toggleSelected(container.id)}
             />
           ))}
         </div>
@@ -411,6 +537,7 @@ export function DockerPage() {
               {t("Mounts")}
             </span>
             <span className="hidden flex-1 lg:block" aria-hidden="true" />
+            <span className="hidden w-[176px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1500px]:block">{t("Security")}</span>
             <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
             <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
             <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
@@ -430,6 +557,9 @@ export function DockerPage() {
                   setRemoving(container);
                 }}
                 busy={action.isPending && action.variables?.target === container.name}
+                selectable={selecting}
+                selected={selectedIds.has(container.id)}
+                onSelect={() => toggleSelected(container.id)}
               />
             ))}
           </div>
@@ -538,6 +668,9 @@ function ContainerCard({
   onUpdate,
   onRemove,
   busy,
+  selectable,
+  selected,
+  onSelect,
 }: {
   container: Container;
   onOpen: () => void;
@@ -545,6 +678,9 @@ function ContainerCard({
   onUpdate: () => void;
   onRemove: () => void;
   busy?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const action = useAction();
   const { t } = useI18n();
@@ -552,6 +688,18 @@ function ContainerCard({
   const ports = (container.ports ?? []).filter((port) => port.host > 0);
   const mounts = container.mounts ?? [];
   const memoryUsage = container.memoryLimit ? (container.memory / container.memoryLimit) * 100 : 0;
+  const security = container.security;
+  const securitySummary = !security?.enabled
+    ? t("Disabled")
+    : security.scanning
+      ? t("Scanning")
+      : security.error
+        ? t("Failed")
+        : !security.available
+          ? t("Not scanned")
+          : security.total === 0
+            ? "0"
+            : t("{count} findings", { count: security.total });
 
   return (
     <Card hover className="card-pad group relative overflow-hidden">
@@ -560,6 +708,15 @@ function ContainerCard({
         style={{ background: hexToRgba(container.color, 0.14) }}
       />
       <div className="relative flex items-start justify-between gap-3">
+        {selectable ? (
+          <input
+            type="checkbox"
+            checked={Boolean(selected)}
+            onChange={onSelect}
+            aria-label={t("Select {name}", { name: container.name })}
+            className="mt-1 size-4 shrink-0 accent-[var(--accent)]"
+          />
+        ) : null}
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
           <EntityIcon
             src={containerIconURL(container.id)}
@@ -625,10 +782,15 @@ function ContainerCard({
         />
       </div>
 
-      <div className="relative mt-4 flex items-center gap-2">
+      <div className="relative mt-4 flex flex-wrap items-center gap-2">
         <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot pulse={running}>
           {running ? t("Running") : container.state}
         </Badge>
+        {container.health ? (
+          <Badge tone={container.health === "healthy" ? "success" : container.health === "unhealthy" ? "danger" : "warning"}>
+            {t(container.health === "healthy" ? "Healthy" : container.health === "unhealthy" ? "Unhealthy" : "Starting")}
+          </Badge>
+        ) : null}
         <span className="text-[10px] text-subtle">{running ? t("Up {time}", { time: formatUptime(container.uptime) }) : container.status}</span>
         {container.updateAvailable ? <Badge tone="warning" className="ml-auto">{t("Update")}</Badge> : null}
       </div>
@@ -713,6 +875,10 @@ function ContainerCard({
             </div>
           )}
         </CardSection>
+
+        <CardSection icon={<ShieldCheck className="size-3" />} label={t("Security")} summary={securitySummary}>
+          <SecurityBreakdown security={security} />
+        </CardSection>
       </div>
 
       <div className="relative mt-4 flex items-center justify-end gap-2 border-t border-line pt-3">
@@ -778,6 +944,9 @@ function ContainerRow({
   onUpdate,
   onRemove,
   busy,
+  selectable,
+  selected,
+  onSelect,
 }: {
   container: Container;
   onOpen: () => void;
@@ -785,6 +954,9 @@ function ContainerRow({
   onUpdate: () => void;
   onRemove: () => void;
   busy?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const action = useAction();
   const { t } = useI18n();
@@ -792,6 +964,15 @@ function ContainerRow({
   const mounts = container.mounts ?? [];
   return (
     <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+      {selectable ? (
+        <input
+          type="checkbox"
+          checked={Boolean(selected)}
+          onChange={onSelect}
+          aria-label={t("Select {name}", { name: container.name })}
+          className="size-4 shrink-0 accent-[var(--accent)]"
+        />
+      ) : null}
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left lg:w-52 lg:flex-none">
         <EntityIcon
           src={containerIconURL(container.id)}
@@ -842,8 +1023,14 @@ function ContainerRow({
         )}
       </span>
       <span className="hidden flex-1 lg:block" aria-hidden="true" />
+      <span className="hidden w-[176px] shrink-0 min-[1500px]:block"><SecurityCounts security={container.security} /></span>
       <span className="w-20 shrink-0">
         <Badge tone={running ? "success" : "neutral"} dot>{running ? t("Running") : container.state}</Badge>
+        {container.health ? (
+          <Badge tone={container.health === "healthy" ? "success" : container.health === "unhealthy" ? "danger" : "warning"} className="ml-1">
+            {t(container.health === "healthy" ? "Healthy" : container.health === "unhealthy" ? "Unhealthy" : "Starting")}
+          </Badge>
+        ) : null}
       </span>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
@@ -1084,6 +1271,8 @@ function ContainerDrawer({
           </div>
         ) : null}
 
+        <ContainerSecuritySection container={container} />
+
         <div>
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Published ports")}</h3>
           {publishedPorts.length === 0 ? (
@@ -1154,6 +1343,221 @@ function ContainerDrawer({
         </div>
       </div>
     </Drawer>
+  );
+}
+
+function SecurityBreakdown({ security }: { security?: ContainerSecurity }) {
+  const { t } = useI18n();
+  if (!security?.enabled) {
+    return <p className="text-[9.5px] leading-relaxed text-subtle">{t("Image scanning is disabled. Enable Trivy in Settings to inspect this image.")}</p>;
+  }
+  if (security.scanning) return <p className="text-[9.5px] text-[var(--info)]">{t("Scanning…")}</p>;
+  if (security.error) return <p className="text-[9.5px] leading-relaxed text-[var(--danger)]">{security.error}</p>;
+  if (!security.available) return <p className="text-[9.5px] leading-relaxed text-subtle">{t("No scan result yet. A scan starts automatically after an image pull.")}</p>;
+  return (
+    <div className="space-y-2">
+      <SecurityCounts security={security} showLabel />
+      {security.total === 0 ? <p className="text-[9.5px] text-[var(--success)]">{t("No known vulnerabilities were found for this image.")}</p> : null}
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-subtle">
+        {security.scannedAt ? <span>{t("Scanned {time}", { time: new Date(security.scannedAt).toLocaleString() })}</span> : null}
+        {security.stale ? <span className="text-[var(--warning)]">{t("Database updated since this scan")}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+type SecurityFilter = "all" | "critical" | "high" | "medium" | "low" | "unknown";
+
+function ContainerSecuritySection({ container }: { container: Container }) {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<SecurityFilter>("all");
+  const enabled = Boolean(container.security?.enabled);
+  const security = useQuery<ContainerSecurityDetail>({
+    queryKey: ["container-security", container.id],
+    queryFn: () => api.containerSecurity(container.id),
+    enabled,
+    refetchInterval: (query) => (query.state.data?.scanning ? 4000 : false),
+  });
+  const scan = useMutation({
+    mutationFn: () => api.scanContainer(container.id),
+    onSuccess: () => {
+      toast({ kind: "info", title: t("Image scan started") });
+      void security.refetch();
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      void queryClient.invalidateQueries({ queryKey: ["security-overview"] });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not start the image scan"), description: error.message }),
+  });
+
+  if (!enabled) {
+    return (
+      <div className="flex items-start gap-2 rounded-xl border border-line bg-[var(--surface-2)]/45 p-3 text-[10.5px] leading-relaxed text-muted">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-[var(--success)]" />
+        {t("Image scanning is disabled. Enable Trivy in Settings to inspect this image.")}
+      </div>
+    );
+  }
+
+  const summary = security.data ?? container.security;
+  const findings = (security.data?.vulnerabilities ?? []).filter((finding) => {
+    if (filter === "all") return true;
+    if (filter === "unknown") return !["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(finding.severity);
+    return finding.severity === filter.toUpperCase();
+  });
+  const visible = findings.slice(0, 200);
+  const scanning = summary.scanning || scan.isPending;
+  const counts: { key: SecurityFilter; label: string; value: number }[] = [
+    { key: "critical", label: t("Critical"), value: summary.critical },
+    { key: "high", label: t("High"), value: summary.high },
+    { key: "medium", label: t("Medium"), value: summary.medium },
+    { key: "low", label: t("Low"), value: summary.low },
+    { key: "unknown", label: t("Unknown"), value: summary.unknown },
+  ];
+  const severityText = (key: SecurityFilter) =>
+    key === "critical"
+      ? "text-[var(--danger)]"
+      : key === "high"
+        ? "text-orange-600 dark:text-orange-400"
+        : key === "medium"
+          ? "text-yellow-700 dark:text-yellow-300"
+          : key === "low"
+            ? "text-[var(--info)]"
+            : "text-subtle";
+  const stateTone = scanning ? "info" : summary.error ? "danger" : !summary.available ? "neutral" : summary.critical > 0 ? "danger" : summary.high > 0 ? "warning" : summary.total > 0 ? "info" : "success";
+  const stateLabel = scanning
+    ? t("Scanning")
+    : summary.error
+      ? t("Failed")
+      : !summary.available
+        ? t("Not scanned")
+        : summary.critical > 0
+          ? t("{count} critical", { count: summary.critical })
+          : summary.high > 0
+            ? t("{count} high", { count: summary.high })
+            : summary.total > 0
+              ? t("{count} findings", { count: summary.total })
+              : "0";
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
+          <ShieldCheck className="size-3.5" /> {t("Image security")}
+        </h3>
+        <div className="flex items-center gap-1.5">
+          <Badge tone={stateTone} dot pulse={scanning}>{stateLabel}</Badge>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<ScanSearch className="size-3.5" />}
+            loading={scanning}
+            disabled={scanning}
+            onClick={() => scan.mutate()}
+          >
+            {scanning ? t("Scanning…") : t("Scan now")}
+          </Button>
+        </div>
+      </div>
+
+      {summary.error ? (
+        <p className="mt-2 flex items-start gap-1.5 rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-soft)] p-2.5 text-[10px] leading-relaxed text-[var(--danger)]">
+          <ShieldAlert className="mt-0.5 size-3.5 shrink-0" /> {summary.error}
+        </p>
+      ) : null}
+
+      {!summary.available && !scanning && !summary.error ? (
+        <p className="mt-2 rounded-xl border border-line bg-[var(--surface-2)]/40 p-3 text-[10.5px] leading-relaxed text-muted">
+          {t("No scan result yet. A scan starts automatically after an image pull.")}
+        </p>
+      ) : null}
+
+      {summary.available && !summary.error ? (
+        <>
+          <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+            {counts.map((count) => (
+              <div key={count.key} className="rounded-lg border border-line bg-[var(--surface-2)]/40 px-2 py-1.5 text-center">
+                <p className={cn("num text-[14px] font-semibold", count.value > 0 ? severityText(count.key) : "text-subtle")}>{count.value}</p>
+                <p className="text-[8px] uppercase tracking-[0.08em] text-subtle">{count.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[9px] text-subtle">
+            {summary.scannedAt ? <span>{t("Scanned {time}", { time: new Date(summary.scannedAt).toLocaleString() })}</span> : null}
+            {summary.trivyVersion ? <span className="font-mono">Trivy v{summary.trivyVersion}</span> : null}
+            {summary.dbUpdatedAt ? <span>{t("Database {time}", { time: new Date(summary.dbUpdatedAt).toLocaleString() })}</span> : null}
+            {summary.stale ? <span className="text-[var(--warning)]">{t("Database updated since this scan")}</span> : null}
+          </div>
+          {summary.total === 0 ? (
+            <p className="mt-3 flex items-center gap-1.5 text-[10px] text-[var(--success)]">
+              <ShieldCheck className="size-3.5" /> {t("No known vulnerabilities were found for this image.")}
+            </p>
+          ) : (
+            <div className="mt-3">
+              <div className="flex flex-wrap gap-1">
+                {([["all", t("All"), summary.total], ...counts.map((count) => [count.key, count.label, count.value] as const)] as const).map(([key, label, count]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key as SecurityFilter)}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-[9px] font-medium transition",
+                      filter === key ? "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-line text-subtle hover:text-ink",
+                    )}
+                  >
+                    {label} <span className="font-mono">{count}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-line">
+                {visible.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-[10px] text-subtle">{t("No finding matches this filter.")}</p>
+                ) : (
+                  visible.map((finding, index) => (
+                    <div key={`${finding.id}-${finding.package}-${index}`} className="flex items-start gap-2 border-b border-line/60 px-3 py-2 last:border-0">
+                      <span
+                        className={cn(
+                          "inline-flex h-[19px] shrink-0 items-center rounded-full border px-1.5 font-mono text-[8.5px] font-semibold",
+                          SEVERITY_STYLES[
+                            finding.severity === "CRITICAL"
+                              ? "critical"
+                              : finding.severity === "HIGH"
+                                ? "high"
+                                : finding.severity === "MEDIUM"
+                                  ? "medium"
+                                  : finding.severity === "LOW"
+                                    ? "low"
+                                    : "unknown"
+                          ],
+                        )}
+                      >
+                        {finding.severity}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-[9.5px] text-soft">{finding.id}</p>
+                        <p className="mt-0.5 text-[9.5px] text-subtle">
+                          {finding.package} {finding.installedVersion}{finding.fixedVersion ? ` → ${finding.fixedVersion}` : ""}
+                        </p>
+                        <p className="truncate text-[9px] text-subtle" title={finding.title || finding.target}>{finding.title || finding.target}</p>
+                      </div>
+                      {finding.url ? (
+                        <a href={finding.url} target="_blank" rel="noreferrer" className="mt-0.5 text-subtle hover:text-ink" aria-label={t("Open vulnerability details")}>
+                          <ExternalLink className="size-3" />
+                        </a>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+              {findings.length > visible.length ? (
+                <p className="mt-1.5 text-[9px] text-subtle">{t("Showing the first {shown} of {count} findings.", { shown: visible.length, count: findings.length })}</p>
+              ) : null}
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
   );
 }
 

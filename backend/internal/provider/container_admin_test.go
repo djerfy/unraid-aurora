@@ -109,7 +109,7 @@ func TestBuildContainerCreateBody(t *testing.T) {
 	if len(binds) != 1 || binds[0] != "/mnt/user/appdata/plex:/config" {
 		t.Fatalf("binds = %+v", binds)
 	}
-	labels, _ := body["Labels"].(map[string]string)
+	labels, _ := body["Labels"].(map[string]any)
 	if labels["net.unraid.docker.icon"] == "" || labels["net.unraid.docker.webui"] == "" {
 		t.Fatalf("labels = %+v", labels)
 	}

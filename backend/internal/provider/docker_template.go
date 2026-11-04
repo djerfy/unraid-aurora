@@ -45,6 +45,8 @@ type containerTemplateData struct {
 	Icon          string
 	WebUI         string
 	Privileged    bool
+	Advanced      model.ContainerAdvanced
+	AdvancedSet   bool
 	// PreserveMeta keeps the icon, WebUI and privilege flag from the existing
 	// template when the caller cannot know them (container settings edit).
 	PreserveMeta bool
@@ -236,6 +238,7 @@ func templateFromXML(root *xmlElement) model.ContainerTemplate {
 		Ports:         []model.Port{},
 		Volumes:       []model.ContainerVolume{},
 		Env:           []model.ContainerEnv{},
+		Advanced:      containerAdvancedFromTemplate(root),
 	}
 	for _, node := range root.Children {
 		if node.Name.Local != "Config" {
@@ -272,6 +275,32 @@ func templateFromXML(root *xmlElement) model.ContainerTemplate {
 		}
 	}
 	return template
+}
+
+func containerAdvancedFromTemplate(root *xmlElement) model.ContainerAdvanced {
+	advanced := containerAdvancedFromExtraParams(root.text("ExtraParams"))
+	advanced.MemoryLimit = parseDockerMemory(root.text("Memory"))
+	advanced.CPUSet = strings.TrimSpace(root.text("CPUset"))
+	for _, node := range root.Children {
+		if node.Name.Local != "Config" || !strings.EqualFold(node.attribute("Type"), "device") {
+			continue
+		}
+		target := strings.TrimSpace(node.attribute("Target"))
+		value := strings.TrimSpace(node.Text)
+		if value == "" {
+			continue
+		}
+		device := model.ContainerDevice{HostPath: value, ContainerPath: target, Permissions: "rwm"}
+		if device.ContainerPath == "" {
+			device.ContainerPath = value
+		}
+		if mode := strings.TrimSpace(node.attribute("Mode")); mode != "" {
+			device.Permissions = mode
+		}
+		advanced.Devices = append(advanced.Devices, device)
+	}
+	normalizeContainerAdvanced(&advanced)
+	return advanced
 }
 
 func templateRestartPolicy(root *xmlElement) string {
@@ -319,9 +348,15 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 		root.setText("Network", "bridge")
 	}
 	root.setText("RestartPolicy", data.RestartPolicy)
-	// Unraid has no dedicated restart policy field; keeping the flag in
-	// ExtraParams makes the setting survive a recreation from its own webGUI.
-	root.setText("ExtraParams", applyRestartPolicy(root.text("ExtraParams"), data.RestartPolicy))
+	if data.AdvancedSet {
+		root.setText("Memory", formatDockerMemory(data.Advanced.MemoryLimit))
+		root.setText("CPUset", data.Advanced.CPUSet)
+		// Unraid has no dedicated restart policy field; keeping the flag in
+		// ExtraParams makes the setting survive a recreation from its own webGUI.
+		root.setText("ExtraParams", mergeExtraParams(root.text("ExtraParams"), data.Advanced, data.RestartPolicy))
+	} else {
+		root.setText("ExtraParams", applyRestartPolicy(root.text("ExtraParams"), data.RestartPolicy))
+	}
 	if !data.PreserveMeta {
 		root.setText("Privileged", strconv.FormatBool(data.Privileged))
 		root.setText("Icon", data.Icon)
@@ -335,7 +370,7 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 	}
 
 	bridgeLike := l.isBridgeNetwork(ctx, data.Network)
-	syncTemplateConfigs(root, data, bridgeLike)
+	syncTemplateConfigs(root, data, bridgeLike, data.AdvancedSet)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(xml.Header)
@@ -392,7 +427,7 @@ func seedTemplate(root *xmlElement, name string) {
 	}
 }
 
-func syncTemplateConfigs(root *xmlElement, data containerTemplateData, bridgeLike bool) {
+func syncTemplateConfigs(root *xmlElement, data containerTemplateData, bridgeLike bool, advancedSet bool) {
 	existing := make([]*xmlElement, 0)
 	for _, child := range root.Children {
 		if child.Name.Local == "Config" {
@@ -441,6 +476,12 @@ func syncTemplateConfigs(root *xmlElement, data containerTemplateData, bridgeLik
 			}
 			node.Text = entry.Value
 			usedEnv[key] = true
+		case "device":
+			if advancedSet {
+				// Devices are regenerated in ExtraParams so the structured
+				// editor remains the single source of truth.
+				root.Children = removeElement(root.Children, node)
+			}
 		}
 	}
 
@@ -619,6 +660,8 @@ func (l *Live) syncTemplateAfterUpdate(ctx context.Context, cfg model.ContainerC
 		Ports:         cfg.Ports,
 		Volumes:       cfg.Volumes,
 		Env:           cfg.Env,
+		Advanced:      cfg.Advanced,
+		AdvancedSet:   true,
 		PreserveMeta:  true,
 	})
 	if err != nil {

@@ -134,3 +134,18 @@ func TestDockerStatusUptime(t *testing.T) {
 		}
 	}
 }
+
+func TestDockerHealth(t *testing.T) {
+	cases := map[string]string{
+		"Up 2 hours (healthy)":            "healthy",
+		"Up 2 hours (unhealthy)":          "unhealthy",
+		"Up 3 seconds (health: starting)": "starting",
+		"Up 2 hours":                      "",
+		"Exited (0) 2 hours ago":          "",
+	}
+	for status, want := range cases {
+		if got := dockerHealth(status); got != want {
+			t.Fatalf("dockerHealth(%q) = %q, want %q", status, got, want)
+		}
+	}
+}

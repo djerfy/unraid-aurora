@@ -21,6 +21,20 @@ const containerStatsTTL = 10 * time.Second
 // dockerStatusUptime derives the running duration from Docker's human-readable
 // status ("Up 3 days"). The list endpoint does not expose StartedAt, and this
 // keeps the container page free of one inspect request per container.
+func dockerHealth(status string) string {
+	lower := strings.ToLower(status)
+	switch {
+	case strings.Contains(lower, "(healthy)"):
+		return "healthy"
+	case strings.Contains(lower, "(unhealthy)"):
+		return "unhealthy"
+	case strings.Contains(lower, "(health: starting)"):
+		return "starting"
+	default:
+		return ""
+	}
+}
+
 func dockerStatusUptime(status string) int64 {
 	_, rest, ok := strings.Cut(strings.TrimSpace(status), "Up ")
 	if !ok {

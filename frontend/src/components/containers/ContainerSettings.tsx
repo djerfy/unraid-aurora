@@ -13,6 +13,7 @@ import {
   SectionHeader,
   validateContainerFields,
 } from "./container-form";
+import { ContainerAdvancedFields, normalizeContainerAdvanced } from "./ContainerAdvancedFields";
 import { useToast } from "../../app/ToastProvider";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
@@ -45,6 +46,7 @@ export function ContainerSettingsModal({
         ports: configQuery.data.ports ?? [],
         volumes: configQuery.data.volumes ?? [],
         env: configQuery.data.env ?? [],
+        advanced: normalizeContainerAdvanced(configQuery.data.advanced),
       });
       setError("");
     }
@@ -107,7 +109,7 @@ export function ContainerSettingsModal({
       open={Boolean(container)}
       onClose={onClose}
       title={t("Settings · {name}", { name: container.name })}
-      description={t("Recreate this container with new paths, ports, environment variables and restart policy.")}
+      description={t("Recreate this container with new paths, ports, environment variables, security options and restart policy.")}
       size="xl"
       footer={
         <>
@@ -314,6 +316,11 @@ export function ContainerSettingsModal({
               </div>
             )}
           </section>
+
+          <ContainerAdvancedFields
+            value={draft.advanced}
+            onChange={(advanced) => update({ advanced })}
+          />
 
           <section>
             <SectionHeader title={t("Restart policy")} hint={t("Docker restart behaviour")} />
