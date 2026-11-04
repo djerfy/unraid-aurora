@@ -78,7 +78,7 @@ type Manager struct {
 	lastInstallAttempt time.Time
 	versions           []model.TrivyVersion
 	versionsAt         time.Time
-	scanning           map[string]bool
+	scanning           map[string]scanActivity
 
 	queue      chan scanJob
 	workerOnce sync.Once
@@ -95,7 +95,7 @@ func New(dir string) *Manager {
 		scansDir:      filepath.Join(dir, "scans"),
 		statePath:     filepath.Join(dir, "state.json"),
 		client:        &http.Client{Timeout: 20 * time.Minute},
-		scanning:      map[string]bool{},
+		scanning:      map[string]scanActivity{},
 		queue:         make(chan scanJob, 64),
 		closed:        make(chan struct{}),
 	}
@@ -332,7 +332,7 @@ func (m *Manager) EnqueueScan(image, imageID string, force bool) bool {
 		return false
 	}
 	m.mu.Lock()
-	if m.scanning[key] {
+	if _, active := m.scanning[key]; active {
 		m.mu.Unlock()
 		return false
 	}
@@ -350,11 +350,11 @@ func (m *Manager) EnqueueScan(image, imageID string, force bool) bool {
 		}
 	}
 	m.mu.Lock()
-	if m.scanning[key] {
+	if _, active := m.scanning[key]; active {
 		m.mu.Unlock()
 		return false
 	}
-	m.scanning[key] = true
+	m.scanning[key] = scanActivity{image: image, imageID: imageID, started: time.Now()}
 	m.mu.Unlock()
 	select {
 	case m.queue <- scanJob{key: key, image: image, imageID: imageID}:
@@ -378,7 +378,7 @@ func (m *Manager) Security(image, imageID string, enabled bool) model.ContainerS
 	}
 	key := scanKey(image, imageID)
 	m.mu.Lock()
-	scanning := m.scanning[key]
+	_, scanning := m.scanning[key]
 	version := m.state.Version
 	m.mu.Unlock()
 	summary, ok := m.readSummary(key)
@@ -839,6 +839,11 @@ func (m *Manager) worker() {
 				m.mu.Unlock()
 				continue
 			}
+			m.mu.Lock()
+			m.scanning[job.key] = scanActivity{
+				image: job.image, imageID: job.imageID, started: time.Now(), running: true,
+			}
+			m.mu.Unlock()
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 			detail, err := m.scan(ctx, job.image, job.imageID)
 			if errors.Is(err, errDatabaseNotReady) {
@@ -1179,6 +1184,35 @@ func (m *Manager) pruneScans() {
 		_ = os.Remove(base + ".summary.json")
 		_ = os.Remove(base + ".detail.json")
 	}
+}
+
+// scanActivity tracks a queued or running scan so the task monitor can show
+// work that does not touch the install/database status.
+type scanActivity struct {
+	image   string
+	imageID string
+	started time.Time
+	running bool
+}
+
+// Scans returns the in-flight image scans, oldest first.
+func (m *Manager) Scans() []model.TrivyScan {
+	m.mu.Lock()
+	out := make([]model.TrivyScan, 0, len(m.scanning))
+	for _, activity := range m.scanning {
+		out = append(out, model.TrivyScan{
+			Image: activity.image, ImageID: activity.imageID,
+			StartedAt: activity.started, Running: activity.running,
+		})
+	}
+	m.mu.Unlock()
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].StartedAt.Equal(out[j].StartedAt) {
+			return out[i].Image < out[j].Image
+		}
+		return out[i].StartedAt.Before(out[j].StartedAt)
+	})
+	return out
 }
 
 func scanKey(image, imageID string) string {

@@ -91,6 +91,13 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 		tasks = append(tasks, task)
 	}
 
+	// Image scans do not change TrivyStatus, so they need their own entries.
+	if l.trivyScans != nil {
+		for _, scan := range l.trivyScans() {
+			tasks = append(tasks, trivyScanTask(scan))
+		}
+	}
+
 	rank := map[string]int{"running": 0, "queued": 1, "failed": 2, "completed": 3}
 	sort.Slice(tasks, func(i, j int) bool {
 		if rank[tasks[i].Status] != rank[tasks[j].Status] {
@@ -99,6 +106,31 @@ func (l *Live) Tasks(ctx context.Context) ([]model.Task, error) {
 		return tasks[i].Name < tasks[j].Name
 	})
 	return tasks, nil
+}
+
+func trivyScanTask(scan model.TrivyScan) model.Task {
+	name := scan.Image
+	if name == "" {
+		name = scan.ImageID
+	}
+	status := "queued"
+	detail := "Waiting for the Trivy worker"
+	if scan.Running {
+		status = "running"
+		detail = "Scanning image layers for vulnerabilities"
+	}
+	started := scan.StartedAt
+	task := model.Task{
+		ID: "trivy-scan:" + name, Name: name, Category: "security", Status: status,
+		Description: "Trivy image vulnerability scan",
+		Command:     "trivy image " + name,
+		Trigger:     "automatic after pull or manual",
+		Detail:      detail, Progress: -1,
+	}
+	if !started.IsZero() {
+		task.StartedAt = &started
+	}
+	return task
 }
 
 func jobProgress(job model.BalanceJob) float64 {

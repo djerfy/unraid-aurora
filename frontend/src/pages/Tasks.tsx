@@ -96,7 +96,7 @@ export function TasksPage() {
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-soft">{task.name}</span>
-                      <span className="block truncate text-[9px] text-subtle">{task.description ? `${task.description} · ` : ""}{task.detail || "—"}</span>
+                      <span className="block truncate text-[9px] text-subtle">{task.description ? `${t(task.description)} · ` : ""}{task.detail ? t(task.detail) : "—"}</span>
                       {task.path ? <span className="block truncate font-mono text-[8.5px] text-subtle">{task.path}</span> : null}
                       {task.error ? <span className="mt-0.5 block truncate text-[9px] text-[var(--danger)]">{task.error}</span> : null}
                     </span>
@@ -141,7 +141,7 @@ export function TasksPage() {
             <Info label={t("Finished")} value={selected.finishedAt ? formatDateTime(selected.finishedAt) : "—"} />
             <Info label={t("Progress")} value={selected.progress >= 0 ? `${Math.round(selected.progress)}%` : "—"} />
             <div className="sm:col-span-2">
-              <Info label={t("Detail")} value={selected.detail || "—"} />
+              <Info label={t("Detail")} value={selected.detail ? t(selected.detail) : "—"} />
             </div>
             {selected.path ? <div className="sm:col-span-2"><Info label={t("Path")} value={selected.path} mono /></div> : null}
             {selected.command ? <div className="sm:col-span-2"><Info label={t("Command")} value={selected.command} mono /></div> : null}

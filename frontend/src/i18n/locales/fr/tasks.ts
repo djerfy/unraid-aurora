@@ -35,5 +35,9 @@ const tasks: Record<string, string> = {
   "runtime": "runtime",
   "scheduler or manual": "planificateur ou manuel",
   "manual or scheduled": "manuel ou planifié",
+  "Trivy image vulnerability scan": "Scan de vulnérabilités d’image Trivy",
+  "Scanning image layers for vulnerabilities": "Analyse des couches de l’image à la recherche de vulnérabilités",
+  "Waiting for the Trivy worker": "En attente du worker Trivy",
+  "automatic after pull or manual": "automatique après téléchargement ou manuel",
 };
 export default tasks;

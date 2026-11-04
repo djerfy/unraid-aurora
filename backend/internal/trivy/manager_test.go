@@ -271,3 +271,21 @@ func TestScanReadyRequiresDatabaseAndIdleManager(t *testing.T) {
 		t.Fatal("scan must not start while Trivy is being installed")
 	}
 }
+
+func TestScansReportsQueuedAndRunning(t *testing.T) {
+	base := time.Unix(1000, 0)
+	manager := &Manager{scanning: map[string]scanActivity{
+		"running": {image: "linuxserver/jackett:latest", started: base, running: true},
+		"queued":  {image: "bitnami/mongodb:latest", started: base.Add(time.Minute)},
+	}}
+	scans := manager.Scans()
+	if len(scans) != 2 {
+		t.Fatalf("scans = %+v", scans)
+	}
+	if scans[0].Image != "linuxserver/jackett:latest" || !scans[0].Running {
+		t.Fatalf("oldest scan should come first: %+v", scans)
+	}
+	if scans[1].Image != "bitnami/mongodb:latest" || scans[1].Running {
+		t.Fatalf("queued scan should be reported as queued: %+v", scans)
+	}
+}

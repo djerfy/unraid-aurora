@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"aurora/internal/model"
 )
 
 func TestTasksShowsShareScans(t *testing.T) {
@@ -36,5 +38,39 @@ func TestTasksShowsShareScans(t *testing.T) {
 		if task.Path == "" || task.Command == "" || task.Description == "" {
 			t.Fatalf("task is missing context: %+v", task)
 		}
+	}
+}
+
+func TestTasksShowsTrivyImageScans(t *testing.T) {
+	now := time.Now()
+	live := &Live{
+		shareUsage:        map[string]shareUsageEntry{},
+		shareUsageStarted: map[string]time.Time{},
+		shareUsageErrors:  map[string]string{},
+		trivyScans: func() []model.TrivyScan {
+			return []model.TrivyScan{
+				{Image: "linuxserver/jackett:latest", StartedAt: now, Running: true},
+				{Image: "bitnami/mongodb:latest", StartedAt: now.Add(-time.Minute)},
+			}
+		},
+	}
+	tasks, err := live.Tasks(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]model.Task{}
+	for _, task := range tasks {
+		byName[task.Name] = task
+	}
+	running, ok := byName["linuxserver/jackett:latest"]
+	if !ok || running.Status != "running" || running.Category != "security" {
+		t.Fatalf("running scan is missing: %+v", tasks)
+	}
+	queued, ok := byName["bitnami/mongodb:latest"]
+	if !ok || queued.Status != "queued" {
+		t.Fatalf("queued scan is missing: %+v", tasks)
+	}
+	if running.Command != "trivy image linuxserver/jackett:latest" {
+		t.Fatalf("unexpected command: %q", running.Command)
 	}
 }

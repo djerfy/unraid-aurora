@@ -65,6 +65,7 @@ type Live struct {
 	osMu sync.Mutex
 
 	trivyManager *trivymanager.Manager
+	trivyScans   func() []model.TrivyScan
 
 	apiMu        sync.Mutex
 	apiVersion   string
@@ -174,6 +175,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 	if trivyDir != "" {
 		l.trivyManager = trivymanager.New(trivyDir)
 		l.trivyManager.SetDockerSocket(dockerSocket)
+		l.trivyScans = l.trivyManager.Scans
 	}
 	l.migrateDurableState()
 	l.loadSettings()
