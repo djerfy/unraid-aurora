@@ -124,6 +124,16 @@ export const api = {
     request<{ ok: boolean }>("/api/v1/zfs/snapshots", { method: "POST", body: JSON.stringify({ dataset, name }) }),
   deleteZFSSnapshot: (dataset: string, name: string) =>
     request<{ ok: boolean }>(`/api/v1/zfs/snapshots?dataset=${encodeURIComponent(dataset)}&name=${encodeURIComponent(name)}`, { method: "DELETE" }),
+  rollbackZFSSnapshot: (dataset: string, name: string) =>
+    request<{ ok: boolean }>("/api/v1/zfs/snapshots/rollback", { method: "POST", body: JSON.stringify({ dataset, name }) }),
+  cloneZFSSnapshot: (dataset: string, name: string, target: string) =>
+    request<{ ok: boolean }>("/api/v1/zfs/snapshots/clone", { method: "POST", body: JSON.stringify({ dataset, name, target }) }),
+  createZFSDataset: (options: import("./types").ZFSDatasetCreate) =>
+    request<{ ok: boolean }>("/api/v1/zfs/datasets", { method: "POST", body: JSON.stringify(options) }),
+  updateZFSDataset: (options: import("./types").ZFSDatasetUpdate) =>
+    request<{ ok: boolean }>("/api/v1/zfs/datasets", { method: "PUT", body: JSON.stringify(options) }),
+  deleteZFSDataset: (name: string, recursive = false) =>
+    request<{ ok: boolean }>(`/api/v1/zfs/datasets?name=${encodeURIComponent(name)}&recursive=${recursive ? 1 : 0}`, { method: "DELETE" }),
   userScripts: () => request<import("./types").UserScript[]>("/api/v1/user-scripts"),
   userScript: (id: string) =>
     request<{ content: string }>(`/api/v1/user-scripts/${encodeURIComponent(id)}`),

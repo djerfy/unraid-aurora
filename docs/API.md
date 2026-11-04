@@ -271,6 +271,11 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | GET | `/zfs/snapshots` | viewer+ | Snapshots |
 | POST | `/zfs/snapshots` | admin | Create a snapshot |
 | DELETE | `/zfs/snapshots` | admin | Delete a snapshot |
+| POST | `/zfs/snapshots/rollback` | admin | Roll a dataset back to a snapshot |
+| POST | `/zfs/snapshots/clone` | admin | Clone a snapshot into a new dataset |
+| POST | `/zfs/datasets` | admin | Create a dataset with compression, quota and recordsize |
+| PUT | `/zfs/datasets` | admin | Update dataset properties |
+| DELETE | `/zfs/datasets?name=&recursive=` | admin | Delete a dataset and optionally its children |
 | GET | `/ups` | viewer+ | Battery telemetry (apcupsd or NUT) |
 | GET | `/ups/settings` | admin | apcupsd shutdown policy |
 | PUT | `/ups/settings` | admin | Save the shutdown policy |

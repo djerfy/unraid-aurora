@@ -469,12 +469,38 @@ type NUTSettings struct {
 }
 
 type ZFSDataset struct {
-	Name       string `json:"name"`
-	Used       uint64 `json:"used"`
-	Available  uint64 `json:"available"`
-	Refer      uint64 `json:"refer"`
-	Mountpoint string `json:"mountpoint"`
-	Type       string `json:"type"`
+	Name        string `json:"name"`
+	Used        uint64 `json:"used"`
+	Available   uint64 `json:"available"`
+	Refer       uint64 `json:"refer"`
+	Mountpoint  string `json:"mountpoint"`
+	Type        string `json:"type"`
+	Compression string `json:"compression"`
+	Quota       uint64 `json:"quota"`
+	ReadOnly    bool   `json:"readOnly"`
+	RecordSize  string `json:"recordsize"`
+}
+
+type ZFSDatasetCreate struct {
+	Name        string `json:"name"`
+	Compression string `json:"compression"`
+	QuotaBytes  uint64 `json:"quotaBytes"`
+	RecordSize  string `json:"recordsize"`
+	ReadOnly    bool   `json:"readOnly"`
+}
+
+type ZFSDatasetUpdate struct {
+	Name        string  `json:"name"`
+	Compression *string `json:"compression,omitempty"`
+	QuotaBytes  *uint64 `json:"quotaBytes,omitempty"`
+	RecordSize  *string `json:"recordsize,omitempty"`
+	ReadOnly    *bool   `json:"readOnly,omitempty"`
+}
+
+type ZFSSnapshotClone struct {
+	Dataset string `json:"dataset"`
+	Name    string `json:"name"`
+	Target  string `json:"target"`
 }
 
 type ZFSPool struct {

@@ -927,6 +927,26 @@ export type ZFSDataset = {
   refer: number;
   mountpoint: string;
   type: string;
+  compression: string;
+  quota: number;
+  readOnly: boolean;
+  recordsize: string;
+};
+
+export type ZFSDatasetCreate = {
+  name: string;
+  compression: string;
+  quotaBytes: number;
+  recordsize: string;
+  readOnly: boolean;
+};
+
+export type ZFSDatasetUpdate = {
+  name: string;
+  compression?: string;
+  quotaBytes?: number;
+  recordsize?: string;
+  readOnly?: boolean;
 };
 
 export type ZFSPool = {

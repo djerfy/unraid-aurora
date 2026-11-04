@@ -15,6 +15,8 @@ import (
 var zfsPoolPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 var zfsDatasetPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,255}$`)
 var zfsNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$`)
+var zfsCompressionPattern = regexp.MustCompile(`^(off|lz4|zstd|zle|gzip|gzip-[1-9])$`)
+var zfsRecordSizePattern = regexp.MustCompile(`^(512|1K|2K|4K|8K|16K|32K|64K|128K|256K|512K|1M)$`)
 
 func (l *Live) ZFSPools(ctx context.Context) ([]model.ZFSPool, error) {
 	out, err := exec.CommandContext(ctx, "zpool", "list", "-H", "-p", "-o", "name,size,alloc,free,health").Output()
@@ -22,7 +24,7 @@ func (l *Live) ZFSPools(ctx context.Context) ([]model.ZFSPool, error) {
 		return nil, nil // ZFS is optional.
 	}
 	pools := parseZFSPools(string(out))
-	datasets, _ := exec.CommandContext(ctx, "zfs", "list", "-H", "-p", "-o", "name,used,avail,refer,mountpoint,type").Output()
+	datasets, _ := exec.CommandContext(ctx, "zfs", "list", "-H", "-p", "-o", "name,used,avail,refer,mountpoint,type,compression,quota,readonly,recordsize").Output()
 	for _, dataset := range parseZFSDatasets(string(datasets)) {
 		poolName := strings.SplitN(dataset.Name, "/", 2)[0]
 		for i := range pools {
@@ -62,10 +64,18 @@ func parseZFSDatasets(output string) []model.ZFSDataset {
 		used, _ := strconv.ParseUint(fields[1], 10, 64)
 		avail, _ := strconv.ParseUint(fields[2], 10, 64)
 		refer, _ := strconv.ParseUint(fields[3], 10, 64)
-		out = append(out, model.ZFSDataset{
+		dataset := model.ZFSDataset{
 			Name: fields[0], Used: used, Available: avail, Refer: refer,
 			Mountpoint: fields[4], Type: fields[5],
-		})
+		}
+		if len(fields) >= 10 {
+			quota, _ := strconv.ParseUint(fields[7], 10, 64)
+			dataset.Compression = fields[6]
+			dataset.Quota = quota
+			dataset.ReadOnly = fields[8] == "on"
+			dataset.RecordSize = fields[9]
+		}
+		out = append(out, dataset)
 	}
 	return out
 }
@@ -122,6 +132,120 @@ func (l *Live) DeleteZFSSnapshot(ctx context.Context, dataset, name string) erro
 	}
 	if output, err := exec.CommandContext(ctx, "zfs", "destroy", dataset+"@"+name).CombinedOutput(); err != nil {
 		return fmt.Errorf("delete snapshot: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func (l *Live) CreateZFSDataset(ctx context.Context, opts model.ZFSDatasetCreate) error {
+	if err := validateZFSDatasetName(opts.Name); err != nil {
+		return err
+	}
+	compression := defaultString(opts.Compression, "off")
+	if !zfsCompressionPattern.MatchString(compression) {
+		return errors.New("invalid compression mode")
+	}
+	recordsize := defaultString(opts.RecordSize, "128K")
+	if !zfsRecordSizePattern.MatchString(recordsize) {
+		return errors.New("invalid recordsize")
+	}
+	args := []string{"create", "-o", "compression=" + compression, "-o", "recordsize=" + recordsize}
+	if opts.QuotaBytes > 0 {
+		args = append(args, "-o", "quota="+strconv.FormatUint(opts.QuotaBytes, 10))
+	}
+	if opts.ReadOnly {
+		args = append(args, "-o", "readonly=on")
+	}
+	args = append(args, opts.Name)
+	if output, err := exec.CommandContext(ctx, "zfs", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("create dataset: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func (l *Live) UpdateZFSDataset(ctx context.Context, opts model.ZFSDatasetUpdate) error {
+	if err := validateZFSDatasetName(opts.Name); err != nil {
+		return err
+	}
+	args := []string{"set"}
+	if opts.Compression != nil {
+		if !zfsCompressionPattern.MatchString(*opts.Compression) {
+			return errors.New("invalid compression mode")
+		}
+		args = append(args, "compression="+*opts.Compression)
+	}
+	if opts.RecordSize != nil {
+		if !zfsRecordSizePattern.MatchString(*opts.RecordSize) {
+			return errors.New("invalid recordsize")
+		}
+		args = append(args, "recordsize="+*opts.RecordSize)
+	}
+	if opts.QuotaBytes != nil {
+		args = append(args, "quota="+strconv.FormatUint(*opts.QuotaBytes, 10))
+	}
+	if opts.ReadOnly != nil {
+		value := "off"
+		if *opts.ReadOnly {
+			value = "on"
+		}
+		args = append(args, "readonly="+value)
+	}
+	if len(args) == 1 {
+		return errors.New("no dataset properties supplied")
+	}
+	args = append(args, opts.Name)
+	if output, err := exec.CommandContext(ctx, "zfs", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("update dataset: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func (l *Live) DeleteZFSDataset(ctx context.Context, name string, recursive bool) error {
+	if err := validateZFSDatasetName(name); err != nil {
+		return err
+	}
+	args := []string{"destroy"}
+	if recursive {
+		args = append(args, "-r")
+	}
+	args = append(args, name)
+	if output, err := exec.CommandContext(ctx, "zfs", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("delete dataset: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func (l *Live) RollbackZFSSnapshot(ctx context.Context, dataset, name string) error {
+	if err := validateZFSDatasetName(dataset); err != nil {
+		return err
+	}
+	if !zfsNamePattern.MatchString(name) {
+		return errors.New("invalid snapshot name")
+	}
+	if output, err := exec.CommandContext(ctx, "zfs", "rollback", "-r", dataset+"@"+name).CombinedOutput(); err != nil {
+		return fmt.Errorf("rollback snapshot: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func (l *Live) CloneZFSSnapshot(ctx context.Context, opts model.ZFSSnapshotClone) error {
+	if err := validateZFSDatasetName(opts.Dataset); err != nil {
+		return err
+	}
+	if !zfsNamePattern.MatchString(opts.Name) {
+		return errors.New("invalid snapshot name")
+	}
+	if err := validateZFSDatasetName(opts.Target); err != nil {
+		return err
+	}
+	if output, err := exec.CommandContext(ctx, "zfs", "clone", opts.Dataset+"@"+opts.Name, opts.Target).CombinedOutput(); err != nil {
+		return fmt.Errorf("clone snapshot: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func validateZFSDatasetName(name string) error {
+	if !zfsDatasetPattern.MatchString(name) || strings.Contains(name, "..") || strings.Contains(name, "@") || !strings.Contains(name, "/") {
+		return errors.New("invalid dataset name")
 	}
 	return nil
 }

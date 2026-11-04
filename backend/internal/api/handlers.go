@@ -1043,6 +1043,94 @@ func (s *Server) zfsScrub(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+func (s *Server) createZFSDataset(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var opts model.ZFSDatasetCreate
+	if !s.decode(w, r, &opts) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.CreateZFSDataset(ctx, opts); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_dataset_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) updateZFSDataset(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var opts model.ZFSDatasetUpdate
+	if !s.decode(w, r, &opts) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.UpdateZFSDataset(ctx, opts); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_dataset_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) deleteZFSDataset(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	recursive := r.URL.Query().Get("recursive") == "1"
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.DeleteZFSDataset(ctx, name, recursive); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_dataset_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) rollbackZFSSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body model.ZFSSnapshotClone
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.RollbackZFSSnapshot(ctx, body.Dataset, body.Name); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_snapshot_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) cloneZFSSnapshot(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body model.ZFSSnapshotClone
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.CloneZFSSnapshot(ctx, body); err != nil {
+		writeError(w, http.StatusBadRequest, "zfs_snapshot_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) zfsSnapshots(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

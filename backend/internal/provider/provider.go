@@ -70,6 +70,11 @@ type Provider interface {
 	ZFSSnapshots(ctx context.Context, dataset string) ([]model.ZFSSnapshot, error)
 	CreateZFSSnapshot(ctx context.Context, dataset, name string) error
 	DeleteZFSSnapshot(ctx context.Context, dataset, name string) error
+	CreateZFSDataset(ctx context.Context, opts model.ZFSDatasetCreate) error
+	UpdateZFSDataset(ctx context.Context, opts model.ZFSDatasetUpdate) error
+	DeleteZFSDataset(ctx context.Context, name string, recursive bool) error
+	RollbackZFSSnapshot(ctx context.Context, dataset, name string) error
+	CloneZFSSnapshot(ctx context.Context, opts model.ZFSSnapshotClone) error
 	UserScript(ctx context.Context, id string) (string, error)
 	RunUserScript(ctx context.Context, id string) (string, error)
 	UpdateUserScript(ctx context.Context, id, content, frequency, cron string) error

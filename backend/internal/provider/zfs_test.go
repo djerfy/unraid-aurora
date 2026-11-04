@@ -20,3 +20,16 @@ func TestParseZFSDatasets(t *testing.T) {
 		t.Fatalf("unexpected datasets: %+v", datasets)
 	}
 }
+
+func TestValidateZFSDatasetName(t *testing.T) {
+	for _, name := range []string{"tank/media", "tank/a/b"} {
+		if err := validateZFSDatasetName(name); err != nil {
+			t.Fatalf("%q should be valid: %v", name, err)
+		}
+	}
+	for _, name := range []string{"", "tank", "tank/@snap", "tank/../etc", "-tank/x"} {
+		if err := validateZFSDatasetName(name); err == nil {
+			t.Fatalf("%q should be rejected", name)
+		}
+	}
+}
