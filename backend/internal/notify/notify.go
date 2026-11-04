@@ -236,5 +236,35 @@ func Allowed(settings model.Settings, message Message) bool {
 			return false
 		}
 	}
+	if enabled, ok := settings.NotifyEvents[NotificationCategory(message)]; ok && !enabled {
+		return false
+	}
 	return true
+}
+
+var eventCategories = []struct {
+	name     string
+	keywords []string
+}{
+	{"mover", []string{"mover", "move"}},
+	{"array", []string{"array", "parity", "sync", "rebuild", "check"}},
+	{"disk", []string{"disk", "smart", "temperature", "unmount", "mount"}},
+	{"docker", []string{"docker", "container"}},
+	{"vm", []string{"vm", "virtual machine", "libvirt", "kvm"}},
+	{"ups", []string{"ups", "battery", "power"}},
+	{"plugin", []string{"plugin", "update", "package"}},
+}
+
+// NotificationCategory classifies an Unraid notification for the per-event
+// filters. Unknown messages fall back to "system" so they can be muted too.
+func NotificationCategory(message Message) string {
+	haystack := strings.ToLower(strings.Join([]string{message.Source, message.Title, message.Subject, message.Description}, " "))
+	for _, category := range eventCategories {
+		for _, keyword := range category.keywords {
+			if strings.Contains(haystack, keyword) {
+				return category.name
+			}
+		}
+	}
+	return "system"
 }

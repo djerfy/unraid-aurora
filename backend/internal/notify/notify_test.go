@@ -121,3 +121,16 @@ func TestAllowedFilters(t *testing.T) {
 		t.Fatal("unknown importance should degrade to normal")
 	}
 }
+
+func TestNotificationCategoryRules(t *testing.T) {
+	settings := model.Settings{NotifyEvents: map[string]bool{"mover": false, "docker": true}}
+	if Allowed(settings, Message{Title: "Mover finished", Importance: "normal"}) {
+		t.Fatal("muted mover event was allowed")
+	}
+	if !Allowed(settings, Message{Title: "Container restarted", Importance: "normal"}) {
+		t.Fatal("enabled docker event was blocked")
+	}
+	if NotificationCategory(Message{Title: "Parity check finished"}) != "array" {
+		t.Fatal("parity should map to the array category")
+	}
+}

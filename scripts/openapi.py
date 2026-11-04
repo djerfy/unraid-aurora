@@ -594,7 +594,7 @@ def build_spec() -> dict:
                     "properties": {
                         "theme": {"type": "string"}, "accent": {"type": "string"}, "density": {"type": "string"},
                         "refreshInterval": {"type": "integer"}, "language": {"type": "string"},
-                        "notifyMinImportance": {"type": "string"}, "notifyMutedSources": {"type": "array", "items": {"type": "string"}},
+                        "notifyMinImportance": {"type": "string"}, "notifyMutedSources": {"type": "array", "items": {"type": "string"}}, "notifyEvents": {"type": "object", "additionalProperties": {"type": "boolean"}},
                         "trivyEnabled": {"type": "boolean"}, "trivyVersion": {"type": "string"},
                     },
                 },

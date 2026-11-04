@@ -802,6 +802,7 @@ type Settings struct {
 	WebhookBody         string            `json:"webhookBody"`
 	NotifyMinImportance string            `json:"notifyMinImportance"`
 	NotifyMutedSources  []string          `json:"notifyMutedSources"`
+	NotifyEvents        map[string]bool   `json:"notifyEvents"`
 	Telemetry           bool              `json:"telemetry"`
 	TemperatureUnit     string            `json:"temperatureUnit"`
 	TrivyEnabled        bool              `json:"trivyEnabled"`

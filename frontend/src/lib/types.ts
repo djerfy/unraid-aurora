@@ -899,6 +899,7 @@ export type Settings = {
   webhookBody: string;
   notifyMinImportance: string;
   notifyMutedSources: string[];
+  notifyEvents: Record<string, boolean>;
   telemetry: boolean;
   temperatureUnit: "celsius" | "fahrenheit" | string;
   trivyEnabled: boolean;

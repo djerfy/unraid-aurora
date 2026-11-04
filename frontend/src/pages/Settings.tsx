@@ -542,6 +542,33 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+              <div className="mt-4 border-t border-line pt-4">
+                <p className="text-[11.5px] font-medium text-soft">{t("Alert events")}</p>
+                <p className="mt-0.5 text-[10px] leading-relaxed text-subtle">
+                  {t("Choose which Unraid event categories can reach the configured channels.")}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {([
+                    ["array", "Array & parity"],
+                    ["disk", "Disks & SMART"],
+                    ["docker", "Docker"],
+                    ["vm", "Virtual machines"],
+                    ["mover", "Mover"],
+                    ["plugin", "Plugins & updates"],
+                    ["ups", "UPS & power"],
+                    ["system", "System"],
+                  ] as const).map(([event, label]) => (
+                    <label key={event} className="flex items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)]/45 px-2.5 py-2 text-[10px] text-muted">
+                      <Switch
+                        checked={settings.notifyEvents?.[event] !== false}
+                        onChange={(value) => update("notifyEvents", { ...(settings.notifyEvents ?? {}), [event]: value })}
+                        label={t(label)}
+                      />
+                      {t(label)}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/50 p-3 text-[10.5px] leading-relaxed text-muted">
                 <span className="flex min-w-0 items-start gap-2">
                   <Bell className="mt-0.5 size-3.5 shrink-0 text-subtle" />

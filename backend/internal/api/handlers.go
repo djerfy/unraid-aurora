@@ -1685,6 +1685,15 @@ func validateSettings(s *model.Settings) error {
 		muted = append(muted, source)
 	}
 	s.NotifyMutedSources = muted
+	allowedEvents := map[string]bool{
+		"array": true, "disk": true, "docker": true, "vm": true,
+		"mover": true, "plugin": true, "ups": true, "system": true,
+	}
+	for event := range s.NotifyEvents {
+		if !allowedEvents[event] {
+			return fmt.Errorf("unknown notification event %q", event)
+		}
+	}
 	return nil
 }
 

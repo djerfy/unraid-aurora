@@ -173,6 +173,12 @@ const settings: Record<string, string> = {
   "Could not revoke the session": "Impossible de révoquer la session",
   "No active sessions.": "Aucune session active.",
   "Revoke": "Révoquer",
+  "Alert events": "Événements d’alerte",
+  "Choose which Unraid event categories can reach the configured channels.": "Choisis les catégories d’événements Unraid autorisées à joindre les canaux configurés.",
+  "Array & parity": "Tableau et parité",
+  "Disks & SMART": "Disques et SMART",
+  "Plugins & updates": "Plugins et mises à jour",
+  "UPS & power": "UPS et alimentation",
 };
 
 export default settings;

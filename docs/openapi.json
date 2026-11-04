@@ -9583,6 +9583,12 @@
               "type": "string"
             }
           },
+          "notifyEvents": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
           "trivyEnabled": {
             "type": "boolean"
           },
