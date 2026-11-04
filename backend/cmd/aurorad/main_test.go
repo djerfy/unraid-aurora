@@ -8,7 +8,7 @@ func TestDisplayVersion(t *testing.T) {
 	for input, want := range map[string]string{
 		"0.0.8":     "v0.0.8",
 		"v0.0.8":    "v0.0.8",
-		"0.1.0-dev": "v0.1.0-dev",
+		"0.0.0-dev": "v0.0.0-dev",
 	} {
 		version = input
 		if got := displayVersion(); got != want {
