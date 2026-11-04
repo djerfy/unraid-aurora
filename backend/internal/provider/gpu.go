@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"aurora/internal/model"
 )
@@ -17,6 +18,26 @@ import (
 // GPUs reads NVIDIA telemetry through nvidia-smi. AMD cards are currently
 // reported by the kernel but not sampled for power/temperature.
 func (l *Live) GPUs(ctx context.Context) ([]model.GPU, error) {
+	l.gpuMu.Lock()
+	if !l.gpuCacheAt.IsZero() && time.Since(l.gpuCacheAt) < 2*time.Second {
+		cached := append([]model.GPU(nil), l.gpuCache...)
+		l.gpuMu.Unlock()
+		return cached, nil
+	}
+	l.gpuMu.Unlock()
+
+	out, err := l.readGPUs(ctx)
+	if err != nil {
+		return out, err
+	}
+	l.gpuMu.Lock()
+	l.gpuCache = append([]model.GPU(nil), out...)
+	l.gpuCacheAt = time.Now()
+	l.gpuMu.Unlock()
+	return out, nil
+}
+
+func (l *Live) readGPUs(ctx context.Context) ([]model.GPU, error) {
 	out, err := exec.CommandContext(ctx, "nvidia-smi",
 		"--query-gpu=index,uuid,name,driver_version,memory.total,memory.used,utilization.gpu,temperature.gpu,power.draw,power.limit,fan.speed,clocks.gr,clocks.mem",
 		"--format=csv,noheader,nounits").Output()

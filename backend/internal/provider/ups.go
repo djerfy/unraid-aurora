@@ -23,6 +23,26 @@ var (
 // UPS reads the built-in Unraid apcupsd service first, then falls back to the
 // NUT plugin. Both are best-effort: a missing daemon simply reports no UPS.
 func (l *Live) UPS(ctx context.Context) (model.UPS, error) {
+	l.upsMu.Lock()
+	if !l.upsCacheAt.IsZero() && time.Since(l.upsCacheAt) < 2*time.Second {
+		cached := l.upsCache
+		l.upsMu.Unlock()
+		return cached, nil
+	}
+	l.upsMu.Unlock()
+
+	ups, err := l.readUPS(ctx)
+	if err != nil {
+		return ups, err
+	}
+	l.upsMu.Lock()
+	l.upsCache = ups
+	l.upsCacheAt = time.Now()
+	l.upsMu.Unlock()
+	return ups, nil
+}
+
+func (l *Live) readUPS(ctx context.Context) (model.UPS, error) {
 	if path := findCommand("apcaccess", "/sbin/apcaccess", "/usr/sbin/apcaccess", "/usr/bin/apcaccess", "/usr/local/bin/apcaccess"); path != "" {
 		if out, err := exec.CommandContext(ctx, path, "status").Output(); err == nil {
 			if ups, ok := parseAPCUPSDStatus(string(out)); ok {
