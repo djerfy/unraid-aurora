@@ -18,3 +18,8 @@ node_modules/
 
 # GoReleaser output
 dist/
+
+# Test output
+coverage.out
+frontend/test-results/
+frontend/playwright-report/
