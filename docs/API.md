@@ -196,7 +196,7 @@ Response:
 | GET | `/vms/{id}/xml` | operator+ | Libvirt domain XML |
 | PUT | `/vms/{id}/xml` | operator | Replace the domain definition |
 | GET | `/vms/{id}/advanced` | operator+ | Guided hardware configuration |
-| PUT | `/vms/{id}/advanced` | operator | Rewrite CPU/network/sound/hostdev |
+| PUT | `/vms/{id}/advanced` | operator | Rewrite CPU/network/sound/hostdev/shared folders |
 | POST | `/vms/{id}/clone` | operator | Clone domain, disks and NVRAM |
 | POST | `/vms/{id}/resize` | operator | Expand the first file-backed vDisk |
 | POST | `/vms/{id}/usb/attach` | operator | Hot-plug or persist a host USB device |

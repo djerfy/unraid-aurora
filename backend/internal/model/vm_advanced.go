@@ -25,15 +25,22 @@ type VMHostDeviceRef struct {
 	Product string `json:"product,omitempty"`
 }
 
+type VMSharedFolder struct {
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	ReadOnly bool   `json:"readOnly"`
+}
+
 // VMAdvancedConfig is the guided hardware editor. Unknown XML elements are
 // preserved; only these fields are rewritten.
 type VMAdvancedConfig struct {
-	VCPUs       int               `json:"vcpus"`
-	MemoryMB    int               `json:"memoryMB"`
-	CPUSet      string            `json:"cpuSet"`
-	Networks    []VMNetworkConfig `json:"networks"`
-	SoundModel  string            `json:"soundModel"`
-	HostDevices []VMHostDeviceRef `json:"hostDevices"`
+	VCPUs         int               `json:"vcpus"`
+	MemoryMB      int               `json:"memoryMB"`
+	CPUSet        string            `json:"cpuSet"`
+	Networks      []VMNetworkConfig `json:"networks"`
+	SoundModel    string            `json:"soundModel"`
+	HostDevices   []VMHostDeviceRef `json:"hostDevices"`
+	SharedFolders []VMSharedFolder  `json:"sharedFolders"`
 }
 
 // VMHostDevice is an assignable PCI or USB device discovered on the host.

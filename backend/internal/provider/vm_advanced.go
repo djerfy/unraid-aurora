@@ -25,6 +25,7 @@ var vmCPUSetPattern = regexp.MustCompile(`^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$
 var vmMACPattern = regexp.MustCompile(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`)
 var vmPCIAddressPattern = regexp.MustCompile(`^[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]$`)
 var usbIDPattern = regexp.MustCompile(`^[0-9a-f]{4}$`)
+var vmShareTargetPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 
 func (l *Live) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error) {
 	name, err := l.vmNameForID(ctx, id)
@@ -39,7 +40,7 @@ func (l *Live) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfi
 	if err != nil {
 		return model.VMAdvancedConfig{}, fmt.Errorf("parse domain XML: %w", err)
 	}
-	cfg := model.VMAdvancedConfig{Networks: []model.VMNetworkConfig{}, HostDevices: []model.VMHostDeviceRef{}}
+	cfg := model.VMAdvancedConfig{Networks: []model.VMNetworkConfig{}, HostDevices: []model.VMHostDeviceRef{}, SharedFolders: []model.VMSharedFolder{}}
 	if vcpu := root.child("vcpu"); vcpu != nil {
 		cfg.VCPUs = atoi(strings.TrimSpace(vcpu.Text))
 		cfg.CPUSet = vcpu.attribute("cpuset")
@@ -71,6 +72,19 @@ func (l *Live) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfi
 				if cfg.SoundModel == "" {
 					cfg.SoundModel = child.attribute("model")
 				}
+			case "filesystem":
+				driver := child.child("driver")
+				if driver == nil || driver.attribute("type") != "virtiofs" {
+					continue
+				}
+				folder := model.VMSharedFolder{ReadOnly: child.child("readonly") != nil}
+				if source := child.child("source"); source != nil {
+					folder.Source = source.attribute("dir")
+				}
+				if target := child.child("target"); target != nil {
+					folder.Target = target.attribute("dir")
+				}
+				cfg.SharedFolders = append(cfg.SharedFolders, folder)
 			case "hostdev":
 				device := model.VMHostDeviceRef{Type: child.attribute("type")}
 				if source := child.child("source"); source != nil {
@@ -135,6 +149,11 @@ func (l *Live) UpdateVMAdvanced(ctx context.Context, id string, cfg model.VMAdva
 			kept = append(kept, child)
 		case "sound", "hostdev":
 			continue
+		case "filesystem":
+			if driver := child.child("driver"); driver != nil && driver.attribute("type") == "virtiofs" {
+				continue
+			}
+			kept = append(kept, child)
 		default:
 			kept = append(kept, child)
 		}
@@ -161,6 +180,23 @@ func (l *Live) UpdateVMAdvanced(ctx context.Context, id string, cfg model.VMAdva
 		sound.setAttribute("model", cfg.SoundModel)
 		devices.Children = append(devices.Children, sound)
 	}
+	for _, folder := range cfg.SharedFolders {
+		filesystem := &xmlElement{Name: xml.Name{Local: "filesystem"}}
+		filesystem.setAttribute("type", "mount")
+		filesystem.setAttribute("accessmode", "passthrough")
+		driver := &xmlElement{Name: xml.Name{Local: "driver"}}
+		driver.setAttribute("type", "virtiofs")
+		source := &xmlElement{Name: xml.Name{Local: "source"}}
+		source.setAttribute("dir", folder.Source)
+		target := &xmlElement{Name: xml.Name{Local: "target"}}
+		target.setAttribute("dir", folder.Target)
+		filesystem.Children = append(filesystem.Children, driver, source, target)
+		if folder.ReadOnly {
+			filesystem.Children = append(filesystem.Children, &xmlElement{Name: xml.Name{Local: "readonly"}})
+		}
+		devices.Children = append(devices.Children, filesystem)
+	}
+
 	for _, device := range cfg.HostDevices {
 		hostdev := &xmlElement{Name: xml.Name{Local: "hostdev"}}
 		hostdev.setAttribute("mode", "subsystem")
@@ -243,6 +279,17 @@ func validateVMAdvanced(cfg model.VMAdvancedConfig) error {
 	case "", "ich9", "ich6", "ac97", "usb-audio":
 	default:
 		return fmt.Errorf("unsupported sound model %q", cfg.SoundModel)
+	}
+	if len(cfg.SharedFolders) > 16 {
+		return errors.New("too many shared folders")
+	}
+	for _, folder := range cfg.SharedFolders {
+		if !strings.HasPrefix(folder.Source, "/mnt/") || strings.Contains(folder.Source, "..") {
+			return fmt.Errorf("invalid shared folder source %q", folder.Source)
+		}
+		if !vmShareTargetPattern.MatchString(folder.Target) {
+			return fmt.Errorf("invalid shared folder target %q", folder.Target)
+		}
 	}
 	if len(cfg.HostDevices) > 32 {
 		return errors.New("too many host devices")

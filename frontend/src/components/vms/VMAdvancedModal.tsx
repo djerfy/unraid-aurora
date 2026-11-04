@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Cpu, HardDrive, Plus, Search, ShieldAlert, Trash2, Usb } from "lucide-react";
+import { Cpu, FolderOpen, HardDrive, Plus, Search, ShieldAlert, Trash2, Usb } from "lucide-react";
 import { Modal } from "../ui/overlays";
 import { Badge, Button, IconButton } from "../ui/primitives";
 import { CPUPinning } from "../system/CPUPinning";
@@ -40,6 +40,7 @@ export function VMAdvancedModal({ vm, onClose }: { vm: VM | null; onClose: () =>
       ...advanced.data,
       networks: advanced.data.networks.length ? advanced.data.networks.map((network) => ({ ...network })) : [{ bridge: "br0", model: "virtio", mac: "" }],
       hostDevices: (advanced.data.hostDevices ?? []).map((device) => ({ ...device })),
+      sharedFolders: (advanced.data.sharedFolders ?? []).map((folder) => ({ ...folder })),
     });
     setError("");
   }, [advanced.data]);
@@ -157,6 +158,33 @@ export function VMAdvancedModal({ vm, onClose }: { vm: VM | null; onClose: () =>
                 <option value="usb-audio">usb-audio</option>
               </select>
             </label>
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-end justify-between gap-2">
+              <div>
+                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-soft"><FolderOpen className="size-3.5" /> {t("Shared folders (virtiofs)")}</h3>
+                <p className="mt-0.5 text-[9.5px] text-subtle">{t("Share a host directory under /mnt with the guest through virtiofs.")}</p>
+              </div>
+              <Button size="sm" variant="ghost" icon={<Plus className="size-3" />} onClick={() => update({ sharedFolders: [...(draft.sharedFolders ?? []), { source: "/mnt/user/", target: "share", readOnly: false }] })}>
+                {t("Add folder")}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {(draft.sharedFolders ?? []).map((folder, index) => (
+                <div key={index} className="grid grid-cols-1 gap-1.5 sm:grid-cols-[1fr_150px_auto_auto] sm:items-center">
+                  <input value={folder.source} onChange={(event) => update({ sharedFolders: draft.sharedFolders.map((item, i) => i === index ? { ...item, source: event.target.value } : item) })} placeholder="/mnt/user/media" aria-label={t("Source path")} className="h-9 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]" />
+                  <input value={folder.target} onChange={(event) => update({ sharedFolders: draft.sharedFolders.map((item, i) => i === index ? { ...item, target: event.target.value } : item) })} placeholder="media" aria-label={t("Target tag")} className="h-9 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]" />
+                  <label className="flex items-center gap-1.5 text-[9.5px] text-muted">
+                    <input type="checkbox" checked={folder.readOnly} onChange={(event) => update({ sharedFolders: draft.sharedFolders.map((item, i) => i === index ? { ...item, readOnly: event.target.checked } : item) })} className="size-3.5 accent-[var(--accent)]" />
+                    {t("Read-only")}
+                  </label>
+                  <IconButton label={t("Remove folder")} size="sm" onClick={() => update({ sharedFolders: draft.sharedFolders.filter((_, i) => i !== index) })}>
+                    <Trash2 className="size-3.5" />
+                  </IconButton>
+                </div>
+              ))}
+            </div>
           </section>
 
           <section>

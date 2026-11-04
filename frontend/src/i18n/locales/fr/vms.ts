@@ -125,6 +125,12 @@ const vms: Record<string, string> = {
   "USB device attached": "Périphérique USB attaché",
   "USB device detached": "Périphérique USB détaché",
   "Unable to change the USB device": "Impossible de modifier le périphérique USB",
+  "Shared folders (virtiofs)": "Dossiers partagés (virtiofs)",
+  "Share a host directory under /mnt with the guest through virtiofs.": "Partage un dossier de l’hôte sous /mnt avec l’invité via virtiofs.",
+  "Add folder": "Ajouter un dossier",
+  "Source path": "Chemin source",
+  "Target tag": "Étiquette cible",
+  "Remove folder": "Supprimer le dossier",
 };
 
 export default vms;

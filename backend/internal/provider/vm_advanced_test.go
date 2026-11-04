@@ -22,6 +22,9 @@ func TestValidateVMAdvanced(t *testing.T) {
 		"bad mac":        func(value *model.VMAdvancedConfig) { value.Networks[0].MAC = "zz" },
 		"bad pci":        func(value *model.VMAdvancedConfig) { value.HostDevices[0].Address = "01:00" },
 		"bad sound":      func(value *model.VMAdvancedConfig) { value.SoundModel = "unknown" },
+		"bad share": func(value *model.VMAdvancedConfig) {
+			value.SharedFolders = []model.VMSharedFolder{{Source: "/etc", Target: "etc"}}
+		},
 	} {
 		value := valid
 		value.Networks = append([]model.VMNetworkConfig(nil), valid.Networks...)

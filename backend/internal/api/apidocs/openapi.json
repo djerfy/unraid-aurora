@@ -4896,8 +4896,8 @@
         "tags": [
           "Virtual machines"
         ],
-        "summary": "Rewrite CPU/network/sound/hostdev",
-        "description": "Rewrite CPU/network/sound/hostdev",
+        "summary": "Rewrite CPU/network/sound/hostdev/shared folders",
+        "description": "Rewrite CPU/network/sound/hostdev/shared folders",
         "operationId": "put_vms_id_advanced",
         "security": [
           {
@@ -9406,6 +9406,23 @@
             "items": {
               "type": "object",
               "additionalProperties": true
+            }
+          },
+          "sharedFolders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "readOnly": {
+                  "type": "boolean"
+                }
+              }
             }
           }
         }

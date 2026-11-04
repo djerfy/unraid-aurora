@@ -622,6 +622,7 @@ export type VMAdvancedConfig = {
   networks: { bridge: string; model: string; mac: string }[];
   soundModel: string;
   hostDevices: { type: string; address?: string; vendor?: string; product?: string }[];
+  sharedFolders: { source: string; target: string; readOnly: boolean }[];
 };
 
 export type VMHostDevice = {
