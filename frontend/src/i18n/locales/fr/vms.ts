@@ -114,6 +114,17 @@ const vms: Record<string, string> = {
   "Could not delete the snapshot": "Impossible de supprimer le snapshot",
   "Delete snapshot": "Supprimer le snapshot",
   "Delete snapshot {name}?": "Supprimer le snapshot {name} ?",
+  "USB passthrough": "Passthrough USB",
+  "Attach a host USB device to this VM. Running guests receive it immediately; stopped guests record it for the next boot.": "Attache un périphérique USB de l’hôte à cette VM. Un invité démarré le reçoit immédiatement ; un invité arrêté l’enregistre pour le prochain démarrage.",
+  "No USB device detected.": "Aucun périphérique USB détecté.",
+  "Attached": "Attaché",
+  "Attach": "Attacher",
+  "Detach": "Détacher",
+  "Live": "En direct",
+  "Config": "Configuration",
+  "USB device attached": "Périphérique USB attaché",
+  "USB device detached": "Périphérique USB détaché",
+  "Unable to change the USB device": "Impossible de modifier le périphérique USB",
 };
 
 export default vms;

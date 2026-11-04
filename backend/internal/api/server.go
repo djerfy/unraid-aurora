@@ -103,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("PUT /api/v1/vms/{id}/advanced", s.updateVMAdvanced)
 	api.HandleFunc("POST /api/v1/vms/{id}/clone", s.cloneVM)
 	api.HandleFunc("POST /api/v1/vms/{id}/resize", s.resizeVMDisk)
+	api.HandleFunc("POST /api/v1/vms/{id}/usb/attach", s.attachVMUSB)
+	api.HandleFunc("POST /api/v1/vms/{id}/usb/detach", s.detachVMUSB)
 	api.HandleFunc("GET /api/v1/vms/{id}/console", s.vmConsole)
 	api.HandleFunc("PUT /api/v1/vms/{id}/autostart", s.vmAutostart)
 	api.HandleFunc("GET /api/v1/vms/{id}/xml", s.vmXML)

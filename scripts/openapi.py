@@ -249,6 +249,8 @@ def request_body_for(method: str, path: str) -> dict | None:
     if path in bodies:
         description, schema = bodies[path]
         return {"required": True, "description": description, "content": {"application/json": {"schema": schema}}}
+    if path.endswith("/usb/attach") or path.endswith("/usb/detach"):
+        return {"required": True, "content": {"application/json": {"schema": {"type": "object", "required": ["vendor", "product"], "properties": {"vendor": {"type": "string", "pattern": "^[0-9a-fA-F]{4}$"}, "product": {"type": "string", "pattern": "^[0-9a-fA-F]{4}$"}}}}}}
     if path.endswith("/autostart"):
         return {"required": True, "content": {"application/json": {"schema": {"type": "object", "required": ["enabled"], "properties": {"enabled": {"type": "boolean"}}}}}}
     if path.endswith("/snapshots") and method == "POST":

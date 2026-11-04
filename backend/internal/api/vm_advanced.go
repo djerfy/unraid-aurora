@@ -82,3 +82,40 @@ func (s *Server) resizeVMDisk(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
+
+type vmUSBRequest struct {
+	Vendor  string `json:"vendor"`
+	Product string `json:"product"`
+}
+
+func (s *Server) attachVMUSB(w http.ResponseWriter, r *http.Request) {
+	s.changeVMUSB(w, r, true)
+}
+
+func (s *Server) detachVMUSB(w http.ResponseWriter, r *http.Request) {
+	s.changeVMUSB(w, r, false)
+}
+
+func (s *Server) changeVMUSB(w http.ResponseWriter, r *http.Request, attach bool) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body vmUSBRequest
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	var err error
+	if attach {
+		err = s.provider.AttachVMUSB(ctx, r.PathValue("id"), body.Vendor, body.Product)
+	} else {
+		err = s.provider.DetachVMUSB(ctx, r.PathValue("id"), body.Vendor, body.Product)
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "vm_usb_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}

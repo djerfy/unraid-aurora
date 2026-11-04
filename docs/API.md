@@ -199,6 +199,8 @@ Response:
 | PUT | `/vms/{id}/advanced` | operator | Rewrite CPU/network/sound/hostdev |
 | POST | `/vms/{id}/clone` | operator | Clone domain, disks and NVRAM |
 | POST | `/vms/{id}/resize` | operator | Expand the first file-backed vDisk |
+| POST | `/vms/{id}/usb/attach` | operator | Hot-plug or persist a host USB device |
+| POST | `/vms/{id}/usb/detach` | operator | Remove a host USB device |
 | PUT | `/vms/{id}/autostart` | operator | Toggle libvirt autostart |
 | GET | `/vms/{id}/snapshots` | viewer+ | List snapshots |
 | POST | `/vms/{id}/snapshots` | operator | Create a snapshot |

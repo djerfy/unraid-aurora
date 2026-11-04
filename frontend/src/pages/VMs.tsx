@@ -29,6 +29,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { VMConsoleModal } from "../components/vms/VMConsoleModal";
 import { VMAdvancedModal } from "../components/vms/VMAdvancedModal";
+import { VMUSBHotplug } from "../components/vms/VMUSBHotplug";
 import { VMCloneModal, VMResizeModal } from "../components/vms/VMManagementModals";
 import { Drawer, Modal } from "../components/ui/overlays";
 import {
@@ -391,6 +392,8 @@ export function VMsPage() {
             </div>
 
             <VMSnapshots vm={selected} />
+
+            <VMUSBHotplug vm={selected} />
 
             <div className="rounded-xl border border-line bg-[var(--surface-2)]/60 p-3 text-[10.5px] leading-relaxed text-muted">
               {t(

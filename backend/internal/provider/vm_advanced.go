@@ -24,6 +24,7 @@ import (
 var vmCPUSetPattern = regexp.MustCompile(`^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$`)
 var vmMACPattern = regexp.MustCompile(`^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$`)
 var vmPCIAddressPattern = regexp.MustCompile(`^[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]$`)
+var usbIDPattern = regexp.MustCompile(`^[0-9a-f]{4}$`)
 
 func (l *Live) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error) {
 	name, err := l.vmNameForID(ctx, id)
@@ -262,6 +263,62 @@ func validateVMAdvanced(cfg model.VMAdvancedConfig) error {
 		default:
 			return fmt.Errorf("unsupported host device type %q", device.Type)
 		}
+	}
+	return nil
+}
+
+// AttachVMUSB hot-plugs a USB device into a running VM, or records it in the
+// persistent domain definition when the VM is stopped.
+func (l *Live) AttachVMUSB(ctx context.Context, id, vendor, product string) error {
+	return l.vmUSBDevice(ctx, id, vendor, product, true)
+}
+
+func (l *Live) DetachVMUSB(ctx context.Context, id, vendor, product string) error {
+	return l.vmUSBDevice(ctx, id, vendor, product, false)
+}
+
+func (l *Live) vmUSBDevice(ctx context.Context, id, vendor, product string, attach bool) error {
+	vendor = strings.ToLower(strings.TrimPrefix(strings.TrimSpace(vendor), "0x"))
+	product = strings.ToLower(strings.TrimPrefix(strings.TrimSpace(product), "0x"))
+	if !usbIDPattern.MatchString(vendor) || !usbIDPattern.MatchString(product) {
+		return errors.New("USB vendor and product must be four hexadecimal digits")
+	}
+	name, err := l.vmNameForID(ctx, id)
+	if err != nil {
+		return err
+	}
+	xmlData := fmt.Sprintf("<hostdev mode='subsystem' type='usb'><source><vendor id='0x%s'/><product id='0x%s'/></source></hostdev>", vendor, product)
+	file, err := os.CreateTemp("", "aurora-usb-*.xml")
+	if err != nil {
+		return fmt.Errorf("create USB device XML: %w", err)
+	}
+	path := file.Name()
+	defer os.Remove(path)
+	if err := file.Chmod(0o600); err != nil {
+		_ = file.Close()
+		return err
+	}
+	if _, err := file.WriteString(xmlData); err != nil {
+		_ = file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	action := "attach-device"
+	if !attach {
+		action = "detach-device"
+	}
+	args := []string{action, name, path}
+	state, _ := exec.CommandContext(ctx, "virsh", "domstate", name).Output()
+	if strings.Contains(strings.ToLower(string(state)), "running") {
+		args = append(args, "--live")
+	} else {
+		args = append(args, "--config")
+	}
+	output, err := exec.CommandContext(ctx, "virsh", args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("virsh %s USB: %w (%s)", action, err, strings.TrimSpace(string(output)))
 	}
 	return nil
 }

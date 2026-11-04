@@ -38,6 +38,8 @@ type Provider interface {
 	VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error)
 	UpdateVMAdvanced(ctx context.Context, id string, cfg model.VMAdvancedConfig) error
 	VMHostDevices(ctx context.Context) ([]model.VMHostDevice, error)
+	AttachVMUSB(ctx context.Context, id, vendor, product string) error
+	DetachVMUSB(ctx context.Context, id, vendor, product string) error
 	CloneVM(ctx context.Context, id string, opts model.VMCloneOptions) (model.VM, error)
 	ResizeVMDisk(ctx context.Context, id string, opts model.VMDiskResizeOptions) error
 	UpdateVMXML(ctx context.Context, id, raw string) error

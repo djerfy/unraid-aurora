@@ -348,6 +348,16 @@ export const api = {
   createVM: (options: import("./types").VMCreateOptions) =>
     request<import("./types").VM>("/api/v1/vms", { method: "POST", body: JSON.stringify(options) }),
   vmHostDevices: () => request<import("./types").VMHostDevice[]>("/api/v1/vms/host-devices"),
+  attachVMUSB: (id: string, vendor: string, product: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/usb/attach`, {
+      method: "POST",
+      body: JSON.stringify({ vendor, product }),
+    }),
+  detachVMUSB: (id: string, vendor: string, product: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/usb/detach`, {
+      method: "POST",
+      body: JSON.stringify({ vendor, product }),
+    }),
   vmAdvanced: (id: string) =>
     request<import("./types").VMAdvancedConfig>(`/api/v1/vms/${encodeURIComponent(id)}/advanced`),
   updateVMAdvanced: (id: string, config: import("./types").VMAdvancedConfig) =>
