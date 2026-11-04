@@ -20,6 +20,7 @@ import { emptyContainerAdvanced } from "../components/containers/ContainerAdvanc
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
 import { useToast } from "../app/ToastProvider";
+import { useApp } from "../app/AppDataProvider";
 import type { AppCatalogEntry, ContainerCreateOptions, ContainerTemplate, PluginEvent } from "../lib/types";
 
 const PAGE_SIZE = 48;
@@ -53,6 +54,7 @@ function containerOptions(template: ContainerTemplate): ContainerCreateOptions {
 export function AppsPage() {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { snapshot } = useApp();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -130,6 +132,28 @@ export function AppsPage() {
     } else {
       template.mutate(selected);
     }
+  };
+
+  const installedContainers = useMemo(() => {
+    const map = new Map<string, { name: string; image: string; repository: string; updateAvailable: boolean }>();
+    for (const container of snapshot?.containers ?? []) {
+      const keys = [container.name, container.repository, container.image, container.image.split(":")[0]];
+      for (const key of keys) {
+        if (key) map.set(key.toLowerCase(), container);
+      }
+    }
+    return map;
+  }, [snapshot?.containers]);
+
+  const installedFor = (entry: AppCatalogEntry) => {
+    const keys = [entry.name, entry.repository, entry.repo, entry.repository?.split(":")[0]].filter(Boolean) as string[];
+    for (const key of keys) {
+      const match = installedContainers.get(key.toLowerCase());
+      if (match) return match;
+    }
+    const repository = entry.repository?.toLowerCase();
+    if (!repository) return undefined;
+    return (snapshot?.containers ?? []).find((container) => container.image.toLowerCase().includes(repository));
   };
 
   return (
@@ -225,6 +249,15 @@ export function AppsPage() {
                       <div className="flex items-start gap-1.5">
                         <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink">{entry.name}</p>
                         <Badge tone={entry.kind === "plugin" ? "violet" : "info"}>{entry.kind === "plugin" ? t("Plugin") : t("Docker")}</Badge>
+                        {(() => {
+                          const installed = installedFor(entry);
+                          if (!installed) return null;
+                          return (
+                            <Badge tone={installed.updateAvailable ? "warning" : "success"}>
+                              {installed.updateAvailable ? t("Update available") : t("Installed")}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <p className="mt-0.5 truncate font-mono text-[9px] text-subtle">{entry.repository || entry.author || entry.repo || "—"}</p>
                     </div>
@@ -262,7 +295,18 @@ export function AppsPage() {
         width="max-w-[760px]"
         footer={selected ? (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[9.5px] text-subtle">{t("Aurora never installs an application without an explicit review.")}</span>
+            <span className="flex flex-wrap items-center gap-2 text-[9.5px] text-subtle">
+              {t("Aurora never installs an application without an explicit review.")}
+              {(() => {
+                const installed = installedFor(selected);
+                if (!installed) return null;
+                return (
+                  <Badge tone={installed.updateAvailable ? "warning" : "success"}>
+                    {installed.updateAvailable ? t("Update available") : t("Installed")}
+                  </Badge>
+                );
+              })()}
+            </span>
             <div className="flex gap-2">
               {selected.support ? <Button variant="secondary" icon={<ExternalLink className="size-3.5" />} onClick={() => window.open(selected.support, "_blank", "noopener")}>{t("Support")}</Button> : null}
               <Button variant="primary" icon={selected.kind === "plugin" ? <Plug className="size-3.5" /> : <Package className="size-3.5" />} loading={template.isPending} onClick={install}>

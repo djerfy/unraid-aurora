@@ -75,6 +75,7 @@ const plugins: Record<string, string> = {
     "Le gestionnaire de plugins officiel supprime les fichiers du plugin et son marqueur d'installation.",
   "Settings and data stored outside the plugin directory are preserved.":
     "Les paramètres et les données stockés hors du répertoire du plugin sont conservés.",
+  "Update available": "Mise à jour disponible",
 };
 
 export default plugins;
