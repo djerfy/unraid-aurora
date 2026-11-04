@@ -112,6 +112,11 @@ type Live struct {
 
 	geoMu    sync.Mutex
 	geoCache map[string]geoEntry
+
+	shareUsageMu         sync.Mutex
+	shareUsage           map[string]shareUsageEntry
+	shareUsageRefreshing map[string]bool
+	shareUsageSem        chan struct{}
 }
 
 type cpuSample struct {
@@ -145,12 +150,15 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 			RefreshInterval: 5, Language: "en", TemperatureUnit: "celsius",
 			TrivyDBUpdateHour: 3,
 		},
-		containerStats: map[string]cachedContainerStats{},
-		imageUpdates:   map[string]bool{},
-		pluginUpdates:  map[string]pluginUpdate{},
-		vmCPU:          map[string]vmCPUSample{},
-		moverStop:      make(chan struct{}),
-		moverSeen:      map[string]bool{},
+		containerStats:       map[string]cachedContainerStats{},
+		imageUpdates:         map[string]bool{},
+		pluginUpdates:        map[string]pluginUpdate{},
+		vmCPU:                map[string]vmCPUSample{},
+		moverStop:            make(chan struct{}),
+		moverSeen:            map[string]bool{},
+		shareUsage:           map[string]shareUsageEntry{},
+		shareUsageRefreshing: map[string]bool{},
+		shareUsageSem:        make(chan struct{}, 2),
 	}
 	trivyDir := strings.TrimSpace(os.Getenv("AURORA_TRIVY_DIR"))
 	if trivyDir == "" && configDir != "" {
@@ -163,6 +171,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 	l.migrateDurableState()
 	l.loadSettings()
 	l.loadMoverHistory()
+	l.loadShareUsage()
 	l.loadImageUpdates()
 	l.loadPluginUpdates()
 	l.loadBalanceHistory()
@@ -484,6 +493,23 @@ func (l *Live) Disks(ctx context.Context) ([]model.Disk, error) {
 			size = parseKiB(d["size"])
 		}
 		used := parseKiB(d["fsUsed"])
+		if typ == "Data" {
+			mount := "/mnt/" + name
+			if size == 0 || used == 0 {
+				if fsSize, fsFree, ok := statfsUsage(mount); ok {
+					if size == 0 {
+						size = fsSize
+					}
+					if used == 0 && fsSize >= fsFree {
+						used = fsSize - fsFree
+					}
+				}
+			}
+		}
+		free := uint64(0)
+		if size >= used {
+			free = size - used
+		}
 		dev := d["device"]
 		io := diskIO[dev]
 		temp := parseInt(d["temp"])
@@ -501,7 +527,7 @@ func (l *Live) Disks(ctx context.Context) ([]model.Disk, error) {
 		brand, modelName, serial := diskIdentity(d)
 		out = append(out, model.Disk{
 			ID: name, Name: name, Device: dev, Type: typ, Pool: d["pool"], FsType: d["fsType"],
-			Size: size, Used: used, Free: size - used, Temp: temp, Status: status, Smart: smart,
+			Size: size, Used: used, Free: free, Temp: temp, Status: status, Smart: smart,
 			Errors: parseInt(d["numErrors"]), ReadBps: io[0], WriteBps: io[1],
 			Rotational: d["rotational"] != "0", Serial: serial, Brand: brand, Model: modelName, Media: diskMedia(d),
 			Firmware: d["firmware"], SpinupGroup: d["spinupGroup"], Luks: strings.HasPrefix(d["fsType"], "luks:"),
@@ -539,13 +565,30 @@ func (l *Live) Shares(ctx context.Context) ([]model.Share, error) {
 			NFS: s["exportNFS"] == "yes" || s["exportNFS"] == "e", Exclusive: s["exclusive"] == "yes",
 		})
 	}
+	for i := range out {
+		l.applyShareUsage(&out[i])
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	l.scheduleShareUsage(out)
 	return out, nil
 }
 
 func (l *Live) Pools(ctx context.Context) ([]model.Pool, error) {
 	disks, _ := l.Disks(ctx)
-	return poolsFromDisks(disks), nil
+	pools := poolsFromDisks(disks)
+	for i := range pools {
+		if pools[i].Size == 0 || pools[i].Used == 0 {
+			if size, free, ok := statfsUsage(filepath.Join("/mnt", pools[i].Name)); ok {
+				pools[i].Size = size
+				pools[i].Free = free
+				pools[i].Used = size - free
+				if size > 0 {
+					pools[i].Usage = round1(float64(pools[i].Used) / float64(size) * 100)
+				}
+			}
+		}
+	}
+	return pools, nil
 }
 
 func poolsFromDisks(disks []model.Disk) []model.Pool {
@@ -1486,6 +1529,19 @@ func readFlash(bootDir string) *model.Disk {
 		disk.Used = disk.Size - disk.Free
 	}
 	return &disk
+}
+
+func statfsUsage(path string) (size, free uint64, ok bool) {
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(path, &st); err != nil || st.Bsize <= 0 || st.Blocks == 0 {
+		return 0, 0, false
+	}
+	size = st.Blocks * uint64(st.Bsize)
+	free = st.Bavail * uint64(st.Bsize)
+	if free > size {
+		free = size
+	}
+	return size, free, true
 }
 
 func firstFloat(value string) float64 {

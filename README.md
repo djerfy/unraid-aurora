@@ -278,7 +278,7 @@ Deep dives:
 | Area | Aurora |
 |---|---|
 | Dashboard | Health score, CPU load graph and per-core matrix, package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
-| Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
+| Storage | Array devices with live I/O and spin controls, background-cached share usage, cache pools, parity check + history |
 | Containers | Docker workloads with real icons, CPU/memory, health status, ports, network, IP address, network calls, a merged Trivy security overview grouped by image/container/CVE/package/severity, container terminal, log search/export, bulk start/stop/restart, autostart toggle, image update checks, live pull/recreate progress, Trivy image scanning with a Security column and finding details, create from an Unraid XML template, advanced devices/capabilities/sysctls/ulimits/resources/MAC fields, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
 | Applications | Community Applications catalog for Docker apps and plugins, search/filter/sort, installed/update badges, dependency hints, template review before creation, and plugin installation through the official plugin manager |
 | Scheduler | Parity, mover and SSD TRIM schedules with generated cron preview, `update_cron` activation, plus shared date/time display formats |
