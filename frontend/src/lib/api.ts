@@ -110,6 +110,9 @@ export const api = {
     return (await res.json()) as { ok: boolean; files: string[]; restartRequired: boolean };
   },
   upsSettings: () => request<import("./types").UPSSettings>("/api/v1/ups/settings"),
+  nutSettings: () => request<import("./types").NUTSettings>("/api/v1/ups/nut"),
+  saveNUTSettings: (settings: import("./types").NUTSettings) =>
+    request<{ ok: boolean }>("/api/v1/ups/nut", { method: "PUT", body: JSON.stringify(settings) }),
   saveUPSSettings: (settings: import("./types").UPSSettings) =>
     request<{ ok: boolean }>("/api/v1/ups/settings", { method: "PUT", body: JSON.stringify(settings) }),
   zfsPools: () => request<import("./types").ZFSPool[]>("/api/v1/zfs/pools"),

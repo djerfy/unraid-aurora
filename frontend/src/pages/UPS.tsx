@@ -7,7 +7,7 @@ import { useI18n } from "../i18n";
 import { useToast } from "../app/ToastProvider";
 import { api } from "../lib/api";
 
-import type { UPSSettings } from "../lib/types";
+import type { NUTSettings, UPSSettings } from "../lib/types";
 
 // Position-based charge map: 0 % is red, the 30 % safety floor stays red,
 // then the bar moves through orange and yellow before reaching green.
@@ -58,11 +58,26 @@ export function UPSView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["ups-settings"], queryFn: api.upsSettings });
+  const nut = useQuery({ queryKey: ["nut-settings"], queryFn: api.nutSettings });
   const [draft, setDraft] = useState<UPSSettings | null>(null);
+  const [nutDraft, setNutDraft] = useState<NUTSettings | null>(null);
 
   useEffect(() => {
     if (settings.data) setDraft(settings.data);
   }, [settings.data]);
+  useEffect(() => {
+    if (nut.data) setNutDraft(nut.data);
+  }, [nut.data]);
+
+  const saveNUT = useMutation({
+    mutationFn: () => api.saveNUTSettings(nutDraft as NUTSettings),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["nut-settings"] });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      toast({ kind: "success", title: t("NUT settings saved") });
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not save NUT settings"), description: error.message }),
+  });
 
   const save = useMutation({
     mutationFn: () => api.saveUPSSettings(draft as UPSSettings),
@@ -182,6 +197,74 @@ export function UPSView() {
           ) : null}
         </Card>
       </div>
+
+      <Card className="card-pad mt-4">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold text-ink"><BatteryCharging className="size-4 text-[var(--violet)]" /> {t("NUT settings")}</h2>
+        <p className="mt-1 text-[10px] leading-relaxed text-subtle">
+          {t("Write the NUT plugin configuration and restart its service. Leave the password empty to keep the current one.")}
+        </p>
+        {nut.isLoading ? <p className="mt-4 text-[10px] text-muted">{t("Loading NUT settings…")}</p> : nut.isError ? (
+          <p className="mt-4 text-[10px] text-[var(--danger)]">{(nut.error as Error).message}</p>
+        ) : nutDraft && !nutDraft.available ? (
+          <p className="mt-4 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-soft)] p-3 text-[10.5px] text-[var(--warning)]">
+            {t("The NUT plugin is not installed or its configuration is missing.")}
+          </p>
+        ) : nutDraft ? (
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <label className="block"><span className={label}>{t("Service")}</span>
+                <select value={nutDraft.service} onChange={(event) => setNutDraft({ ...nutDraft, service: event.target.value })} className={field}>
+                  <option value="enable">{t("Enabled")}</option><option value="disable">{t("Disabled")}</option>
+                </select>
+              </label>
+              <label className="block"><span className={label}>{t("Mode")}</span>
+                <select value={nutDraft.mode} onChange={(event) => setNutDraft({ ...nutDraft, mode: event.target.value })} className={field}>
+                  <option value="standalone">standalone</option><option value="netserver">netserver</option><option value="slave">slave</option>
+                </select>
+              </label>
+              <label className="block"><span className={label}>{t("UPS name")}</span>
+                <input value={nutDraft.name} onChange={(event) => setNutDraft({ ...nutDraft, name: event.target.value })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Driver")}</span>
+                <input value={nutDraft.driver} onChange={(event) => setNutDraft({ ...nutDraft, driver: event.target.value })} className={field} />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <label className="block"><span className={label}>{t("Port")}</span>
+                <input value={nutDraft.port} onChange={(event) => setNutDraft({ ...nutDraft, port: event.target.value })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Monitor address")}</span>
+                <input value={nutDraft.ipAddr} onChange={(event) => setNutDraft({ ...nutDraft, ipAddr: event.target.value })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Battery threshold (%)")}</span>
+                <input type="number" min={0} max={100} value={nutDraft.batteryLevel} onChange={(event) => setNutDraft({ ...nutDraft, batteryLevel: Number(event.target.value) })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Runtime threshold (min)")}</span>
+                <input type="number" min={0} max={86400} value={nutDraft.runtimeValue} onChange={(event) => setNutDraft({ ...nutDraft, runtimeValue: Number(event.target.value) })} className={field} />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <label className="block"><span className={label}>{t("Shutdown timeout (s)")}</span>
+                <input type="number" min={0} max={86400} value={nutDraft.timeout} onChange={(event) => setNutDraft({ ...nutDraft, timeout: Number(event.target.value) })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Poll interval (s)")}</span>
+                <input type="number" min={1} max={300} value={nutDraft.poll} onChange={(event) => setNutDraft({ ...nutDraft, poll: Number(event.target.value) })} className={field} />
+              </label>
+              <label className="block"><span className={label}>{t("Turn off UPS")}</span>
+                <select value={nutDraft.upsKill} onChange={(event) => setNutDraft({ ...nutDraft, upsKill: event.target.value })} className={field}>
+                  <option value="disable">{t("No")}</option><option value="enable">{t("Yes")}</option>
+                </select>
+              </label>
+              <label className="block"><span className={label}>{t("Monitor password")}</span>
+                <input type="password" value={nutDraft.monitorPassword ?? ""} onChange={(event) => setNutDraft({ ...nutDraft, monitorPassword: event.target.value })} placeholder={nutDraft.passwordSet ? t("Leave empty to keep it") : ""} className={field} />
+              </label>
+            </div>
+            <Button variant="primary" icon={<Save className="size-3.5" />} loading={saveNUT.isPending} onClick={() => saveNUT.mutate()}>
+              {t("Save NUT settings")}
+            </Button>
+          </div>
+        ) : null}
+      </Card>
     </>
   );
 }

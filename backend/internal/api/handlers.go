@@ -1217,6 +1217,35 @@ func (s *Server) upsSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) nutSettings(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	v, err := s.provider.NUTSettings(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) saveNUTSettings(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var settings model.NUTSettings
+	if !s.decode(w, r, &settings) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.provider.SaveNUTSettings(ctx, settings); err != nil {
+		writeError(w, http.StatusBadRequest, "nut_settings_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (s *Server) saveUPSSettings(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.ReadOnly {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")

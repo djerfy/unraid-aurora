@@ -1119,3 +1119,20 @@ export type AuthSession = {
   expires: string;
   current: boolean;
 };
+
+export type NUTSettings = {
+  available: boolean;
+  service: string;
+  mode: string;
+  name: string;
+  driver: string;
+  port: string;
+  ipAddr: string;
+  batteryLevel: number;
+  runtimeValue: number;
+  timeout: number;
+  poll: number;
+  upsKill: string;
+  passwordSet: boolean;
+  monitorPassword?: string;
+};

@@ -451,6 +451,23 @@ type UPSSettings struct {
 	OverrideCapacity int    `json:"overrideCapacity"`
 }
 
+type NUTSettings struct {
+	Available       bool   `json:"available"`
+	Service         string `json:"service"`
+	Mode            string `json:"mode"`
+	Name            string `json:"name"`
+	Driver          string `json:"driver"`
+	Port            string `json:"port"`
+	IPAddr          string `json:"ipAddr"`
+	BatteryLevel    int    `json:"batteryLevel"`
+	RuntimeValue    int    `json:"runtimeValue"`
+	Timeout         int    `json:"timeout"`
+	Poll            int    `json:"poll"`
+	UPSKill         string `json:"upsKill"`
+	PasswordSet     bool   `json:"passwordSet"`
+	MonitorPassword string `json:"monitorPassword,omitempty"`
+}
+
 type ZFSDataset struct {
 	Name       string `json:"name"`
 	Used       uint64 `json:"used"`

@@ -127,6 +127,8 @@ type Provider interface {
 	UPS(ctx context.Context) (model.UPS, error)
 	UPSSettings(ctx context.Context) (model.UPSSettings, error)
 	SaveUPSSettings(ctx context.Context, settings model.UPSSettings) error
+	NUTSettings(ctx context.Context) (model.NUTSettings, error)
+	SaveNUTSettings(ctx context.Context, settings model.NUTSettings) error
 	Logs(ctx context.Context, source string, lines int) ([]model.LogLine, error)
 	Settings(ctx context.Context) (model.Settings, error)
 	SaveSettings(ctx context.Context, s model.Settings) error

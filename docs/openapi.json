@@ -4192,6 +4192,117 @@
         }
       }
     },
+    "/api/v1/ups/nut": {
+      "get": {
+        "tags": [
+          "UPS"
+        ],
+        "summary": "NUT plugin connection and shutdown settings",
+        "description": "NUT plugin connection and shutdown settings",
+        "operationId": "get_ups_nut",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NUTSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "admin"
+      },
+      "put": {
+        "tags": [
+          "UPS"
+        ],
+        "summary": "Save NUT settings and restart the service",
+        "description": "Save NUT settings and restart the service",
+        "operationId": "put_ups_nut",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "admin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ups/settings": {
       "get": {
         "tags": [
@@ -9626,6 +9737,54 @@
       "UPSSettings": {
         "type": "object",
         "additionalProperties": true
+      },
+      "NUTSettings": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "service": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "ipAddr": {
+            "type": "string"
+          },
+          "batteryLevel": {
+            "type": "integer"
+          },
+          "runtimeValue": {
+            "type": "integer"
+          },
+          "timeout": {
+            "type": "integer"
+          },
+          "poll": {
+            "type": "integer"
+          },
+          "upsKill": {
+            "type": "string"
+          },
+          "passwordSet": {
+            "type": "boolean"
+          },
+          "monitorPassword": {
+            "type": "string"
+          }
+        }
       },
       "ZFSPool": {
         "type": "object",

@@ -270,6 +270,8 @@ The apply body is `SchedulerSettings` plus `acknowledge: true`. Preview returns
 | GET | `/ups` | viewer+ | Battery telemetry (apcupsd or NUT) |
 | GET | `/ups/settings` | admin | apcupsd shutdown policy |
 | PUT | `/ups/settings` | admin | Save the shutdown policy |
+| GET | `/ups/nut` | admin | NUT plugin connection and shutdown settings |
+| PUT | `/ups/nut` | admin | Save NUT settings and restart the service |
 | GET | `/gpus` | viewer+ | NVIDIA/AMD telemetry and processes |
 
 ### Users, tokens, audit and notifications

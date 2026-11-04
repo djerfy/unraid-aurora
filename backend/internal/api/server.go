@@ -160,6 +160,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/ups", s.ups)
 	api.HandleFunc("GET /api/v1/ups/settings", s.upsSettings)
 	api.HandleFunc("PUT /api/v1/ups/settings", s.saveUPSSettings)
+	api.HandleFunc("GET /api/v1/ups/nut", s.nutSettings)
+	api.HandleFunc("PUT /api/v1/ups/nut", s.saveNUTSettings)
 	api.HandleFunc("GET /api/v1/gpus", s.gpus)
 	api.HandleFunc("GET /api/v1/mover", s.mover)
 	api.HandleFunc("POST /api/v1/mover/start", s.startMover)
