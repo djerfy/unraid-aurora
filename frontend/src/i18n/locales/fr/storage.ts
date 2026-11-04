@@ -51,6 +51,15 @@ const storage: Record<string, string> = {
   "{read} read · {write} write": "{read} en lecture · {write} en écriture",
   "Read": "Lecture",
   "Write": "Écriture",
+  "Unraid's mover progress is disabled, so Aurora can only estimate from the active file list.": "La progression du mover est désactivée dans Unraid ; Aurora ne peut donc qu'estimer à partir de la liste de fichiers active.",
+  "Enable Mover progress": "Activer la progression du mover",
+  "Mover progress enabled": "Progression du mover activée",
+  "It will be reported on the next mover run.": "Elle sera disponible au prochain lancement du mover.",
+  "Unable to enable mover progress": "Impossible d'activer la progression du mover",
+  "Aurora writes shareMoverProgress=\"yes\" to /boot/config/share.cfg and activates cron.": "Aurora écrit shareMoverProgress=\"yes\" dans /boot/config/share.cfg et active le cron.",
+  "Enable": "Activer",
+  "Unraid only writes live byte progress when this option is enabled. The next run will show progress, throughput and ETA.": "Unraid n'écrit la progression en octets que si cette option est activée. Le prochain lancement affichera la progression, le débit et l'ETA.",
+  "Unchanged": "Inchangé",
 
   // Array tab
   "Filter shares…": "Filtrer les partages…",
@@ -334,6 +343,9 @@ const storage: Record<string, string> = {
   "Unraid is rebuilding or replacing a disk. Aurora monitors the operation but never changes disk assignments.":
     "Unraid reconstruit ou remplace un disque. Aurora surveille l'opération mais ne modifie jamais les affectations de disques.",
   "rebuilt": "reconstruit",
+  "Waiting for the mover to report its first files…": "En attente des premiers fichiers rapportés par le mover…",
+  "File lists are captured from the mover's active file list and syslog.": "Les listes de fichiers proviennent de la liste active du mover et du syslog.",
+  "Copy-on-write applies to new files; existing data keeps its current attributes.": "Le copy-on-write s’applique aux nouveaux fichiers ; les données existantes conservent leurs attributs actuels.",
 };
 
 export default storage;

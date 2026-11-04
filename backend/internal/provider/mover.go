@@ -1,9 +1,11 @@
 package provider
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +18,10 @@ import (
 
 const moverHistoryLimit = 10
 
+// moverMountPrefix is a variable so tests can exercise the tracker against a
+// temporary directory instead of a real /mnt tree.
+var moverMountPrefix = "/mnt/"
+
 func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	status, err := l.readMoverStatus(ctx)
 	if err != nil {
@@ -24,12 +30,21 @@ func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 	status.Phase = moverPhase(status.Running, status.Action, status.Total, status.Remain)
 	l.moverMu.Lock()
 	if status.Running {
-		l.tailMoverOutputLocked()
+		// The watcher already tails the mover output, file lists and syslog.
+		// Only enrich from its cache here so the HTTP poll stays fast on large
+		// shares.
+		l.enrichMoverStatusLocked(&status)
 		l.moverLast = status
 		status.Files = append([]string(nil), l.moverFiles...)
 		if status.File == "" && len(l.moverFiles) > 0 {
 			status.File = l.moverFiles[len(l.moverFiles)-1]
 		}
+	}
+	if status.ProgressSource == "" {
+		status.ProgressSource = "none"
+	}
+	if status.Files == nil {
+		status.Files = []string{}
 	}
 	status.History = append([]model.MoverRun(nil), l.moverHistory...)
 	if status.History == nil {
@@ -42,7 +57,11 @@ func (l *Live) Mover(ctx context.Context) (model.MoverStatus, error) {
 func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	status := model.MoverStatus{}
 	status.Running = moverRunning(ctx)
-	path := filepath.Join(l.stateDir, "mover.ini")
+	status.ProgressEnabled = l.moverProgressEnabled()
+	path, exists := l.moverStatusPath()
+	if !exists {
+		return status, nil
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		return status, nil
@@ -52,6 +71,7 @@ func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	if err != nil {
 		return status, nil
 	}
+	status.ProgressSource = "mover.ini"
 	get := func(key string) string { return ini.get("", key) }
 	status.Total = uint64(parseInt(get("TotalSize")))
 	status.Remain = uint64(parseInt(get("RemainSize")))
@@ -65,11 +85,50 @@ func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	status.Action = get("Action")
 	status.FilePercent = parseFloat(get("Filepercent"))
 	status.PID = parseInt(get("MoverPid"))
-	if status.Total > 0 {
-		moved := status.Total - status.Remain
-		status.Progress = round1(float64(moved) / float64(status.Total) * 100)
-	}
+	status.Progress = progressPercent(status.Total, status.Remain)
 	return status, nil
+}
+
+// moverStatusPath returns the first existing mover status file. Unraid writes
+// to /usr/local/emhttp/state (a symlink to /var/local/emhttp on most installs),
+// but the symlink can be missing after a failed boot.
+func (l *Live) moverStatusPath() (string, bool) {
+	candidates := []string{}
+	if l.stateDir != "" {
+		candidates = append(candidates, filepath.Join(l.stateDir, "mover.ini"))
+	}
+	candidates = append(candidates, "/usr/local/emhttp/state/mover.ini")
+	for _, path := range candidates {
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			return path, true
+		}
+	}
+	return candidates[len(candidates)-1], false
+}
+
+// moverProgressEnabled reports whether Unraid's mover writes byte progress.
+// share.cfg drives the mover itself; var.ini is the source of truth for the
+// WebGUI on newer releases, so use it when share.cfg has no explicit value.
+func (l *Live) moverProgressEnabled() bool {
+	if ini, err := parseINI(l.schedulerShareConfigPath()); err == nil {
+		if value, ok := ini.section("")["shareMoverProgress"]; ok {
+			return strings.EqualFold(value, "yes")
+		}
+	}
+	if l.stateDir == "" {
+		return false
+	}
+	if ini, err := parseINI(filepath.Join(l.stateDir, "var.ini")); err == nil {
+		return strings.EqualFold(ini.get("", "shareMoverProgress"), "yes")
+	}
+	return false
+}
+
+func progressPercent(total, remain uint64) float64 {
+	if total == 0 || remain >= total {
+		return 0
+	}
+	return round1(float64(total-remain) / float64(total) * 100)
 }
 
 func moverPhase(running bool, action string, total, remain uint64) string {
@@ -93,6 +152,233 @@ func moverPhase(running bool, action string, total, remain uint64) string {
 	}
 }
 
+func (l *Live) resetMoverTrackingLocked() {
+	l.moverActive = true
+	l.moverStarted = time.Now()
+	l.moverStopped = false
+	l.moverLast = model.MoverStatus{}
+	l.moverFiles = nil
+	l.moverSeen = map[string]bool{}
+	l.moverCandidates = map[string]int64{}
+	l.moverScannedLists = map[string]int64{}
+	l.moverCandidateTotal = 0
+	l.moverCandidateRemain = 0
+	l.moverSyslogOffset = fileSize("/var/log/syslog")
+	l.moverOutput = ""
+	l.moverOutputOffset = 0
+}
+
+func fileSize(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return 0
+	}
+	return info.Size()
+}
+
+// scanMoverFileListsLocked reads the per-share mover-files.* lists created by
+// the official mover script. It gives a byte total and move candidates even
+// when shareMoverProgress is disabled.
+func (l *Live) scanMoverFileListsLocked() {
+	if l.moverCandidates == nil {
+		l.moverCandidates = map[string]int64{}
+	}
+	if l.moverScannedLists == nil {
+		l.moverScannedLists = map[string]int64{}
+	}
+	lists, _ := filepath.Glob(filepath.Join(os.TempDir(), "mover-files.*"))
+	if os.TempDir() != "/tmp" {
+		extra, _ := filepath.Glob("/tmp/mover-files.*")
+		lists = append(lists, extra...)
+	}
+	for _, path := range lists {
+		info, err := os.Stat(path)
+		if err != nil || info.IsDir() {
+			continue
+		}
+		if previous, ok := l.moverScannedLists[path]; ok && previous == info.Size() {
+			continue
+		}
+		l.moverScannedLists[path] = info.Size()
+		file, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		scanner := bufio.NewScanner(file)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			candidate := strings.TrimSpace(scanner.Text())
+			if !strings.HasPrefix(candidate, moverMountPrefix) {
+				continue
+			}
+			if len(l.moverCandidates) >= 50_000 {
+				break
+			}
+			if _, exists := l.moverCandidates[candidate]; exists {
+				continue
+			}
+			info, err := os.Stat(candidate)
+			if err != nil || !info.Mode().IsRegular() {
+				continue
+			}
+			size := info.Size()
+			if size < 0 {
+				size = 0
+			}
+			l.moverCandidates[candidate] = size
+			l.moverCandidateTotal += uint64(size)
+			l.moverCandidateRemain += uint64(size)
+		}
+		_ = file.Close()
+	}
+}
+
+// scanMoverTuningListsLocked reads CA Mover Tuning's filtered file lists.
+// The plugin does not create /tmp/mover-files.* and does not write mover.ini
+// when live progress is disabled, but its filtered list always contains the
+// file size and path.
+func (l *Live) scanMoverTuningListsLocked() {
+	if l.moverCandidates == nil {
+		l.moverCandidates = map[string]int64{}
+	}
+	if l.moverScannedLists == nil {
+		l.moverScannedLists = map[string]int64{}
+	}
+	directories := []string{filepath.Join(os.TempDir(), "ca.mover.tuning")}
+	if os.TempDir() != "/tmp" {
+		directories = append(directories, "/tmp/ca.mover.tuning")
+	}
+	for _, directory := range directories {
+		lists, _ := filepath.Glob(filepath.Join(directory, "Filtered_files_*.list"))
+		for _, path := range lists {
+			info, err := os.Stat(path)
+			if err != nil || info.IsDir() {
+				continue
+			}
+			if previous, ok := l.moverScannedLists[path]; ok && previous == info.Size() {
+				continue
+			}
+			l.moverScannedLists[path] = info.Size()
+			file, err := os.Open(path)
+			if err != nil {
+				continue
+			}
+			scanner := bufio.NewScanner(file)
+			scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+			for scanner.Scan() {
+				fields := strings.Split(scanner.Text(), "|")
+				if len(fields) < 13 || strings.TrimSpace(fields[11]) != "f" {
+					continue
+				}
+				candidate := strings.TrimSpace(fields[12])
+				if !strings.HasPrefix(candidate, moverMountPrefix) {
+					continue
+				}
+				if _, exists := l.moverCandidates[candidate]; exists {
+					continue
+				}
+				if len(l.moverCandidates) >= 50_000 {
+					break
+				}
+				size := parseInt(fields[7])
+				if size < 0 {
+					size = 0
+				}
+				l.moverCandidates[candidate] = int64(size)
+				l.moverCandidateTotal += uint64(size)
+				l.moverCandidateRemain += uint64(size)
+			}
+			_ = file.Close()
+		}
+	}
+}
+
+func (l *Live) updateMoverCandidatesLocked(limit int) {
+	checked := 0
+	for path, size := range l.moverCandidates {
+		if limit > 0 && checked >= limit {
+			break
+		}
+		checked++
+		if _, err := os.Stat(path); err == nil {
+			continue
+		}
+		delete(l.moverCandidates, path)
+		if uint64(size) <= l.moverCandidateRemain {
+			l.moverCandidateRemain -= uint64(size)
+		} else {
+			l.moverCandidateRemain = 0
+		}
+		l.addMoverFileLocked(path)
+	}
+}
+
+func (l *Live) addMoverFileLocked(path string) {
+	path = strings.TrimSpace(path)
+	if path == "" || !strings.HasPrefix(path, moverMountPrefix) || l.moverSeen[path] {
+		return
+	}
+	l.moverSeen[path] = true
+	if len(l.moverFiles) < 1000 {
+		l.moverFiles = append(l.moverFiles, path)
+	}
+}
+
+func (l *Live) tailMoverSyslogLocked() {
+	const path = "/var/log/syslog"
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return
+	}
+	if l.moverSyslogOffset <= 0 || info.Size() < l.moverSyslogOffset {
+		l.moverSyslogOffset = 0
+	}
+	if info.Size() == l.moverSyslogOffset {
+		return
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	if _, err := file.Seek(l.moverSyslogOffset, io.SeekStart); err != nil {
+		return
+	}
+	raw, err := io.ReadAll(io.LimitReader(file, 2<<20))
+	if err != nil {
+		return
+	}
+	l.moverSyslogOffset += int64(len(raw))
+	for _, line := range strings.Split(string(raw), "\n") {
+		if file, ok := moverFileFromLine(line); ok {
+			l.addMoverFileLocked(file)
+		}
+	}
+}
+
+func (l *Live) enrichMoverStatusLocked(status *model.MoverStatus) {
+	if status.Total == 0 && l.moverCandidateTotal > 0 {
+		status.Total = l.moverCandidateTotal
+		status.Remain = l.moverCandidateRemain
+		status.ProgressSource = "file-list"
+	}
+	if status.Total > 0 {
+		status.Progress = progressPercent(status.Total, status.Remain)
+		if status.Remain == 0 || status.Progress >= 99.9 {
+			status.Progress = 100
+		}
+	}
+	if status.Throughput <= 0 && status.Total > status.Remain && !l.moverStarted.IsZero() {
+		elapsed := time.Since(l.moverStarted).Seconds()
+		if elapsed > 0 {
+			status.Throughput = float64(status.Total-status.Remain) / elapsed
+		}
+	}
+	if status.ETA <= 0 && status.Throughput > 0 && status.Remain > 0 {
+		status.ETA = int64(float64(status.Remain) / status.Throughput)
+	}
+}
+
 func (l *Live) watchMover() {
 	// A short run can complete between two polls; half a second keeps the
 	// mover card responsive without spawning a status process each tick.
@@ -103,32 +389,53 @@ func (l *Live) watchMover() {
 		case <-l.moverStop:
 			return
 		case <-ticker.C:
-			l.moverMu.Lock()
-			l.tailMoverOutputLocked()
-			l.moverMu.Unlock()
 			status, _ := l.readMoverStatus(context.Background())
 			l.moverMu.Lock()
 			if status.Running {
 				if !l.moverActive {
-					l.moverActive = true
-					l.moverStarted = time.Now()
-					l.moverStopped = false
-					l.moverFiles = nil
-					l.moverSeen = map[string]bool{}
+					l.resetMoverTrackingLocked()
+				}
+				l.tailMoverOutputLocked()
+				l.scanMoverFileListsLocked()
+				l.scanMoverTuningListsLocked()
+				l.updateMoverCandidatesLocked(2000)
+				l.tailMoverSyslogLocked()
+				l.enrichMoverStatusLocked(&status)
+				if status.ProgressSource == "" {
+					status.ProgressSource = "none"
 				}
 				l.trackMoverFile(status)
 				l.moverLast = status
 			} else if l.moverActive {
+				l.tailMoverOutputLocked()
+				l.scanMoverFileListsLocked()
+				l.scanMoverTuningListsLocked()
+				l.updateMoverCandidatesLocked(0)
+				l.tailMoverSyslogLocked()
+				l.enrichMoverStatusLocked(&l.moverLast)
 				last := l.moverLast
+				total := last.Total
+				if total == 0 {
+					total = last.ShareTotal
+				}
+				if total == 0 {
+					total = l.moverCandidateTotal
+				}
 				moved := uint64(0)
-				if last.Total > last.Remain {
-					moved = last.Total - last.Remain
+				if total > last.Remain {
+					moved = total - last.Remain
+				}
+				if moved == 0 && l.moverCandidateTotal > l.moverCandidateRemain {
+					moved = l.moverCandidateTotal - l.moverCandidateRemain
+				}
+				if total == 0 && moved > 0 {
+					total = moved
 				}
 				finished := time.Now()
 				run := model.MoverRun{
 					Started: l.moverStarted, Finished: finished,
 					Duration: int64(finished.Sub(l.moverStarted).Seconds()),
-					Total:    last.Total, Moved: moved,
+					Total:    total, Moved: moved,
 				}
 				if l.moverStopped {
 					run.Status = "stopped"
@@ -145,6 +452,11 @@ func (l *Live) watchMover() {
 				l.moverLast = model.MoverStatus{}
 				l.moverFiles = nil
 				l.moverSeen = map[string]bool{}
+				l.moverCandidates = nil
+				l.moverScannedLists = nil
+				l.moverCandidateTotal = 0
+				l.moverCandidateRemain = 0
+				l.moverSyslogOffset = 0
 				l.moverOutput = ""
 				_ = l.saveMoverHistory()
 			}
@@ -184,10 +496,29 @@ func (l *Live) tailMoverOutputLocked() {
 	if l.moverOutput == "" {
 		return
 	}
-	raw, err := os.ReadFile(l.moverOutput)
+	info, err := os.Stat(l.moverOutput)
+	if err != nil || info.IsDir() {
+		return
+	}
+	if info.Size() < l.moverOutputOffset {
+		l.moverOutputOffset = 0
+	}
+	if info.Size() == l.moverOutputOffset {
+		return
+	}
+	file, err := os.Open(l.moverOutput)
 	if err != nil {
 		return
 	}
+	defer file.Close()
+	if _, err := file.Seek(l.moverOutputOffset, io.SeekStart); err != nil {
+		return
+	}
+	raw, err := io.ReadAll(io.LimitReader(file, 2<<20))
+	if err != nil {
+		return
+	}
+	l.moverOutputOffset += int64(len(raw))
 	for _, line := range strings.Split(string(raw), "\n") {
 		file, ok := moverFileFromLine(line)
 		if !ok || l.moverSeen[file] {
@@ -202,17 +533,21 @@ func (l *Live) tailMoverOutputLocked() {
 
 func moverFileFromLine(line string) (string, bool) {
 	line = strings.TrimSpace(line)
-	if !strings.HasPrefix(line, "move: ") {
+	// Syslog lines from the official helper look like
+	// "move: move: /mnt/cache/file Success": the first prefix is the logger
+	// tag, so the last match is the actual path.
+	index := strings.LastIndex(line, "move: ")
+	if index < 0 {
 		return "", false
 	}
-	file := strings.TrimSpace(strings.TrimPrefix(line, "move: "))
+	file := strings.TrimSpace(line[index+len("move: "):])
 	for _, suffix := range []string{" Success", " File exists", " Not moved", " Failed", " failed"} {
 		if strings.HasSuffix(file, suffix) {
 			file = strings.TrimSpace(strings.TrimSuffix(file, suffix))
 			break
 		}
 	}
-	if file == "" || !strings.HasPrefix(file, "/mnt/") {
+	if file == "" || !strings.HasPrefix(file, moverMountPrefix) {
 		return "", false
 	}
 	return file, true
@@ -275,12 +610,7 @@ func (l *Live) StartMover(ctx context.Context) error {
 		_ = output.Close()
 	}
 	l.moverMu.Lock()
-	l.moverActive = true
-	l.moverStarted = time.Now()
-	l.moverStopped = false
-	l.moverLast = model.MoverStatus{}
-	l.moverFiles = nil
-	l.moverSeen = map[string]bool{}
+	l.resetMoverTrackingLocked()
 	l.moverOutput = outputPath
 	l.moverMu.Unlock()
 	// Do not Wait: the mover runs for minutes or hours and must survive the

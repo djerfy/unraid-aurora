@@ -66,13 +66,6 @@ const TABS = [
   { value: "zfs", label: "ZFS" },
 ];
 
-const MOVER_PHASES = [
-  { key: "scanning", label: "Scanning" },
-  { key: "calculating", label: "Calculating" },
-  { key: "moving", label: "Moving" },
-  { key: "finishing", label: "Finishing" },
-];
-
 function diskHardware(disk: Disk): string {
   return [disk.brand, disk.model].filter(Boolean).join(" ") || disk.device;
 }
@@ -1140,7 +1133,7 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
                   </option>
                 ))}
               </SelectInput>
-              <SelectInput label={t("Copy-on-write")} value={draft.cow} onChange={() => undefined} disabled>
+              <SelectInput label={t("Copy-on-write")} value={draft.cow} onChange={(value) => update({ cow: value })}>
                 <option value="auto">{t("Auto")}</option>
                 <option value="no">{t("No")}</option>
               </SelectInput>
@@ -1150,7 +1143,7 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
               <TextInput label={t("Excluded disks (comma separated)")} value={excludeText} onChange={setExcludeText} placeholder="disk3" />
             </div>
             <p className="mt-2 text-[9.5px] text-subtle">
-              {t("Copy-on-write can only be chosen when creating a share.")}
+              {t("Copy-on-write applies to new files; existing data keeps its current attributes.")}
             </p>
           </section>
 
@@ -1200,7 +1193,7 @@ function ShareEditModal({ share, onClose }: { share: Share | null; onClose: () =
                   value={draft.nfsHostList}
                   onChange={(event) => update({ nfsHostList: event.target.value })}
                   rows={4}
-                  placeholder={t("*(rw,sec=sys,insecure,anongid=100,anonuid=99,no_root_squash,lock)")}
+                  placeholder="*(rw,sec=sys,insecure,anongid=100,anonuid=99,no_root_squash,lock)"
                   className="w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 py-2 font-mono text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
                 />
               </label>
@@ -1486,10 +1479,11 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
   });
   const status = statusQuery.data;
   const running = Boolean(status?.running);
-  const phaseIndex = MOVER_PHASES.findIndex((phase) => phase.key === status?.phase);
   const shareProgress = status && status.shareTotal > 0
     ? ((status.shareTotal - status.shareRemain) / status.shareTotal) * 100
     : 0;
+  const baseProgress = status?.total ? Math.min(100, Math.max(0, status.progress)) : shareProgress;
+  const progressValue = status?.total && (status.remain === 0 || baseProgress >= 99.9) ? 100 : baseProgress;
 
   const run = async (action: "start" | "stop") => {
     setBusy(true);
@@ -1556,27 +1550,6 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
 
       {running ? (
         <div className="mt-4 space-y-3">
-          <div className="grid grid-cols-4 gap-1.5">
-            {MOVER_PHASES.map((phase, index) => {
-              const active = index === phaseIndex || (phaseIndex < 0 && index === 0);
-              const done = phaseIndex > index;
-              return (
-                <div
-                  key={phase.key}
-                  className={cn(
-                    "rounded-lg border px-2 py-1.5 text-center text-[9px] font-medium uppercase tracking-[0.08em]",
-                    active
-                      ? "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : done
-                        ? "border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[var(--success-soft)] text-[var(--success)]"
-                        : "border-line bg-[var(--surface-2)]/40 text-subtle",
-                  )}
-                >
-                  {t(phase.label)}
-                </div>
-              );
-            })}
-          </div>
           <div className="flex items-baseline justify-between gap-3">
             <p className="min-w-0 truncate text-[11.5px] text-soft">
               {status?.action || (status?.files?.length ? t("Moving files") : t("Calculating totals…"))}
@@ -1584,21 +1557,22 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
             </p>
             <span className="num shrink-0 text-[12px] text-ink">
               {status?.total
-                ? `${status?.progress.toFixed(1)}%`
+                ? `${progressValue.toFixed(1)}%`
                 : status?.files?.length
                   ? status.files.length === 1
                     ? t("1 file moved")
                     : t("{count} files moved", { count: status.files.length })
-                  : `${status?.progress.toFixed(1)}%`}
+                  : t("Starting…")}
             </span>
           </div>
-          <Progress value={status?.progress ?? 0} height={7} />
+          <Progress value={progressValue} height={7} />
           <div className="grid grid-cols-2 gap-3 text-[10px] sm:grid-cols-4">
             <MoverStat label={t("Moved")} value={formatBytes(Math.max(0, (status?.total ?? 0) - (status?.remain ?? 0)))} />
             <MoverStat label={t("Remaining")} value={formatBytes(status?.remain ?? 0)} />
             <MoverStat label={t("Throughput")} value={formatSpeed(status?.throughput ?? 0)} />
             <MoverStat label={t("ETA")} value={status && status.eta > 0 ? formatDuration(status.eta) : "—"} />
           </div>
+          <MoverProgressHint visible={Boolean(status && !status.progressEnabled)} />
           {status?.files?.length ? (
             <button
               type="button"
@@ -1619,9 +1593,9 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
               <Progress value={shareProgress} height={4} className="mt-2" tone="var(--violet)" />
             </div>
           ) : null}
-          {!status?.total ? (
+          {!status?.total && !status?.shareTotal ? (
             <p className="text-[10px] text-subtle">
-              {t("Byte progress is disabled in Unraid (Settings → Scheduler → Mover). File tracking still works for runs started from Aurora.")}
+              {t("Waiting for the mover to report its first files…")}
             </p>
           ) : null}
         </div>
@@ -1636,6 +1610,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
           {t("and survives a page refresh.")}
         </p>
       )}
+      {!running ? <MoverProgressHint visible={Boolean(status && !status.progressEnabled)} /> : null}
 
       {status?.history?.length ? (
         <div className="mt-4 border-t border-line">
@@ -1655,7 +1630,9 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
               {status.history.slice(0, 10).map((run, index) => (
                 <div key={`${run.finished}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
                   <span className="text-muted">{formatDateTime(run.finished)}</span>
-                  <span className="num text-subtle">{formatDuration(run.duration)} · {formatBytes(run.moved)}</span>
+                  <span className="num text-subtle">
+                    {formatDuration(run.duration)} · {run.total > 0 ? `${formatBytes(run.moved)} / ${formatBytes(run.total)}` : formatBytes(run.moved)}
+                  </span>
                   {run.files?.length ? (
                     <button
                       type="button"
@@ -1678,7 +1655,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
                   </Badge>
                 </div>
               ))}
-              <p className="pt-1 text-[9px] text-subtle">{t("File lists are captured for runs started from Aurora.")}</p>
+              <p className="pt-1 text-[9px] text-subtle">{t("File lists are captured from the mover's active file list and syslog.")}</p>
             </div>
           ) : null}
         </div>
@@ -1712,6 +1689,72 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
         )}
       </Modal>
     </Card>
+  );
+}
+
+function MoverProgressHint({ visible }: { visible: boolean }) {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const enable = useMutation({
+    mutationFn: async () => {
+      const state = await api.schedulerState();
+      await api.applyScheduler(
+        { ...state.settings, mover: { ...state.settings.mover, progress: true } },
+        true,
+      );
+    },
+    onSuccess: () => {
+      setConfirming(false);
+      toast({
+        kind: "success",
+        title: t("Mover progress enabled"),
+        description: t("It will be reported on the next mover run."),
+      });
+      void queryClient.invalidateQueries({ queryKey: ["mover"] });
+    },
+    onError: (error) => {
+      toast({
+        kind: "error",
+        title: t("Unable to enable mover progress"),
+        description: (error as Error).message,
+      });
+    },
+  });
+  if (!visible) return null;
+  return (
+    <>
+      <p className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-[var(--surface-2)]/45 p-3 text-[9.5px] leading-relaxed text-subtle">
+        <Info className="size-3.5 shrink-0 text-[var(--info)]" />
+        <span className="min-w-0 flex-1">
+          {t("Unraid's mover progress is disabled, so Aurora can only estimate from the active file list.")}
+        </span>
+        <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
+          {t("Enable Mover progress")}
+        </Button>
+      </p>
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t("Enable Mover progress")}
+        description={t("Aurora writes shareMoverProgress=\"yes\" to /boot/config/share.cfg and activates cron.")}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={enable.isPending}>
+              {t("Cancel")}
+            </Button>
+            <Button variant="primary" loading={enable.isPending} onClick={() => enable.mutate()}>
+              {t("Enable")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[11px] leading-relaxed text-muted">
+          {t("Unraid only writes live byte progress when this option is enabled. The next run will show progress, throughput and ETA.")}
+        </p>
+      </Modal>
+    </>
   );
 }
 

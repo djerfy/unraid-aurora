@@ -37,6 +37,7 @@ func TestMoverFileFromLine(t *testing.T) {
 		ok   bool
 	}{
 		{"move: /mnt/cache/media/movie.mkv Success", "/mnt/cache/media/movie.mkv", true},
+		{"Nov  4 03:12:01 vault move: move: /mnt/cache/media/movie.mkv Success", "/mnt/cache/media/movie.mkv", true},
 		{"move: /mnt/cache/media/My File.mkv File exists", "/mnt/cache/media/My File.mkv", true},
 		{"move: /mnt/cache/media/partial.mkv Not moved", "/mnt/cache/media/partial.mkv", true},
 		{"skip: /mnt/cache/iso/linux.iso", "", false},
