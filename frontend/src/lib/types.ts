@@ -959,6 +959,7 @@ export type APIToken = {
   readOnly: boolean;
   created: string;
   lastUsed: string;
+  expiresAt?: string | null;
 };
 
 export type AuditEntry = {

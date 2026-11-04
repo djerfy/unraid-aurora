@@ -75,10 +75,10 @@ export const api = {
   serverHealth: () => request<import("./types").ServerHealth>("/api/v1/health"),
   auditLog: (limit = 200) => request<import("./types").AuditEntry[]>(`/api/v1/audit?limit=${limit}`),
   apiTokens: () => request<import("./types").APIToken[]>("/api/v1/tokens"),
-  createAPIToken: (name: string, role: "viewer" | "operator" | "admin") =>
+  createAPIToken: (name: string, role: "viewer" | "operator" | "admin", expiresInDays: number) =>
     request<{ token: import("./types").APIToken; secret: string }>("/api/v1/tokens", {
       method: "POST",
-      body: JSON.stringify({ name, role }),
+      body: JSON.stringify({ name, role, expiresInDays }),
     }),
   revokeAPIToken: (id: string) =>
     request<{ ok: boolean }>(`/api/v1/tokens/${encodeURIComponent(id)}`, { method: "DELETE" }),

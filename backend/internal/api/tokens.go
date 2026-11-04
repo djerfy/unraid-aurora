@@ -22,13 +22,14 @@ const (
 )
 
 type APIToken struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Role     string    `json:"role"`
-	ReadOnly bool      `json:"readOnly"`
-	Created  time.Time `json:"created"`
-	LastUsed time.Time `json:"lastUsed"`
-	Hash     string    `json:"hash,omitempty"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Role      string     `json:"role"`
+	ReadOnly  bool       `json:"readOnly"`
+	Created   time.Time  `json:"created"`
+	LastUsed  time.Time  `json:"lastUsed"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+	Hash      string     `json:"hash,omitempty"`
 }
 
 func normalizeTokenRole(role string, readOnly bool) string {
@@ -77,7 +78,7 @@ func (s *tokenStore) list() []APIToken {
 	return out
 }
 
-func (s *tokenStore) create(name, role string) (APIToken, string, error) {
+func (s *tokenStore) create(name, role string, expiresAt *time.Time) (APIToken, string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || len(name) > 64 {
 		return APIToken{}, "", errors.New("token name is required")
@@ -103,7 +104,7 @@ func (s *tokenStore) create(name, role string) (APIToken, string, error) {
 	}
 	token := APIToken{
 		ID: hex.EncodeToString(idBytes), Name: name, Role: role, ReadOnly: role == TokenRoleViewer,
-		Created: time.Now(), Hash: hex.EncodeToString(hash[:]),
+		Created: time.Now(), ExpiresAt: expiresAt, Hash: hex.EncodeToString(hash[:]),
 	}
 	s.tokens = append(s.tokens, token)
 	if err := s.save(); err != nil {
@@ -136,6 +137,9 @@ func (s *tokenStore) validate(raw string) (APIToken, bool) {
 	defer s.mu.Unlock()
 	for i := range s.tokens {
 		if subtle.ConstantTimeCompare([]byte(encoded), []byte(s.tokens[i].Hash)) == 1 {
+			if s.tokens[i].ExpiresAt != nil && time.Now().After(*s.tokens[i].ExpiresAt) {
+				return APIToken{}, false
+			}
 			s.tokens[i].LastUsed = time.Now()
 			if time.Since(s.lastPersist) > 30*time.Second {
 				s.lastPersist = time.Now()

@@ -155,6 +155,14 @@ const settings: Record<string, string> = {
   "All sessions revoked": "Toutes les sessions révoquées",
   "Browse every endpoint and role in the": "Parcours tous les endpoints et rôles dans la",
   "API reference": "référence API",
+  "Expiry": "Expiration",
+  "30 days": "30 jours",
+  "90 days": "90 jours",
+  "1 year": "1 an",
+  "Never": "Jamais",
+  "Expired": "Expiré",
+  "Expires {date}": "Expire le {date}",
+  "Never expires": "N’expire jamais",
 };
 
 export default settings;

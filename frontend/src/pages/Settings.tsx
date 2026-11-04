@@ -81,6 +81,7 @@ export function SettingsPage() {
   const [testingNotification, setTestingNotification] = useState(false);
   const [tokenName, setTokenName] = useState("");
   const [tokenRole, setTokenRole] = useState<"viewer" | "operator" | "admin">("viewer");
+  const [tokenExpiry, setTokenExpiry] = useState(90);
   const [newToken, setNewToken] = useState("");
 
   if (!snapshot) return null;
@@ -116,7 +117,7 @@ export function SettingsPage() {
 
   const tokens = useQuery({ queryKey: ["api-tokens"], queryFn: api.apiTokens, enabled: section === "api" });
   const createToken = useMutation({
-    mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole),
+    mutationFn: () => api.createAPIToken(tokenName.trim(), tokenRole, tokenExpiry),
     onSuccess: (result) => {
       setNewToken(result.secret);
       setTokenName("");
@@ -587,6 +588,20 @@ export function SettingsPage() {
                     <option value="admin">{t("Admin")}</option>
                   </select>
                 </label>
+                <label className="min-w-[130px]">
+                  <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-subtle">{t("Expiry")}</span>
+                  <select
+                    value={tokenExpiry}
+                    onChange={(event) => setTokenExpiry(Number(event.target.value))}
+                    aria-label={t("Expiry")}
+                    className="h-9 w-full rounded-[7px] border border-line bg-[var(--surface-2)] px-2 text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+                  >
+                    <option value={30}>{t("30 days")}</option>
+                    <option value={90}>{t("90 days")}</option>
+                    <option value={365}>{t("1 year")}</option>
+                    <option value={0}>{t("Never")}</option>
+                  </select>
+                </label>
                 <Button variant="primary" loading={createToken.isPending} disabled={!tokenName.trim()} onClick={() => createToken.mutate()}>{t("Create token")}</Button>
               </div>
               <div className="mt-3 space-y-2">
@@ -596,7 +611,15 @@ export function SettingsPage() {
                     <Badge tone={token.role === "viewer" ? "info" : token.role === "operator" ? "warning" : "danger"}>
                       {t(token.role === "viewer" ? "Viewer" : token.role === "operator" ? "Operator" : "Admin")}
                     </Badge>
-                    <span className="text-[9px] text-subtle">{token.lastUsed ? new Date(token.lastUsed).toLocaleString() : t("Never used")}</span>
+                    <span className="text-[9px] text-subtle">
+                      {token.expiresAt && new Date(token.expiresAt).getTime() <= Date.now()
+                        ? t("Expired")
+                        : token.expiresAt
+                          ? t("Expires {date}", { date: new Date(token.expiresAt).toLocaleDateString() })
+                          : t("Never expires")}
+                      {" · "}
+                      {token.lastUsed ? new Date(token.lastUsed).toLocaleString() : t("Never used")}
+                    </span>
                     <IconButton label={t("Revoke token")} size="sm" onClick={() => { if (window.confirm(t("Revoke API token {name}?", { name: token.name }))) revokeToken.mutate(token.id); }}><Trash2 className="size-3.5" /></IconButton>
                   </div>
                 )) : <p className="text-[10.5px] text-subtle">{t("No API tokens yet.")}</p>}

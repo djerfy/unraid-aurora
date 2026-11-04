@@ -3608,7 +3608,7 @@
           "Access"
         ],
         "summary": "Create an API token",
-        "description": "Create `{name,role}` \u2192 secret once",
+        "description": "Create `{name,role,expiresInDays}` \u2192 secret once",
         "operationId": "post_tokens",
         "security": [
           {
@@ -8741,6 +8741,13 @@
           "lastUsed": {
             "type": "string",
             "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -8761,6 +8768,13 @@
               "operator",
               "admin"
             ]
+          },
+          "expiresInDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3650,
+            "default": 90,
+            "description": "0 means never expires."
           }
         }
       },

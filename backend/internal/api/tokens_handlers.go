@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (s *Server) apiTokens(w http.ResponseWriter, r *http.Request) {
@@ -23,9 +24,10 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Name     string `json:"name"`
-		Role     string `json:"role"`
-		ReadOnly bool   `json:"readOnly"`
+		Name          string `json:"name"`
+		Role          string `json:"role"`
+		ReadOnly      bool   `json:"readOnly"`
+		ExpiresInDays int    `json:"expiresInDays"`
 	}
 	if !s.decode(w, r, &body) {
 		return
@@ -39,7 +41,16 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 			role = TokenRoleAdmin
 		}
 	}
-	token, secret, err := s.tokens.create(body.Name, role)
+	var expiresAt *time.Time
+	if body.ExpiresInDays < 0 || body.ExpiresInDays > 3650 {
+		writeError(w, http.StatusBadRequest, "invalid_expiry", "expiry must be between 0 and 3650 days")
+		return
+	}
+	if body.ExpiresInDays > 0 {
+		value := time.Now().AddDate(0, 0, body.ExpiresInDays)
+		expiresAt = &value
+	}
+	token, secret, err := s.tokens.create(body.Name, role, expiresAt)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "token_create_failed", err.Error())
 		return

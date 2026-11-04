@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"aurora/internal/model"
 )
@@ -10,7 +11,7 @@ import (
 func TestTokenStoreLifecycle(t *testing.T) {
 	dir := t.TempDir()
 	store := newTokenStore(dir)
-	token, secret, err := store.create("prometheus", TokenRoleViewer)
+	token, secret, err := store.create("prometheus", TokenRoleViewer, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,5 +79,24 @@ func TestRedactSettings(t *testing.T) {
 	}
 	if redacted.Theme != "dark" {
 		t.Fatal("unrelated settings were changed")
+	}
+}
+
+func TestTokenExpiry(t *testing.T) {
+	store := newTokenStore(t.TempDir())
+	past := time.Now().Add(-time.Hour)
+	token, secret, err := store.create("expired", TokenRoleViewer, &past)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := store.validate(secret); ok {
+		t.Fatalf("expired token %s was accepted", token.ID)
+	}
+	future := time.Now().Add(time.Hour)
+	if _, secret, err = store.create("valid", TokenRoleViewer, &future); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := store.validate(secret); !ok {
+		t.Fatal("valid token was rejected")
 	}
 }

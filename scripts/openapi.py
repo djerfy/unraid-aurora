@@ -506,12 +506,12 @@ def build_spec() -> dict:
                 },
                 "APIToken": {
                     "type": "object",
-                    "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "role": {"type": "string", "enum": ["viewer", "operator", "admin"]}, "readOnly": {"type": "boolean"}, "created": {"type": "string", "format": "date-time"}, "lastUsed": {"type": "string", "format": "date-time"}},
+                    "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "role": {"type": "string", "enum": ["viewer", "operator", "admin"]}, "readOnly": {"type": "boolean"}, "created": {"type": "string", "format": "date-time"}, "lastUsed": {"type": "string", "format": "date-time"}, "expiresAt": {"type": ["string", "null"], "format": "date-time"}},
                 },
                 "TokenCreate": {
                     "type": "object",
                     "required": ["name", "role"],
-                    "properties": {"name": {"type": "string"}, "role": {"type": "string", "enum": ["viewer", "operator", "admin"]}},
+                    "properties": {"name": {"type": "string"}, "role": {"type": "string", "enum": ["viewer", "operator", "admin"]}, "expiresInDays": {"type": "integer", "minimum": 0, "maximum": 3650, "default": 90, "description": "0 means never expires."}},
                 },
                 "System": {
                     "type": "object",
