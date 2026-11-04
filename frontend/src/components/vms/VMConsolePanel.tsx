@@ -74,6 +74,7 @@ function sendRawKey(connection: unknown, keysym: number, down: boolean): boolean
 export type VMConsoleHandle = {
   sendCtrlAltDel: () => void;
   focus: () => void;
+  clipboardPaste: (text: string) => boolean;
 };
 
 export const VMConsolePanel = forwardRef<VMConsoleHandle, {
@@ -91,6 +92,7 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
     disconnect: () => void;
     focus: (options?: FocusOptions) => void;
     sendCtrlAltDel: () => void;
+    clipboardPasteFrom?: (text: string) => void;
     sendKey?: (keysym: number, code: string, down: boolean) => void;
   } | null>(null);
   const statusRef = useRef(onStatus);
@@ -226,6 +228,11 @@ export const VMConsolePanel = forwardRef<VMConsoleHandle, {
   useImperativeHandle(ref, () => ({
     sendCtrlAltDel: () => clientRef.current?.sendCtrlAltDel(),
     focus: () => hostRef.current?.querySelector("canvas")?.focus({ preventScroll: true }),
+    clipboardPaste: (text: string) => {
+      if (!clientRef.current?.clipboardPasteFrom) return false;
+      clientRef.current.clipboardPasteFrom(text);
+      return true;
+    },
   }));
 
   return (

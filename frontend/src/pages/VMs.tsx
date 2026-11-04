@@ -28,6 +28,8 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { VMConsoleModal } from "../components/vms/VMConsoleModal";
+import { VMAdvancedModal } from "../components/vms/VMAdvancedModal";
+import { VMCloneModal, VMResizeModal } from "../components/vms/VMManagementModals";
 import { Drawer, Modal } from "../components/ui/overlays";
 import {
   Badge,
@@ -54,6 +56,9 @@ export function VMsPage() {
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
   const [xmlVm, setXmlVm] = useState<VM | null>(null);
+  const [advancedVm, setAdvancedVm] = useState<VM | null>(null);
+  const [cloneVm, setCloneVm] = useState<VM | null>(null);
+  const [resizeVm, setResizeVm] = useState<VM | null>(null);
   const [creating, setCreating] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -338,9 +343,18 @@ export function VMsPage() {
                 <span className="block text-[11px] font-medium text-soft">{t("Start with the array")}</span>
                 <span className="block text-[9.5px] text-subtle">{t("libvirt autostart")}</span>
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" icon={<FileCode2 className="size-3" />} onClick={() => setXmlVm(selected)}>
                   {t("XML")}
+                </Button>
+                <Button size="sm" variant="secondary" icon={<Cpu className="size-3" />} onClick={() => setAdvancedVm(selected)}>
+                  {t("Hardware")}
+                </Button>
+                <Button size="sm" variant="secondary" icon={<Copy className="size-3" />} onClick={() => setCloneVm(selected)}>
+                  {t("Clone")}
+                </Button>
+                <Button size="sm" variant="secondary" icon={<HardDrive className="size-3" />} onClick={() => setResizeVm(selected)}>
+                  {t("Expand disk")}
                 </Button>
                 <Switch
                   checked={selected.autostart}
@@ -395,6 +409,9 @@ export function VMsPage() {
       />
 
       <VMXMLModal vm={xmlVm} onClose={() => setXmlVm(null)} />
+      <VMAdvancedModal vm={advancedVm} onClose={() => setAdvancedVm(null)} />
+      <VMCloneModal vm={cloneVm} onClose={() => setCloneVm(null)} />
+      <VMResizeModal vm={resizeVm} onClose={() => setResizeVm(null)} />
       <NewVMModal open={creating} onClose={() => setCreating(false)} />
     </>
   );

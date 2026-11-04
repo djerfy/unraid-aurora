@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { ExternalLink, Keyboard, RefreshCw } from "lucide-react";
+import { ClipboardPaste, ExternalLink, Keyboard, RefreshCw } from "lucide-react";
 import { Modal } from "../ui/overlays";
 import { Badge, Button } from "../ui/primitives";
 import { VMConsolePanel, type VMConsoleHandle, type ConsoleStatus } from "./VMConsolePanel";
 import { useI18n } from "../../i18n";
+import { useToast } from "../../app/ToastProvider";
 import type { VM } from "../../lib/types";
 
 const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
@@ -15,11 +16,24 @@ const TONE: Record<ConsoleStatus, "success" | "warning" | "danger"> = {
 
 export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => void }) {
   const { t } = useI18n();
+  const { toast } = useToast();
   const [status, setStatus] = useState<ConsoleStatus>("connecting");
   const [token, setToken] = useState(0);
   const panelRef = useRef<VMConsoleHandle>(null);
 
   if (!vm) return null;
+
+  const pasteClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+      if (!panelRef.current?.clipboardPaste(text)) {
+        toast({ kind: "warning", title: t("Clipboard is not ready"), description: t("Reconnect the console and try again.") });
+      }
+    } catch (error) {
+      toast({ kind: "error", title: t("Unable to read the clipboard"), description: (error as Error).message });
+    }
+  };
 
   const openWindow = () => {
     window.open(
@@ -49,6 +63,13 @@ export function VMConsoleModal({ vm, onClose }: { vm: VM | null; onClose: () => 
             onClick={() => panelRef.current?.sendCtrlAltDel()}
           >
             Ctrl+Alt+Del
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<ClipboardPaste className="size-3.5" />}
+            onClick={() => void pasteClipboard()}
+          >
+            {t("Paste clipboard")}
           </Button>
           <Button
             variant="secondary"

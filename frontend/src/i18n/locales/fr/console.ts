@@ -18,6 +18,10 @@ const console: Record<string, string> = {
   "The console connection was lost.": "La connexion à la console a été perdue.",
   "The virtual machine rejected the console connection.":
     "La machine virtuelle a refusé la connexion à la console.",
+  "Paste clipboard": "Coller le presse-papiers",
+  "Clipboard is not ready": "Presse-papiers indisponible",
+  "Reconnect the console and try again.": "Reconnecte la console et réessaie.",
+  "Unable to read the clipboard": "Impossible de lire le presse-papiers",
 };
 
 export default console;
