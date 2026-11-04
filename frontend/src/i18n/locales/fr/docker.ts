@@ -124,6 +124,8 @@ const docker: Record<string, string> = {
   "Large images can take several minutes; the pull keeps running on the server even if you close this window.":
     "Les grosses images peuvent prendre plusieurs minutes ; le téléchargement continue sur le serveur même si vous fermez cette fenêtre.",
   "Elapsed {duration}": "Écoulé {duration}",
+  "Unhealthy": "Non sain",
+  "Starting": "Démarrage",
   "Complete": "Terminé",
   "Pull image": "Télécharger l'image",
   "Recreate container": "Recréer le conteneur",

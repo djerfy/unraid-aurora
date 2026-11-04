@@ -662,6 +662,18 @@ function CardSection({
   );
 }
 
+// "Healthy" is the normal state and adds noise; only surface problems.
+function ContainerHealthBadge({ health, className }: { health?: string; className?: string }) {
+  const { t } = useI18n();
+  if (!health || health === "healthy") return null;
+  const unhealthy = health === "unhealthy";
+  return (
+    <Badge tone={unhealthy ? "danger" : "warning"} className={className}>
+      {t(unhealthy ? "Unhealthy" : "Starting")}
+    </Badge>
+  );
+}
+
 function ContainerCard({
   container,
   onOpen,
@@ -787,11 +799,7 @@ function ContainerCard({
         <Badge tone={running ? "success" : container.state === "paused" ? "warning" : "neutral"} dot pulse={running}>
           {running ? t("Running") : container.state}
         </Badge>
-        {container.health ? (
-          <Badge tone={container.health === "healthy" ? "success" : container.health === "unhealthy" ? "danger" : "warning"}>
-            {t(container.health === "healthy" ? "Healthy" : container.health === "unhealthy" ? "Unhealthy" : "Starting")}
-          </Badge>
-        ) : null}
+        <ContainerHealthBadge health={container.health} />
         <span className="text-[10px] text-subtle">{running ? t("Up {time}", { time: formatUptime(container.uptime) }) : container.status}</span>
         {container.updateAvailable ? <Badge tone="warning" className="ml-auto">{t("Update")}</Badge> : null}
       </div>
@@ -1027,11 +1035,7 @@ function ContainerRow({
       <span className="hidden w-[176px] shrink-0 min-[1500px]:block"><SecurityCounts security={container.security} /></span>
       <span className="w-20 shrink-0">
         <Badge tone={running ? "success" : "neutral"} dot>{running ? t("Running") : container.state}</Badge>
-        {container.health ? (
-          <Badge tone={container.health === "healthy" ? "success" : container.health === "unhealthy" ? "danger" : "warning"} className="ml-1">
-            {t(container.health === "healthy" ? "Healthy" : container.health === "unhealthy" ? "Unhealthy" : "Starting")}
-          </Badge>
-        ) : null}
+        <ContainerHealthBadge health={container.health} className="ml-1" />
       </span>
       <span className="hidden w-16 text-right num text-[10px] text-muted sm:block">{container.cpu.toFixed(1)}% CPU</span>
       <span className="hidden w-20 text-right num text-[10px] text-muted sm:block">{formatMemory(container.memory)}</span>
