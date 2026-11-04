@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Check, Loader2, RefreshCw, TriangleAlert, X } from "lucide-react";
 import type { ContainerUpdateEvent } from "../../lib/types";
 import { useI18n } from "../../i18n";
@@ -7,6 +8,7 @@ import { Badge, Button, Progress } from "../ui/primitives";
 export type ContainerUpdateRun = {
   names: string[];
   index: number;
+  startedAt: number;
   events: ContainerUpdateEvent[];
   running: boolean;
   error: string;
@@ -30,6 +32,16 @@ export function ContainerUpdateModal({
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!run?.running) return;
+    const update = () => setElapsed(Math.max(0, Math.floor((Date.now() - run.startedAt) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [run?.running, run?.startedAt]);
+
   if (!run) return null;
   const target = run.names[run.index] ?? "container";
   const last = run.events[run.events.length - 1];
@@ -71,9 +83,12 @@ export function ContainerUpdateModal({
 
         <div>
           <Progress value={percent} height={6} tone={run.error ? "var(--danger)" : undefined} />
-          <div className="mt-1.5 flex items-center justify-between text-[9.5px] text-subtle">
+          <div className="mt-1.5 flex items-center justify-between gap-3 text-[9.5px] text-subtle">
             <span className="min-w-0 truncate font-mono">{last?.message ?? t("Starting…")}</span>
-            <span className="num shrink-0">{Math.round(percent)}%</span>
+            <span className="flex shrink-0 items-center gap-2">
+              {run.running ? <span className="num">{t("Elapsed {duration}", { duration: elapsedLabel(elapsed) })}</span> : null}
+              <span className="num">{Math.round(percent)}%</span>
+            </span>
           </div>
         </div>
 
@@ -118,12 +133,22 @@ export function ContainerUpdateModal({
 
         {run.running ? (
           <p className="flex items-center gap-1.5 text-[9.5px] text-subtle">
-            <RefreshCw className="size-3" /> {t("Keep this window open; the server streams each stage.")}
+            <RefreshCw className="size-3" /> {t("Large images can take several minutes; the pull keeps running on the server even if you close this window.")}
           </p>
         ) : null}
       </div>
     </Modal>
   );
+}
+
+function elapsedLabel(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  }
+  return `${minutes}m ${String(rest).padStart(2, "0")}s`;
 }
 
 function orderedSteps(events: ContainerUpdateEvent[]) {

@@ -228,13 +228,7 @@ func (l *Live) fetchContainerStats(ctx context.Context, id string) (cachedContai
 	if err != nil {
 		return cachedContainerStats{}, err
 	}
-	client := l.client
-	if client.Timeout > 0 {
-		clone := *client
-		clone.Timeout = 0
-		client = &clone
-	}
-	resp, err := client.Do(req)
+	resp, err := l.dockerLongClient().Do(req)
 	if err != nil {
 		return cachedContainerStats{}, err
 	}

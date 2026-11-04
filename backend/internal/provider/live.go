@@ -120,6 +120,7 @@ type Live struct {
 	shareUsageTrigger    map[string]string
 	shareUsageErrors     map[string]string
 	shareUsageSem        chan struct{}
+	pullStall            time.Duration
 }
 
 type cpuSample struct {
@@ -182,6 +183,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 	l.loadPluginUpdates()
 	l.loadBalanceHistory()
 	go l.watchMover()
+	l.pullStall = dockerPullStall()
 	l.client = &http.Client{
 		Timeout: 4 * time.Second,
 		Transport: &http.Transport{

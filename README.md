@@ -199,6 +199,7 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
 | `AURORA_METRICS_TOKEN` | empty | Dedicated bearer token for the Prometheus `/metrics` endpoint. Scoped API tokens also work; with no dedicated token, only a valid API token is accepted |
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
+| `AURORA_DOCKER_PULL_STALL` | `10m` | Abort an image pull after this much silence from Docker (`0` disables it). There is no total limit, so multi-GB images can finish on slow links |
 
 Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-log-level`, `-daemon`, `-version`.
 `make build` injects the latest reachable Git tag, and `/api/v1/health` exposes the same version to

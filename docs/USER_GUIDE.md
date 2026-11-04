@@ -373,6 +373,9 @@ stored in **Historique**.
 - Badges appear on cards, list rows, the Updates tab and the dashboard.
 - Updating pulls the image and recreates the container with its current settings; the UI streams
   each step (pull progress, stop, recreate, start, cleanup) in real time.
+- Pulls have no total time limit, so multi-gigabyte images can finish on a slow link. Aurora only
+  aborts after `AURORA_DOCKER_PULL_STALL` (default `10m`) without any Docker progress, and the pull
+  keeps running server-side if the browser tab is closed.
 - **Update all** processes every outdated container sequentially.
 
 ### Image security

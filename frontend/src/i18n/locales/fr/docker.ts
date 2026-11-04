@@ -121,8 +121,9 @@ const docker: Record<string, string> = {
     "Téléchargez l'image et recréez le conteneur avec ses paramètres actuels.",
   "Preparing the update…": "Préparation de la mise à jour…",
   "Starting…": "Démarrage…",
-  "Keep this window open; the server streams each stage.":
-    "Gardez cette fenêtre ouverte ; le serveur transmet chaque étape.",
+  "Large images can take several minutes; the pull keeps running on the server even if you close this window.":
+    "Les grosses images peuvent prendre plusieurs minutes ; le téléchargement continue sur le serveur même si vous fermez cette fenêtre.",
+  "Elapsed {duration}": "Écoulé {duration}",
   "Complete": "Terminé",
   "Pull image": "Télécharger l'image",
   "Recreate container": "Recréer le conteneur",

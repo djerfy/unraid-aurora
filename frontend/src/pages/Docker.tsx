@@ -162,13 +162,14 @@ export function DockerPage() {
     setUpdateRun({
       names: targets.map((container) => container.name),
       index: 0,
+      startedAt: Date.now(),
       events: [],
       running: true,
       error: "",
       done: false,
     });
     for (let index = 0; index < targets.length; index += 1) {
-      setUpdateRun((current) => (current ? { ...current, index, events: [] } : current));
+      setUpdateRun((current) => (current ? { ...current, index, startedAt: Date.now(), events: [] } : current));
       let streamError = "";
       try {
         await api.updateContainer(targets[index].id, (event) => {

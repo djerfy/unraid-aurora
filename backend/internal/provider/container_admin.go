@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"aurora/internal/model"
@@ -37,6 +38,11 @@ func (l *Live) CreateContainer(ctx context.Context, opts model.ContainerCreateOp
 	if err := l.ensureImage(ctx, opts.Image); err != nil {
 		return "", err
 	}
+	// The pull above is unbounded because images can be several gigabytes.
+	// Container creation and start stay bounded so a stuck daemon cannot hang
+	// the request forever.
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
 	raw, err := l.dockerDo(ctx, http.MethodPost, "/containers/create?name="+url.QueryEscape(opts.Name), buildContainerCreateBody(opts))
 	if err != nil {
 		return "", fmt.Errorf("create container: %w", err)
@@ -222,7 +228,9 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	}); err != nil {
 		return err
 	}
-	if err := l.updateContainerConfig(ctx, id, cfg, report); err != nil {
+	recreateCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	if err := l.updateContainerConfig(recreateCtx, id, cfg, report); err != nil {
 		return err
 	}
 	l.setImageUpdate(cfg.Image, false)
@@ -238,6 +246,23 @@ func (l *Live) pullImage(ctx context.Context, image string) error {
 type dockerPullLayer struct {
 	current uint64
 	total   uint64
+}
+
+// dockerPullStall is the maximum silence tolerated from the Docker daemon
+// during a pull. AURORA_DOCKER_PULL_STALL accepts a Go duration; zero disables
+// the watchdog. There is deliberately no total timeout: multi-gigabyte images
+// on a slow link can take hours.
+func dockerPullStall() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("AURORA_DOCKER_PULL_STALL"))
+	if raw == "" {
+		return 10 * time.Minute
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil || value < 0 {
+		slog.Warn("invalid AURORA_DOCKER_PULL_STALL", "value", raw, "fallback", "10m")
+		return 10 * time.Minute
+	}
+	return value
 }
 
 func (l *Live) pullImageWithProgress(ctx context.Context, image string, report func(message string, percent float64)) error {
@@ -258,6 +283,21 @@ func (l *Live) pullImageWithProgress(ctx context.Context, image string, report f
 			headers["X-Registry-Auth"] = encoded
 		}
 	}
+	// Cancel the request only when the daemon stops sending progress; the
+	// caller's context usually has no deadline for that reason.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var stalled atomic.Bool
+	resetStall := func() {}
+	if l.pullStall > 0 {
+		timer := time.AfterFunc(l.pullStall, func() {
+			stalled.Store(true)
+			cancel()
+		})
+		defer timer.Stop()
+		resetStall = func() { timer.Reset(l.pullStall) }
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker/images/create?"+query.Encode(), nil)
 	if err != nil {
 		return err
@@ -265,12 +305,12 @@ func (l *Live) pullImageWithProgress(ctx context.Context, image string, report f
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-	client := l.client
-	if client == nil {
-		client = &http.Client{}
-	}
-	resp, err := client.Do(req)
+
+	resp, err := l.dockerLongClient().Do(req)
 	if err != nil {
+		if stalled.Load() {
+			return fmt.Errorf("pull image %s: no response from the Docker daemon for %s", image, l.pullStall)
+		}
 		return fmt.Errorf("pull image %s: %w", image, err)
 	}
 	defer resp.Body.Close()
@@ -301,11 +341,19 @@ func (l *Live) pullImageWithProgress(ctx context.Context, image string, report f
 			} `json:"errorDetail"`
 		}
 		if err := decoder.Decode(&event); err != nil {
+			// Cancelling the request closes the stream, which may surface as
+			// EOF; the watchdog flag disambiguates a stall from a clean end.
+			if stalled.Load() {
+				return fmt.Errorf("pull image %s: no progress from the Docker daemon for %s "+
+					"(network, registry or disk may be stalled; raise AURORA_DOCKER_PULL_STALL if needed)",
+					image, l.pullStall)
+			}
 			if err == io.EOF {
 				break
 			}
 			return fmt.Errorf("pull image %s: %w", image, err)
 		}
+		resetStall()
 		if event.ErrorDetail.Message != "" {
 			return fmt.Errorf("pull image %s: %s", image, event.ErrorDetail.Message)
 		}

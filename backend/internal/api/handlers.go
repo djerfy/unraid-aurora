@@ -540,7 +540,9 @@ func (s *Server) createContainer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnprocessableEntity, "invalid_container", err.Error())
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Pulls can take a long time for large images; the provider applies its own
+	// silence watchdog and bounds the post-pull steps.
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	id, err := s.provider.CreateContainer(ctx, opts)
 	if err != nil {
@@ -564,7 +566,9 @@ func (s *Server) updateContainerImage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "streaming", "streaming is not supported")
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	// No total deadline: a multi-gigabyte image on a slow link can take longer
+	// than any fixed budget. The provider aborts when the daemon goes silent.
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")

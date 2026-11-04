@@ -25,6 +25,22 @@ func (l *Live) dockerDo(ctx context.Context, method, path string, body any) ([]b
 	return l.dockerDoHeaders(ctx, method, path, body, nil)
 }
 
+// dockerLongClient drops the short timeout used for list and summary calls.
+// Container recreation, image pulls and stats reads can legitimately outlive
+// it, and http.Client.Timeout also aborts streaming bodies.
+func (l *Live) dockerLongClient() *http.Client {
+	client := l.client
+	if client == nil {
+		return &http.Client{}
+	}
+	if client.Timeout == 0 {
+		return client
+	}
+	clone := *client
+	clone.Timeout = 0
+	return &clone
+}
+
 func (l *Live) dockerDoHeaders(ctx context.Context, method, path string, body any, headers map[string]string) ([]byte, error) {
 	var reader io.Reader
 	if body != nil {
@@ -44,15 +60,7 @@ func (l *Live) dockerDoHeaders(ctx context.Context, method, path string, body an
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-	client := l.client
-	if client.Timeout > 0 {
-		// Container recreation can legitimately take longer than the short
-		// timeout used for list/summary calls.
-		clone := *client
-		clone.Timeout = 0
-		client = &clone
-	}
-	resp, err := client.Do(req)
+	resp, err := l.dockerLongClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("docker %s %s: %w", method, path, err)
 	}
