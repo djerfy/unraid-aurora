@@ -35,6 +35,7 @@ stops when the root context is cancelled.
 | `internal/config` | env/flags parsing and validation |
 | `internal/model` | JSON transport types, no behaviour |
 | `internal/provider` | `Provider` interface, live Unraid adapter, INI parsing |
+| `internal/trivy` | Managed Trivy binary/DB, image scans, severity parsing and nightly DB scheduler |
 | `internal/metrics` | 2 s sampling loop, ring history, subscriber fan-out |
 | `internal/auth` | native root/shadow authentication, HMAC sessions, throttling |
 | `internal/api` | routing, middleware, handlers, SSE, validation |
@@ -101,6 +102,7 @@ Reads the same sources as the original webGUI:
 | Mover | `/var/run/mover.pid`, `/var/local/emhttp/mover.ini`, run history in `$AURORA_CONFIG_DIR/mover-history.json` |
 | VM icons | domain metadata icon, `/usr/local/emhttp/.../vm.manager/templates/images` |
 | Settings | `$AURORA_CONFIG_DIR/settings.json` (defaults to `$AURORA_BOOT_DIR/config/aurora`) |
+| Trivy | `$AURORA_TRIVY_DIR` (default `$AURORA_CONFIG_DIR/trivy`): persistent binary, main/Java DB cache and `scans/*.json`; the binary is copied to `$AURORA_TRIVY_RUNTIME_DIR` (default `/usr/local/aurora/trivy`) before execution |
 | Storage location map | `$AURORA_CONFIG_DIR/storage-layout.json` (v2: grid panels, chassis sections, physical media; visual only, never written to Unraid) |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
 | Configuration history | `$AURORA_CONFIG_DIR/config-history/<id>/{meta.json,files/}` |
@@ -112,6 +114,11 @@ hard failure is a host without `/var/local/emhttp/var.ini`: Aurora refuses to st
 fake data. Snapshots are normalised so JSON never contains `null` where the UI expects an array.
 
 ## 5. HTTP surface
+
+> The maintained reference — authentication, token roles, error envelopes and
+> examples — is [API.md](API.md). The live host also serves a read-only Redoc
+> page at `/api/docs` and the OpenAPI document at `/api/openapi.json`. The table
+> below is a compact map of the same surface.
 
 | Method | Path | Description |
 |---|---|---|
@@ -132,15 +139,28 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `PUT` | `/api/v1/shares/{name}/smb` | SMB export, security, case sensitivity |
 | `PUT` | `/api/v1/shares/{name}/nfs` | NFS export, security and host rules |
 | `GET` | `/api/v1/pools` | Cache/boot pools |
+| `GET` | `/api/v1/apps` | Cached Community Applications catalog with search/filter/sort |
+| `GET` | `/api/v1/apps/template` | Download and parse a catalog Docker template after URL validation |
+| `GET` | `/api/v1/apps/icon` | Proxy a catalog icon with a size/type check and same-origin CSP |
+| `GET` | `/api/v1/system/scheduler` | Current parity, mover and TRIM schedules plus display settings |
+| `POST` | `/api/v1/system/scheduler/preview` | Generate cron/config files without writing them |
+| `PUT` | `/api/v1/system/scheduler` | Apply schedules after explicit acknowledgement |
+| `PUT` | `/api/v1/system/display` | Update shared date/time display formats |
 | `GET` | `/api/v1/docker/containers` | Containers |
 | `GET` | `/api/v1/docker/containers/{id}/logs?lines=` | Container log tail |
 | `GET` | `/api/v1/docker/containers/{id}/connections` | Network sockets observed with `ss` (public, private and loopback) |
 | `POST` | `/api/v1/vms` | Create a VM |
+| `GET` | `/api/v1/vms/host-devices` | PCI/USB inventory with IOMMU groups |
+| `GET` | `/api/v1/vms/{id}/advanced` | Guided hardware configuration parsed from the domain XML |
+| `PUT` | `/api/v1/vms/{id}/advanced` | Rewrite selected CPU, network, sound and hostdev XML fragments |
+| `POST` | `/api/v1/vms/{id}/clone` | Clone the domain, disks and NVRAM with a new UUID/MACs |
+| `POST` | `/api/v1/vms/{id}/resize` | Expand the first file-backed vDisk |
 | `PUT` | `/api/v1/vms/{id}/xml` | Update a libvirt domain definition |
 | `GET/POST` | `/api/v1/vms/{id}/snapshots` | List or create VM snapshots |
 | `POST/DELETE` | `/api/v1/vms/{id}/snapshots/{snapshot}` | Restore or delete a VM snapshot |
 | `GET` | `/api/v1/audit` | Durable mutation audit |
 | `GET/POST` | `/api/v1/user-scripts` | User Scripts inventory and execution |
+| `PUT` | `/api/v1/user-scripts/{id}` | Edit a script and persist its plugin schedule/cron |
 | `GET/POST` | `/api/v1/zfs/*` | ZFS pools, scrub and snapshots |
 | `GET/PUT` | `/api/v1/ups/settings` | apcupsd shutdown policy |
 | `POST` | `/api/v1/notifications/test` | Test configured outbound channels |
@@ -159,11 +179,18 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `GET` | `/api/v1/docker/templates` | Unraid XML templates available for recreation |
 | `POST` | `/api/v1/docker/check-updates` | Compare local and registry image digests |
 | `POST` | `/api/v1/docker/containers/{id}/update` | Stream pull/recreate stages as NDJSON |
+| `GET` | `/api/v1/docker/security` | Merged Trivy overview across every container image |
+| `GET` | `/api/v1/docker/containers/{id}/security` | Trivy summary and finding list for the container image |
+| `POST` | `/api/v1/docker/containers/{id}/scan` | Force a fresh image scan |
+| `GET` | `/api/v1/trivy` | Managed Trivy binary, database and operation status |
+| `GET` | `/api/v1/trivy/versions` | Stable Trivy releases from GitHub |
+| `POST` | `/api/v1/trivy/install` | Download a selected or latest Trivy binary and database |
+| `POST` | `/api/v1/trivy/db/update` | Refresh the persistent vulnerability and Java databases |
 | `GET` | `/api/v1/vms` | Virtual machines |
 | `GET` | `/api/v1/vms/{id}/icon` | Unraid OS icon for the VM |
 | `GET` | `/api/v1/vms/{id}/console` | WebSocket VNC/SPICE proxy to the libvirt console |
 | `PUT` | `/api/v1/vms/{id}/autostart` | Toggle libvirt autostart |
-| `GET` | `/api/v1/vms/{id}/xml` | Read-only domain XML |
+| `GET` | `/api/v1/vms/{id}/xml` | Libvirt domain XML |
 | `GET` | `/api/v1/plugins` | Installed plugin metadata |
 | `POST` | `/api/v1/plugins/check-updates` | Compare local and remote .plg versions |
 | `POST` | `/api/v1/plugins/{name}/update` | Stream the official plugin manager output |
@@ -182,6 +209,18 @@ fake data. Snapshots are normalised so JSON never contains `null` where the UI e
 | `POST` | `/api/v1/balance/start` | Start a background balance job |
 | `POST` | `/api/v1/balance/cancel` | Cancel the running job |
 | `GET` | `/api/v1/network` | Interfaces, WireGuard, services |
+| `GET/PUT` | `/api/v1/network/config` | Read or validate and write every interface in `network.cfg` (timestamped backup, per-interface lockout guard) |
+| `POST` | `/api/v1/network/apply` | Restart networking in the background after explicit confirmation |
+| `POST` | `/api/v1/network/revert` | Restore the most recent network configuration backup |
+| `POST` | `/api/v1/network/interfaces/{name}/{action}` | Bring a configured interface `up` or `down` (`ip link`) |
+| `GET` | `/api/v1/system/os` | Installed Unraid OS version, branch, pending reboot and cached update |
+| `POST` | `/api/v1/system/os/check` | Query `releases.unraid.net` for the current branch |
+| `POST` | `/api/v1/system/os/update` | Stream the official OS plugin installation as NDJSON |
+| `POST` | `/api/v1/system/os/restore` | Swap `/boot/previous` back and require a reboot |
+| `GET` | `/api/v1/unraid-api` | Official API service state and configuration |
+| `POST` | `/api/v1/unraid-api/{action}` | Start, stop or restart `rc.unraid-api` |
+| `GET` | `/api/v1/unraid-api/logs` | Tail the API or PM2 log file |
+| `GET/POST/DELETE` | `/api/v1/tokens` | Scoped API token management (session required) |
 | `GET` | `/api/v1/users` | Accounts and access |
 | `POST` | `/api/v1/users` | Create an account through emhttpd |
 | `PUT` | `/api/v1/users/{name}` | Update the description |

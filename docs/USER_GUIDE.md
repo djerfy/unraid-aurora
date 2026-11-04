@@ -22,6 +22,7 @@ files and commands as the official webGUI.
    - [Mover](#57-mover)
    - [Rebalancing](#58-rebalancing)
 6. [Containers](#6-containers)
+   - [Applications (Community Applications)](#applications-community-applications)
 7. [Virtual machines](#7-virtual-machines)
 8. [Network](#8-network)
 9. [GPUs](#9-gpus)
@@ -32,6 +33,7 @@ files and commands as the official webGUI.
 14. [Tools](#14-tools)
 15. [Historique (configuration history)](#15-historique-configuration-history)
 16. [Settings](#16-settings)
+   - [Scheduler](#scheduler)
 17. [Keyboard shortcuts](#17-keyboard-shortcuts)
 18. [Safety model and backups](#18-safety-model-and-backups)
 19. [Troubleshooting](#19-troubleshooting)
@@ -101,6 +103,8 @@ live SSE metrics.
 - **Acknowledge** moves a notification to the archive.
 - **Acknowledge all** clears the unread inbox.
 - The top bar shows the unread count and a short preview menu.
+- **Settings → Notifications** can drop messages below a minimum importance and mute specific
+  Unraid sources (for example `docker` or `vm`) before they reach Discord, ntfy or a webhook.
 
 ---
 
@@ -191,7 +195,7 @@ Share settings:
 | Section | Options |
 |---|---|
 | Share | Name, comment, minimum free space (`0`, `10G`, `500M`…) |
-| Storage | Primary storage (Array/pool), secondary storage, cache mode (`No`, `Yes`, `Prefer`, `Only`), allocation method (`High-water`, `Fill-up`, `Most-free`), split level, included/excluded disks, copy-on-write (read-only for existing shares) |
+| Storage | Primary storage (Array/pool), secondary storage, cache mode (`No`, `Yes`, `Prefer`, `Only`), allocation method (`High-water`, `Fill-up`, `Most-free`), split level, included/excluded disks, copy-on-write (`Auto`/`No`) |
 | SMB | Export (`No`, `Yes`, hidden, Time Machine variants), security (`Public`, `Secure`, `Private`), case-sensitive names, Time Machine size limit |
 | NFS | Export (`No`, `Yes`), security (`Public`, `Secure`, `Private`), host rules when private |
 
@@ -220,12 +224,19 @@ reviewed or rolled back.
 ![Mover](screenshots/storage-mover.png)
 
 - Start/stop the official mover in the background.
-- Live phases: **Recherche → Calculs → Déplacement → Finalisation**.
 - Current share/action and file, global and per-share progress, throughput and ETA.
-- Files observed during the run (best effort, sampled from `mover.ini`).
-- A collapsible **Recent runs** list keeps the last **10** mover runs, with duration, moved bytes and the file list.
-- Runs started from Aurora capture the mover's own output, so the file list works even when Unraid's
-  optional byte-progress setting is disabled; byte progress still follows `mover.ini`.
+- The progress bar reaches **100%** when the remaining bytes reach zero or the ETA is exhausted; it
+  reads Unraid's `mover.ini` from `/usr/local/emhttp/state` (or the configured state directory) and
+  otherwise estimates from the per-share file lists created by the mover.
+- Files are captured from the mover's `mover-files.*` lists and from `move:` lines in syslog, so
+  automatic nightly runs also produce a file list.
+- A collapsible **Recent runs** list keeps the last **10** mover runs with duration, moved/total
+  bytes and the file list.
+- Enabling **Settings → Scheduler → Mover progress** (or the card's **Enable Mover progress** button)
+  makes the byte counters and ETA exact. The flag is read from `share.cfg`, with `var.ini` as a
+  fallback on newer releases; without it, Aurora still reports the estimated totals and observed files.
+- CA Mover Tuning runs are supported through its `Filtered_files_*.list`, so estimated totals still
+  work when the plugin's live progress is disabled.
 
 ### 5.8 Rebalancing
 
@@ -320,8 +331,16 @@ Actions: start, restart, stop, open WebUI, update image, edit settings, open ter
 ### Settings editor
 
 Edit paths (bind mounts, read-only), published ports, environment variables and restart policy.
+The **Advanced** section adds structured Docker options without handing Aurora a shell:
+
+- host devices under `/dev`, with container path and `rwm` permissions;
+- capabilities to add or drop, sysctls, labels, extra hosts, tmpfs mounts and DNS servers;
+- fixed MAC address, hostname and CPU pinning (click the logical cores to pin);
+- memory, CPU and PID limits, plus a read-only root filesystem.
+
 Applying stops and recreates the container with rollback on failure. The Unraid XML template is
-synchronised and the previous template is stored in **Historique**.
+synchronised (including `Memory`, `CPUset` and managed `ExtraParams`) and the previous template is
+stored in **Historique**.
 
 ### Create a container
 
@@ -331,7 +350,9 @@ synchronised and the previous template is stored in **Historique**.
   - optional template picker (existing `my-*.xml` from the flash drive),
   - name, repository/image, network (bridge/host/none/custom), restart policy,
   - icon URL, WebUI, privileged mode,
-  - paths, ports, environment (`PUID`/`PGID`/`UMASK` prefilled).
+  - paths, ports, environment (`PUID`/`PGID`/`UMASK` prefilled),
+  - advanced devices, capabilities, sysctls, ulimits, labels, extra hosts, tmpfs, DNS, MAC,
+    hostname, CPU pinning and resource limits.
 - The image is pulled when missing; the container is created and started.
 - Templates prefill every field and can be used to relaunch a container after a failed creation.
 
@@ -343,6 +364,56 @@ synchronised and the previous template is stored in **Historique**.
 - Updating pulls the image and recreates the container with its current settings; the UI streams
   each step (pull progress, stop, recreate, start, cleanup) in real time.
 - **Update all** processes every outdated container sequentially.
+
+### Image security
+
+- Enable **Settings → Image scanning** to install Trivy and its vulnerability databases (the main
+  vulnerability DB and the Java DB). The binary, cache and scan results live under
+  `AURORA_TRIVY_DIR` (default `<AURORA_CONFIG_DIR>/trivy`).
+  Because Unraid often mounts `/boot` with `noexec`, Aurora re-materializes the binary in an
+  executable runtime directory (`AURORA_TRIVY_RUNTIME_DIR`, default `/usr/local/aurora/trivy`, then
+  `/tmp/aurora-trivy`) on every start. The persistent copy remains the source of truth.
+  Both databases live in the same persistent cache (`cache/db` and `cache/java-db`); the Java DB is
+  required to analyse JAR dependencies.
+- The Settings panel can install a specific release or update to the latest stable one, download or
+  refresh both databases manually, and chooses the nightly database update hour.
+- While scanning is enabled, Aurora keeps the selected binary, its executable runtime copy and both
+  databases installed, downloading anything missing automatically.
+- Images are scanned automatically after a pull, after a container is created or recreated. Scans are
+  not queued until both vulnerability and Java databases are present, and they pause while the
+  databases are being installed or refreshed; while waiting, containers show **Not scanned**.
+  Downloading or updating the databases does **not** trigger a full rescan of every image. Use
+  **Scan images** or **Scan now** when you want a fresh pass; this avoids a resource spike.
+- A **Security** column splits findings into compact count badges: red critical, orange high, yellow
+  medium, blue low and grey unknown. When there is no finding, a green **0** badge keeps the same
+  compact format. The card view exposes the same breakdown in a collapsible **Security** section
+  below **Mounts**.
+- **Scan images** in the page header scans every unique container image, like **Check updates** does
+  for image updates. It is disabled until Trivy and both databases are ready.
+- The container drawer shows the full severity breakdown, scan date, Trivy and database versions,
+  filters, and the finding list with package versions, fixed versions and advisory links. **Scan now**
+  forces a fresh scan.
+- The **Security** tab next to **Network calls** merges every scan into one overview. Totals are
+  deduplicated by image ID, and the same data can be grouped by image, container, CVE, package or
+  severity. Search and severity filters narrow the result; container chips open the container drawer.
+
+![Security overview](screenshots/docker-security.png)
+
+![Security grouped by CVE](screenshots/docker-security-cve.png)
+
+### Applications (Community Applications)
+
+The **Applications** page browses the official Community Applications feed:
+
+- search across Docker applications and plugins, filter by type and category, and sort by downloads,
+  name or update date;
+- open an application drawer with its overview, repository, author, support link and requirements;
+- **Review & install** downloads the Unraid template, opens the normal container form with every
+  field prefilled, and waits for an explicit **Create & start**;
+- plugins are installed through the official plugin manager after a separate confirmation warning;
+- Aurora never executes a Docker template or plugin without that review step.
+
+![Applications](screenshots/apps.png)
 
 ### Autostart and removal
 
@@ -361,10 +432,17 @@ synchronised and the previous template is stored in **Historique**.
 ![VM list](screenshots/vms-list.png)
 - Lifecycle: start, suspend/resume, shut down.
 - **Autostart** toggle uses libvirt `virsh autostart`.
-- **XML** opens the libvirt domain definition read-only, with copy-to-clipboard.
+- **XML** opens the libvirt domain definition, editable with copy-to-clipboard.
+- **Hardware** edits vCPU, memory, CPU pinning (clickable logical cores), network bridge/model/MAC,
+  virtual sound and PCI/USB passthrough with IOMMU group hints.
+- **Clone** copies the domain, disks and NVRAM into a new VM with fresh UUID and MAC addresses.
+- **Expand disk** grows the first file-backed vDisk, online with `virsh blockresize` or offline with
+  `qemu-img resize`.
 - **Console** opens the VNC/SPICE console.
 
 ![VM XML](screenshots/vm-xml.png)
+
+![VM hardware](screenshots/vm-hardware.png)
 
 ### Details
 
@@ -380,6 +458,8 @@ utilisation, autostart and actions.
 - **New window** opens a standalone console page.
 - Keyboard input is captured at document level and can be sent via **Ctrl+Alt+Del** for Windows
   guests.
+- **Paste clipboard** forwards the local clipboard to the guest through the RFB client cut-text
+  message.
 - If keystrokes do not reach a guest, see the tracked issue:
   <https://github.com/djerfy/unraid-aurora/issues/1>.
 
@@ -395,8 +475,31 @@ utilisation, autostart and actions.
 - Listening services with protocol, status and direct links.
 - Traffic chart.
 
-Network configuration is currently **read-only**; changing interfaces, bonding, bridges, VLANs or
-WireGuard remains on the roadmap.
+### Edit interfaces
+
+**Edit configuration** opens a form for every interface stored in `/boot/config/network.cfg`.
+Each interface card also has its own edit button, and the form switches between the configured
+interfaces with tabs (for example `br0`, `br1`, `bond0`).
+
+For the selected interface you can change:
+
+- DHCP or a static IPv4 address, subnet mask and gateway.
+- Optional custom MTU.
+- Bonding with mode and member selection.
+- Bridging with member selection and spanning-tree control.
+- DNS servers, which are shared by every interface on the flash drive.
+
+The editor also shows the live interface state with a green/red badge and lets you **Bring up** or
+**Bring down** the configured interface. Bringing an interface down asks for confirmation because the
+current connection may drop; the request is deferred for two seconds so the UI can acknowledge it.
+
+Aurora validates every address, mask, gateway, MTU and interface name before writing. Each save
+creates a timestamped backup next to `network.cfg` (the last ten are kept). Changes are written
+without touching live networking: reboot the server to apply them, or use **Apply now** to restart
+`/etc/rc.d/rc.inet1` after an explicit confirmation. **Revert** restores the most recent backup.
+
+If a static change would place the current client outside the new subnet, Aurora refuses to save
+until you explicitly acknowledge the lockout risk. VLAN and WireGuard editing remain on the roadmap.
 
 ---
 
@@ -438,7 +541,7 @@ WireGuard remains on the roadmap.
 - **Update** runs the official plugin manager and streams its output.
 - **Install plugin** accepts an `.plg` URL; **Remove plugin** deletes it through the plugin manager.
 - All operations show a live output modal and require explicit confirmation.
-- Community Applications opens in a new tab.
+- The **Applications** page provides the Community Applications catalog for Docker apps and plugins; plugin installs still use this official plugin manager.
 
 ![Plugin install](screenshots/plugins-install.png)
 
@@ -488,6 +591,9 @@ Missing logs show an explicit message with a retry button instead of a generic e
   - Aurora settings, image update status, mover and balance history;
   - installed plugin list;
   - tails of syslog, docker and libvirt logs.
+- Credentials, tokens, webhook URLs and similar keys are redacted in the diagnostics archive.
+- **Export redacted configuration** produces a restorable-looking support archive with the same
+  sensitive values removed; the normal export is kept faithful for a real restore.
 - Host summary and snapshot counters.
 - Nothing is stored server-side; the archive is generated per request.
 
@@ -527,21 +633,46 @@ can itself be reverted.
 - **Refresh interval**.
 - **Language**: English (default) or French. The switch previews immediately; **Save changes** persists it on the server.
 - **Automatic updates**, **anonymous telemetry**, **email alerts**, **push notifications**.
-- **Outbound notifications**: Discord webhook, ntfy URL and generic JSON webhook, with a test button.
-  New Unraid notifications are forwarded after Aurora starts.
+- **Outbound notifications**: Discord webhook, ntfy URL and a generic webhook (GET/POST/PUT/DELETE,
+  custom headers and body template with `{title}`, `{subject}`, `{description}`, `{importance}`,
+  `{source}` and `{timestamp}` placeholders), with a test button. New Unraid notifications are
+  forwarded after Aurora starts.
+- **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Viewers can only
+  read, operators manage containers, VMs, array and mover actions, and admins control everything.
+  The secret is shown once; token management itself requires a signed-in session. **Revoke all
+  sessions** invalidates every Aurora cookie, including the current browser.
+- **Unraid OS**: current version and branch, update check against `releases.unraid.net`, release
+  notes, streamed installation through the official plugin manager, and a downgrade that restores
+  the boot files kept in `/boot/previous`. A reboot is required to boot the new or restored version.
+- **Unraid API**: installed state, version, process controls (start, stop, restart), service
+  configuration and the latest API/PM2 log lines.
+- **Scheduler**: choose parity, mover and SSD TRIM schedules, review a per-file diff (green additions,
+  red deletions) before applying, and activate the result through `update_cron`. Files that are already
+  up to date are left untouched to limit flash writes. The display date/time
+  formats can also be changed here; time zone and NTP stay read-only to avoid a clock lockout.
+- **Image scanning**: enable Trivy, install or change the binary version, download/update the
+  vulnerability and Java databases, and choose the nightly database update hour. Scans surface in
+  the Containers page and drawer.
 - Session information: account, authentication, HMAC session store, CSRF protection.
 - About: Unraid version, kernel, uptime, board, memory, license.
 - The **System → About** page describes Aurora, the author (🌱 DJΞRFY 🚀), the public repository and the AGPL-3.0 license.
+
+![Scheduler](screenshots/scheduler.png)
+
+![Scheduler preview](screenshots/scheduler-preview.png)
 
 ### UPS, ZFS, user scripts and audit
 
 - **Settings → UPS** shows battery/load/runtime and edits the apcupsd shutdown policy; NUT remains
   managed by its own plugin.
 - **Storage → ZFS** lists pools and datasets, starts a scrub and manages dataset snapshots.
-- **User scripts** lists the User Scripts plugin inventory, shows the source and runs a script as root,
-  returning its output.
+- **User scripts** lists the User Scripts plugin inventory, shows and edits the source, runs a script
+  as root and returns its output. The schedule editor writes the plugin's `schedule.json` and cron
+  fragment: disabled, hourly, daily, weekly, monthly, array start/stop, first array start, or a
+  five-field custom cron expression. Unraid's `update_cron` helper is invoked after a change.
 - The **Logs** page groups three tabs: **Logs**, **Audit log** and **History**. The audit tab records
-  every mutating API call with user, method, path, status and remote address.
+  every mutating API call with user, method, path, status and remote address, and can export the
+  visible entries as CSV.
 
 ---
 
@@ -596,5 +727,6 @@ canvas so they never steal keystrokes from a console.
 ## Further reading
 
 - [README](../README.md) — installation, flags, environment variables, release process.
-- [Architecture](ARCHITECTURE.md) — internals, providers, API surface, security.
+- [Architecture](ARCHITECTURE.md) — internals, providers, authentication and security.
+- [API reference](API.md) — endpoints, token roles, error format and examples. On a live host, Redoc renders the same reference at `/api/docs`.
 - [Unraid documentation](https://docs.unraid.net) — host behaviour and configuration reference.

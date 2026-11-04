@@ -46,14 +46,18 @@ operational model and rebuilds the experience around it:
 | **Dashboard** — health, CPU, memory, array, network, workload | **Storage** — disks, I/O, capacity and parity |
 | ![Containers](docs/screenshots/docker.png) | ![Virtual machines](docs/screenshots/vms.png) |
 | **Containers** — live resources, ports and lifecycle | **Virtual machines** — KVM workloads and passthrough |
+| ![Container security](docs/screenshots/docker-security.png) | ![Security by CVE](docs/screenshots/docker-security-cve.png) |
+| **Container security** — merged Trivy findings, grouped by image | **CVE view** — affected images and containers |
 | ![Network](docs/screenshots/network.png) | ![Notifications](docs/screenshots/notifications.png) |
 | **Network** — interfaces, tunnels and services | **Notifications** — a calm operational inbox |
+| ![Applications](docs/screenshots/apps.png) | ![Scheduler](docs/screenshots/scheduler.png) |
+| **Applications** — Community Applications with a review step | **Scheduler** — parity, mover, TRIM and display formats |
 | ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login-native.png) |
 | **Settings** — themes, accents and native auth | **Login** — root credentials checked against the host |
 | ![Historique](docs/screenshots/history.png) | ![Équilibrage](docs/screenshots/balance.png) |
 | **Historique** — configuration snapshots, unified diffs and rollback | **Équilibrage** — empty a disk with live per-file progress |
 | ![Tools](docs/screenshots/tools.png) | ![Mover](docs/screenshots/storage-mover.png) |
-| **Tools** — diagnostics archive and host summary | **Mover** — live phases, throughput and per-file history |
+| **Tools** — diagnostics archive and host summary | **Mover** — live progress, throughput and per-file history |
 
 More captures in [`docs/screenshots`](docs/screenshots): shares, pools, parity history, container logs,
 command palette, light theme, users, plugins, logs and mobile layouts.
@@ -179,6 +183,8 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_STATE_DIR` | `/var/local/emhttp` | Unraid state directory (must contain `var.ini`) |
 | `AURORA_BOOT_DIR` | `/boot` | Flash/boot directory |
 | `AURORA_CONFIG_DIR` | `<AURORA_BOOT_DIR>/config/aurora` | Durable JSON config/history (settings, layout, history) |
+| `AURORA_TRIVY_DIR` | `<AURORA_CONFIG_DIR>/trivy` | Persistent Trivy binary, vulnerability and Java DB cache, and scan results |
+| `AURORA_TRIVY_RUNTIME_DIR` | `/usr/local/aurora/trivy` then `/tmp/aurora-trivy` | Writable, executable directory used to run the persistent Trivy binary (the flash mount is often noexec) |
 | `AURORA_DOCKER_SOCKET` | `/var/run/docker.sock` | Docker Engine socket |
 | `AURORA_DATA_DIR` | `/var/lib/aurora` | Runtime cache and mover output (tmpfs on Unraid) |
 | `AURORA_TLS_CERT` | derived | Explicit PEM bundle path (default: `/boot/config/ssl/certs/<server>_unraid_bundle.pem`) |
@@ -190,7 +196,7 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_LOG_LEVEL` | `info` | `debug` for verbose logs |
 | `AURORA_LOG_FILE` | stdout | Append logs to this file |
 | `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
-| `AURORA_METRICS_TOKEN` | empty | Bearer token for the Prometheus `/metrics` endpoint; disabled when empty |
+| `AURORA_METRICS_TOKEN` | empty | Dedicated bearer token for the Prometheus `/metrics` endpoint. Scoped API tokens also work; with no dedicated token, only a valid API token is accepted |
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 
 Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-daemon`, `-version`.
@@ -261,7 +267,9 @@ Browser ── React 19 SPA (embedded) ── /api/v1/* ── Go net/http
 Deep dives:
 
 - [`docs/ANALYSIS.md`](docs/ANALYSIS.md) — architecture, state model, nchan, plugins, security, UX audit.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Go packages, API surface, authentication, live mapping.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Go packages, authentication, live mapping.
+- [`docs/API.md`](docs/API.md) — HTTP API reference: authentication, token roles, endpoints and examples.
+  The live host also serves a rendered Redoc reference at `/api/docs` and the OpenAPI document at `/api/openapi.json`.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — visual system, tokens, components, accessibility and motion.
 
 ## Feature map
@@ -270,20 +278,22 @@ Deep dives:
 |---|---|
 | Dashboard | Health score, CPU load graph and per-core matrix, package power, memory, GPU, array capacity, parity progress, network, UPS, containers, shares, activity |
 | Storage | Array devices with live I/O and spin controls, shares, cache pools, parity check + history |
-| Containers | Docker workloads with real icons, CPU/memory, ports, network, IP address, network calls, container terminal, log search/export, autostart toggle, image update checks, live pull/recreate progress, create from an Unraid XML template, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
-| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console |
-| Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart |
+| Containers | Docker workloads with real icons, CPU/memory, health status, ports, network, IP address, network calls, a merged Trivy security overview grouped by image/container/CVE/package/severity, container terminal, log search/export, bulk start/stop/restart, autostart toggle, image update checks, live pull/recreate progress, Trivy image scanning with a Security column and finding details, create from an Unraid XML template, advanced devices/capabilities/sysctls/ulimits/resources/MAC fields, remove, lifecycle, logs and a settings editor for paths, ports, environment and restart policy |
+| Applications | Community Applications catalog for Docker apps and plugins, search/filter/sort, template review before creation, and plugin installation through the official plugin manager |
+| Scheduler | Parity, mover and SSD TRIM schedules with generated cron preview, `update_cron` activation, plus shared date/time display formats |
+| Virtual machines | KVM inventory, vCPU/RAM/disk usage, GPU passthrough, VM creation, editable libvirt XML, guided hardware editor (CPU pinning, network/MAC, sound, PCI/USB passthrough with IOMMU groups), clone, vDisk expansion, snapshots, autostart toggle, lifecycle actions and a VNC/SPICE console with clipboard paste |
+| Network | Interfaces, bridges, WireGuard peers, listening services, traffic chart, and guarded per-interface editing (DHCP/static, DNS, MTU, bonding, bridging) with live state, link up/down, backups, revert and delayed apply |
 | GPUs | NVIDIA and AMD (ROCm) utilisation, VRAM, temperature, power, clocks, vendor logo and compute processes |
 | ZFS | Pools, datasets, scrub and snapshots |
 | UPS | Battery telemetry and apcupsd shutdown policy |
-| User scripts | User Scripts plugin inventory, source and root execution output |
-| Audit log | Durable record of every mutating API call |
+| User scripts | User Scripts plugin inventory, source editing, root execution output and plugin-native schedules (hourly/daily/weekly/monthly, array start/stop, first boot, custom cron) |
+| Audit log | Durable record of every mutating API call, searchable and exportable as CSV |
 | About | Product description, author, repository, runtime and AGPL-3.0 license |
 | Users | Accounts, roles, share access matrix, add/edit/password/delete through Unraid account management |
-| Notifications | Inbox, unread/archived filters, acknowledge all, severity and source |
+| Notifications | Inbox, unread/archived filters, acknowledge all, severity and source, minimum-importance and muted-source filters |
 | Plugins | Real .plg metadata, update checks, streamed update/install/remove through the official plugin manager |
 | Logs | Syslog, Docker, Nginx, Libvirt, Maillog and parity tails with level + text filters, follow mode and export |
-| Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) and host summary |
+| Tools | Diagnostics ZIP (system, Docker, libvirt, configs, logs) with credentials redacted, redacted configuration export, host summary |
 | Configuration history | `$AURORA_CONFIG_DIR/config-history` (backup files, metas, unified diffs) |
 | Balance | Mounts under `/mnt`, `statfs`, `du`; copy → verify → delete pipeline |
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
@@ -291,7 +301,7 @@ Deep dives:
 | Shares | Create, rename and edit shares: comment, free-space floor, cache mode, primary/secondary storage, allocator, split level, include/exclude disks, SMB and NFS export/security |
 | Équilibrage | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
 | Historique | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
-| Settings | Dark/light/system, five accents, density, units, refresh cadence, session info |
+| Settings | Dark/light/system, five accents, density, units, refresh cadence, session info, notification channels, UPS policy, API tokens, Unraid OS updates/downgrade, Unraid API process management and Trivy installation/database scheduling |
 | Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 
 ## Security notes
@@ -311,9 +321,8 @@ Deep dives:
 
 ## Scope
 
-Aurora focuses on day-to-day observability and lifecycle operations. It deliberately does **not** implement
-share editing, VM consoles (noVNC/SPICE), plugin installation, flash backups, Unraid Connect SSO or the full
-Unraid GraphQL API. Those remain in Unraid itself.
+Aurora focuses on day-to-day observability and lifecycle operations. It deliberately does **not**
+implement Unraid Connect SSO or the full Unraid GraphQL API. Those remain in Unraid itself.
 
 ## Project layout
 
@@ -331,6 +340,7 @@ backend/
   internal/metrics/        sampling hub
   internal/model/          shared transport types
   internal/provider/       live Unraid provider, INI parsing
+  internal/trivy/          managed Trivy binary, database and image scans
   internal/webui/          embedded SPA
 docs/                      analysis, architecture, design
 ```
@@ -345,6 +355,9 @@ cd frontend && npm run build      # TypeScript + production bundle
 The authentication tests verify SHA-512, SHA-256 and MD5 shadow hashes, locked/expired accounts, rate limiting,
 session expiry and tampering. The live provider tests build a synthetic Unraid state tree in a temporary
 directory; they are not a runtime mode.
+
+`.github/workflows/ci.yml` runs `go vet` and the Go test suite on every push (any branch or tag) and on
+pull requests, so a regression is reported before a release workflow starts.
 
 ## Credits
 
