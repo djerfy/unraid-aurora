@@ -162,10 +162,14 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 // environment and restart policy. The original container is stopped, renamed as
 // a backup and restored if any step fails.
 func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error {
-	return l.updateContainerConfig(ctx, id, cfg, nil)
+	return l.updateContainerConfig(ctx, id, cfg, nil, true)
 }
 
-func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig, report func(model.ContainerUpdateEvent)) error {
+// updateContainerConfig recreates a container with new settings. syncTemplate
+// is false for image updates: the template already describes the container and
+// must not be rewritten from Docker inspect data, which includes image labels,
+// generated MAC addresses and other runtime defaults.
+func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig, report func(model.ContainerUpdateEvent), syncTemplate bool) error {
 	emit := func(step, message string) {
 		if report != nil {
 			report(model.ContainerUpdateEvent{Step: step, Message: message})
@@ -291,8 +295,12 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	emit("cleanup", "Removing the previous container")
 	_, _ = l.dockerDo(ctx, http.MethodDelete, "/containers/"+url.PathEscape(oldID)+"?force=1", nil)
 	// Keep the Unraid template in sync so the official webGUI and its update
-	// scripts recreate the container with the same settings.
-	l.syncTemplateAfterUpdate(ctx, cfg)
+	// scripts recreate the container with the same settings. Image updates skip
+	// this: Docker inspect carries image labels and generated values that do
+	// not belong in the template.
+	if syncTemplate {
+		l.syncTemplateAfterUpdate(ctx, cfg)
+	}
 	l.queueContainerScan(createdInfo.ID)
 	return nil
 }

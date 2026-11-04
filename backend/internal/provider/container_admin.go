@@ -230,7 +230,7 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	}
 	recreateCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	if err := l.updateContainerConfig(recreateCtx, id, cfg, report); err != nil {
+	if err := l.updateContainerConfig(recreateCtx, id, cfg, report, false); err != nil {
 		return err
 	}
 	l.setImageUpdate(cfg.Image, false)

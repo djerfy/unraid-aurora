@@ -376,6 +376,9 @@ stored in **Historique**.
 - Pulls have no total time limit, so multi-gigabyte images can finish on a slow link. Aurora only
   aborts after `AURORA_DOCKER_PULL_STALL` (default `10m`) without any Docker progress, and the pull
   keeps running server-side if the browser tab is closed.
+- An image update never rewrites the Unraid template: Docker inspect exposes image labels, generated
+  MAC addresses, hostnames and runtime limits that do not belong in `<ExtraParams>`. Settings edits
+  keep the existing `ExtraParams` and only update the structured fields.
 - **Update all** processes every outdated container sequentially.
 
 ### Image security

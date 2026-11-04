@@ -233,3 +233,85 @@ func TestContainerTemplatesListsUserTemplates(t *testing.T) {
 		t.Fatalf("templates = %+v", templates)
 	}
 }
+
+func TestSyncContainerTemplatePreservesExtraParams(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "my-plex.xml")
+	if err := os.WriteFile(path, []byte(sampleTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	live := &Live{bootDir: boot}
+	err := live.syncContainerTemplate(context.Background(), containerTemplateData{
+		Name:          "plex",
+		Image:         "linuxserver/plex:latest",
+		Network:       "bridge",
+		RestartPolicy: "unless-stopped",
+		AdvancedSet:   true,
+		Advanced: model.ContainerAdvanced{
+			Labels:     map[string]string{"build-date": "20261022", "vendor": "VMware"},
+			Hostname:   "94b32b702031",
+			MacAddress: "7e:0c:eb:09:3c:68",
+			PidsLimit:  2048,
+		},
+		PreserveMeta:        true,
+		PreserveExtraParams: true,
+	})
+	if err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := parseXMLTree(raw)
+	if err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	if got := root.text("ExtraParams"); got != "--device=/dev/dri --restart=unless-stopped" {
+		t.Fatalf("image labels leaked into ExtraParams: %q", got)
+	}
+}
+
+func TestSyncTemplateAfterUpdateKeepsExtraParams(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "my-plex.xml")
+	if err := os.WriteFile(path, []byte(sampleTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	live := &Live{bootDir: boot}
+	live.syncTemplateAfterUpdate(context.Background(), model.ContainerConfig{
+		Name:          "plex",
+		Image:         "linuxserver/plex:latest",
+		NetworkMode:   "bridge",
+		RestartPolicy: "unless-stopped",
+		Advanced: model.ContainerAdvanced{
+			Labels:     map[string]string{"build-date": "20261022"},
+			Hostname:   "94b32b702031",
+			MacAddress: "7e:0c:eb:09:3c:68",
+			PidsLimit:  2048,
+		},
+	})
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := parseXMLTree(raw)
+	if err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	if got := root.text("ExtraParams"); got != "--device=/dev/dri --restart=unless-stopped" {
+		t.Fatalf("template sync leaked Docker defaults: %q", got)
+	}
+}

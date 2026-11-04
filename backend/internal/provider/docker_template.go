@@ -50,6 +50,10 @@ type containerTemplateData struct {
 	// PreserveMeta keeps the icon, WebUI and privilege flag from the existing
 	// template when the caller cannot know them (container settings edit).
 	PreserveMeta bool
+	// PreserveExtraParams leaves the template's ExtraParams untouched apart
+	// from the restart policy. Docker inspect exposes image labels, generated
+	// MAC addresses and other runtime defaults that must not leak into it.
+	PreserveExtraParams bool
 }
 
 /* -------------------------------------------------------------------------- */
@@ -351,9 +355,13 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 	if data.AdvancedSet {
 		root.setText("Memory", formatDockerMemory(data.Advanced.MemoryLimit))
 		root.setText("CPUset", data.Advanced.CPUSet)
-		// Unraid has no dedicated restart policy field; keeping the flag in
-		// ExtraParams makes the setting survive a recreation from its own webGUI.
-		root.setText("ExtraParams", mergeExtraParams(root.text("ExtraParams"), data.Advanced, data.RestartPolicy))
+		if data.PreserveExtraParams {
+			root.setText("ExtraParams", applyRestartPolicy(root.text("ExtraParams"), data.RestartPolicy))
+		} else {
+			// Unraid has no dedicated restart policy field; keeping the flag in
+			// ExtraParams makes the setting survive a recreation from its own webGUI.
+			root.setText("ExtraParams", mergeExtraParams(root.text("ExtraParams"), data.Advanced, data.RestartPolicy))
+		}
 	} else {
 		root.setText("ExtraParams", applyRestartPolicy(root.text("ExtraParams"), data.RestartPolicy))
 	}
@@ -653,16 +661,17 @@ func (l *Live) syncTemplateAfterUpdate(ctx context.Context, cfg model.ContainerC
 		return
 	}
 	err := l.syncContainerTemplate(ctx, containerTemplateData{
-		Name:          cfg.Name,
-		Image:         cfg.Image,
-		Network:       cfg.NetworkMode,
-		RestartPolicy: cfg.RestartPolicy,
-		Ports:         cfg.Ports,
-		Volumes:       cfg.Volumes,
-		Env:           cfg.Env,
-		Advanced:      cfg.Advanced,
-		AdvancedSet:   true,
-		PreserveMeta:  true,
+		Name:                cfg.Name,
+		Image:               cfg.Image,
+		Network:             cfg.NetworkMode,
+		RestartPolicy:       cfg.RestartPolicy,
+		Ports:               cfg.Ports,
+		Volumes:             cfg.Volumes,
+		Env:                 cfg.Env,
+		Advanced:            cfg.Advanced,
+		AdvancedSet:         true,
+		PreserveMeta:        true,
+		PreserveExtraParams: true,
 	})
 	if err != nil {
 		slog.Error("sync container template", "container", cfg.Name, "error", err)
