@@ -346,6 +346,11 @@ const storage: Record<string, string> = {
   "Waiting for the mover to report its first files…": "En attente des premiers fichiers rapportés par le mover…",
   "File lists are captured from the mover's active file list and syslog.": "Les listes de fichiers proviennent de la liste active du mover et du syslog.",
   "Copy-on-write applies to new files; existing data keeps its current attributes.": "Le copy-on-write s’applique aux nouveaux fichiers ; les données existantes conservent leurs attributs actuels.",
+  "Recalculate usage": "Recalculer l’usage",
+  "Share usage recalculation started": "Recalcul de l’usage des shares démarré",
+  "{count} share(s) queued. Values update as scans finish.": "{count} share(s) en file. Les valeurs se mettent à jour à la fin des scans.",
+  "Could not start share usage recalculation": "Impossible de démarrer le recalcul de l’usage",
+  "Usage scanned {time}": "Usage scanné {time}",
 };
 
 export default storage;

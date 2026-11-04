@@ -85,6 +85,7 @@ export function StoragePage() {
   const { snapshot, metrics, history, refresh } = useApp();
   const action = useAction();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { t } = useI18n();
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "array";
@@ -118,6 +119,21 @@ export function StoragePage() {
   const eta = parity.running && parity.speed > 0
     ? ((100 - parity.progress) / 100) * (parity.lastCheck?.size || array.total) / parity.speed
     : 0;
+
+  const refreshUsage = useMutation({
+    mutationFn: () => api.refreshShareUsage(),
+    onSuccess: (result) => {
+      toast({
+        kind: "info",
+        title: t("Share usage recalculation started"),
+        description: t("{count} share(s) queued. Values update as scans finish.", { count: result.started }),
+      });
+      window.setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      }, 5000);
+    },
+    onError: (error: Error) => toast({ kind: "error", title: t("Could not start share usage recalculation"), description: error.message }),
+  });
 
   const tabAction = (value: string) => {
     const next = new URLSearchParams(params);
@@ -318,6 +334,9 @@ export function StoragePage() {
               icon={<Search className="size-3.5" />}
               className="w-56"
             />
+            <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} loading={refreshUsage.isPending} onClick={() => refreshUsage.mutate()}>
+              {t("Recalculate usage")}
+            </Button>
             <Button variant="primary" icon={<Plus className="size-3.5" />} onClick={() => setShareEditor({ share: null })}>
               {t("New share")}
             </Button>
@@ -1421,6 +1440,9 @@ function ShareCard({ share, onOpen }: { share: Share; onOpen: () => void }) {
           <span>{t("{size} used", { size: formatBytes(share.used) })}</span>
           <span>{t("{size} free", { size: formatBytes(share.free) })}</span>
         </div>
+        {share.usageUpdated ? (
+          <p className="mt-1 text-right text-[8.5px] text-subtle">{t("Usage scanned {time}", { time: relativeTime(share.usageUpdated) })}</p>
+        ) : null}
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {share.smb ? <Badge tone="info">{t("SMB")}</Badge> : null}

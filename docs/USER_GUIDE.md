@@ -178,9 +178,12 @@ If `smartctl` is missing or the disk is in standby, the drawer explains why data
 ![Shares](screenshots/storage-shares.png)
 
 Share cards show usage, SMB/NFS state, cache mode and allocation. When
-`shares.ini` has no size data, Aurora scans the share across the array and pool
-mounts with `du`, caches the result for 30 minutes and refreshes it in the
-background (two shares at a time) so bootstrap latency is never affected. Disk
+`shares.ini` has no size data, Aurora scans the merged share path
+`/mnt/user/<share>` with `du` (the view that includes every data disk, cache pool
+and secondary pool), caches the result for 6 hours and refreshes it in the
+background (two shares at a time) so bootstrap latency is never affected.
+**Recalculate usage** forces a new scan immediately; it also runs in the
+background and updates each share as its scan completes. Disk
 usage falls back to `statfs` when `disks.ini` omits it.
 
 **Create a share**

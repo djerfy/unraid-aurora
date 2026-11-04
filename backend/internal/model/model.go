@@ -186,23 +186,24 @@ type Disk struct {
 }
 
 type Share struct {
-	Name         string    `json:"name"`
-	Comment      string    `json:"comment"`
-	Size         uint64    `json:"size"`
-	Free         uint64    `json:"free"`
-	Used         uint64    `json:"used"`
-	Usage        float64   `json:"usage"`
-	Allocator    string    `json:"allocator"`
-	SplitLevel   string    `json:"splitLevel"`
-	CacheMode    string    `json:"cacheMode"`
-	Pool         string    `json:"pool"`
-	Security     string    `json:"security"`
-	SMB          bool      `json:"smb"`
-	NFS          bool      `json:"nfs"`
-	Exclusive    bool      `json:"exclusive"`
-	Include      []string  `json:"include"`
-	Exclude      []string  `json:"exclude"`
-	LastModified time.Time `json:"lastModified"`
+	Name         string     `json:"name"`
+	Comment      string     `json:"comment"`
+	Size         uint64     `json:"size"`
+	Free         uint64     `json:"free"`
+	Used         uint64     `json:"used"`
+	Usage        float64    `json:"usage"`
+	Allocator    string     `json:"allocator"`
+	SplitLevel   string     `json:"splitLevel"`
+	CacheMode    string     `json:"cacheMode"`
+	Pool         string     `json:"pool"`
+	Security     string     `json:"security"`
+	SMB          bool       `json:"smb"`
+	NFS          bool       `json:"nfs"`
+	Exclusive    bool       `json:"exclusive"`
+	Include      []string   `json:"include"`
+	Exclude      []string   `json:"exclude"`
+	LastModified time.Time  `json:"lastModified"`
+	UsageUpdated *time.Time `json:"usageUpdated,omitempty"`
 }
 
 type ShareConfig struct {

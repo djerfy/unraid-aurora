@@ -560,7 +560,7 @@ def build_spec() -> dict:
                         "name": {"type": "string"}, "comment": {"type": "string"}, "size": {"type": "integer"},
                         "free": {"type": "integer"}, "used": {"type": "integer"}, "usage": {"type": "number"},
                         "allocator": {"type": "string"}, "splitLevel": {"type": "string"},
-                        "cacheMode": {"type": "string"}, "pool": {"type": "string"}, "smb": {"type": "boolean"}, "nfs": {"type": "boolean"},
+                        "cacheMode": {"type": "string"}, "pool": {"type": "string"}, "smb": {"type": "boolean"}, "nfs": {"type": "boolean"}, "usageUpdated": {"type": ["string", "null"], "format": "date-time"},
                     },
                 },
                 "ShareConfig": {"type": "object", "additionalProperties": True},

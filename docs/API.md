@@ -142,6 +142,7 @@ are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 | GET | `/shares` | viewer+ | Shares and protocol state |
 | GET | `/shares/{name}/config` | viewer+ | Editable share configuration |
 | POST | `/shares` | admin | Create a share |
+| POST | `/shares/usage/refresh` | admin | Force a background share-usage rescan (`name` optional) |
 | PUT | `/shares/{name}` | admin | Cache mode, allocator, disks, COW |
 | PUT | `/shares/{name}/smb` | admin | SMB export, security, case |
 | PUT | `/shares/{name}/nfs` | admin | NFS export, security, host rules |

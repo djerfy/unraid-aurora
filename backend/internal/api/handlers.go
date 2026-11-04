@@ -312,6 +312,29 @@ func (s *Server) pools(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) refreshShareUsage(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	if r.ContentLength > 0 {
+		if !s.decode(w, r, &body) {
+			return
+		}
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	started, err := s.provider.RefreshShareUsage(ctx, body.Name)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "share_usage_refresh_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "started": started})
+}
+
 func (s *Server) createShare(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.ReadOnly {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")

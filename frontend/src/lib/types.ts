@@ -194,6 +194,7 @@ export type Share = {
   include: string[];
   exclude: string[];
   lastModified: string;
+  usageUpdated?: string | null;
 };
 
 export type ShareConfig = {

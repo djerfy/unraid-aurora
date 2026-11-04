@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,7 +15,10 @@ import (
 	"aurora/internal/model"
 )
 
-const shareUsageTTL = 30 * time.Minute
+const shareUsageTTL = 6 * time.Hour
+
+// shareUserRoot is a variable so tests can point the scanner at a temp tree.
+var shareUserRoot = "/mnt/user"
 
 type shareUsageEntry struct {
 	Used    uint64    `json:"used"`
@@ -44,21 +48,27 @@ func (l *Live) saveShareUsageLocked() {
 	_ = l.saveConfigFile("share-usage.json", raw)
 }
 
-func (l *Live) cachedShareUsed(name string) uint64 {
+func (l *Live) cachedShareUsed(name string) (uint64, time.Time) {
 	l.shareUsageMu.Lock()
 	defer l.shareUsageMu.Unlock()
-	return l.shareUsage[name].Used
+	entry := l.shareUsage[name]
+	return entry.Used, entry.Updated
 }
 
 func (l *Live) applyShareUsage(share *model.Share) {
 	used := share.Used
+	updated := time.Time{}
 	if used == 0 {
-		used = l.cachedShareUsed(share.Name)
+		used, updated = l.cachedShareUsed(share.Name)
 	}
 	if used == 0 {
 		return
 	}
 	share.Used = used
+	if !updated.IsZero() {
+		value := updated
+		share.UsageUpdated = &value
+	}
 	size := share.Size
 	if size == 0 {
 		size = l.shareCapacity(share.CacheMode, share.Pool)
@@ -68,6 +78,49 @@ func (l *Live) applyShareUsage(share *model.Share) {
 		share.Free = size - used
 		share.Usage = round1(float64(used) / float64(size) * 100)
 	}
+}
+
+// RefreshShareUsage forces a background scan instead of waiting for the TTL.
+// An empty name refreshes every share.
+func (l *Live) RefreshShareUsage(ctx context.Context, name string) (int, error) {
+	_ = ctx
+	names := []string{}
+	if name != "" {
+		name = strings.TrimSpace(name)
+		if name == "" || filepath.Base(name) != name || strings.ContainsAny(name, "\x00\n\r") {
+			return 0, errors.New("invalid share name")
+		}
+		ini, err := parseINI(filepath.Join(l.stateDir, "shares.ini"))
+		if err != nil {
+			return 0, err
+		}
+		if _, ok := ini[name]; !ok {
+			return 0, errors.New("share not found")
+		}
+		names = []string{name}
+	} else {
+		ini, err := parseINI(filepath.Join(l.stateDir, "shares.ini"))
+		if err != nil {
+			return 0, err
+		}
+		for shareName := range ini {
+			names = append(names, shareName)
+		}
+		sort.Strings(names)
+	}
+	started := 0
+	for _, shareName := range names {
+		l.shareUsageMu.Lock()
+		if l.shareUsageRefreshing[shareName] {
+			l.shareUsageMu.Unlock()
+			continue
+		}
+		l.shareUsageRefreshing[shareName] = true
+		l.shareUsageMu.Unlock()
+		started++
+		go l.refreshShareUsage(shareName)
+	}
+	return started, nil
 }
 
 func (l *Live) scheduleShareUsage(shares []model.Share) {
@@ -139,36 +192,14 @@ func (l *Live) sharePaths(name string) []string {
 	if name == "" || name == "." || name == ".." || filepath.Base(name) != name || strings.ContainsAny(name, "\x00\n\r") {
 		return nil
 	}
-	ini, err := parseINI(filepath.Join(l.stateDir, "disks.ini"))
-	if err != nil {
+	// Shares are the /mnt/user view: it merges every data disk, cache pool and
+	// secondary pool that contributes to the share. Scanning /mnt/diskX would
+	// only see one isolated disk and miss data stored elsewhere.
+	path := filepath.Join(shareUserRoot, name)
+	if info, err := os.Stat(path); err != nil || !info.IsDir() {
 		return nil
 	}
-	seen := map[string]bool{}
-	paths := []string{}
-	add := func(path string) {
-		if seen[path] {
-			return
-		}
-		seen[path] = true
-		if info, err := os.Stat(path); err == nil && info.IsDir() {
-			paths = append(paths, path)
-		}
-	}
-	for diskName, disk := range ini {
-		switch disk["type"] {
-		case "Data":
-			if strings.HasPrefix(diskName, "disk") {
-				add(filepath.Join("/mnt", diskName, name))
-			}
-		case "Cache":
-			if pool := strings.TrimSpace(disk["pool"]); pool != "" {
-				add(filepath.Join("/mnt", pool, name))
-			}
-		}
-	}
-	add(filepath.Join("/mnt/cache", name))
-	sort.Strings(paths)
-	return paths
+	return []string{path}
 }
 
 func (l *Live) shareCapacity(useCache, pool string) uint64 {

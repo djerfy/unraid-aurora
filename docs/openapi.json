@@ -7322,6 +7322,68 @@
         }
       }
     },
+    "/api/v1/shares/usage/refresh": {
+      "post": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Force a background share-usage rescan (`name` optional)",
+        "description": "Force a background share-usage rescan (`name` optional)",
+        "operationId": "post_shares_usage_refresh",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "admin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/os/check": {
       "post": {
         "tags": [
@@ -9738,6 +9800,13 @@
           },
           "nfs": {
             "type": "boolean"
+          },
+          "usageUpdated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },

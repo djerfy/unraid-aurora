@@ -409,6 +409,11 @@ export const api = {
     request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/snapshots/${encodeURIComponent(name)}`, {
       method: "DELETE",
     }),
+  refreshShareUsage: (name?: string) =>
+    request<{ ok: boolean; started: number }>("/api/v1/shares/usage/refresh", {
+      method: "POST",
+      body: JSON.stringify({ name: name ?? "" }),
+    }),
   createShare: (config: import("./types").ShareConfig) =>
     request<{ ok: boolean }>("/api/v1/shares", { method: "POST", body: JSON.stringify(config) }),
   shareConfig: (name: string) =>

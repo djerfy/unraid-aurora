@@ -58,3 +58,43 @@ func TestStatfsUsage(t *testing.T) {
 		t.Fatalf("unexpected statfs result: %d %d %v", size, free, ok)
 	}
 }
+
+func TestShareUsageTTLAndManualValidation(t *testing.T) {
+	if shareUsageTTL < 6*time.Hour {
+		t.Fatalf("share usage TTL = %v, want at least 6h", shareUsageTTL)
+	}
+	state := t.TempDir()
+	if err := os.WriteFile(filepath.Join(state, "shares.ini"), []byte(`["media"]
+size="0"
+free="0"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{
+		stateDir:             state,
+		shareUsage:           map[string]shareUsageEntry{},
+		shareUsageRefreshing: map[string]bool{},
+		shareUsageSem:        make(chan struct{}, 1),
+	}
+	if _, err := live.RefreshShareUsage(context.Background(), "missing"); err == nil {
+		t.Fatal("unknown share should be rejected")
+	}
+}
+
+func TestSharePathsUsesMergedUserView(t *testing.T) {
+	root := t.TempDir()
+	previous := shareUserRoot
+	shareUserRoot = root
+	defer func() { shareUserRoot = previous }()
+	if err := os.MkdirAll(filepath.Join(root, "media"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{}
+	paths := live.sharePaths("media")
+	if len(paths) != 1 || paths[0] != filepath.Join(root, "media") {
+		t.Fatalf("unexpected share path: %+v", paths)
+	}
+	if paths := live.sharePaths("../etc"); len(paths) != 0 {
+		t.Fatalf("invalid share name produced a path: %+v", paths)
+	}
+}
