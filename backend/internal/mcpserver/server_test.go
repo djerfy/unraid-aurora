@@ -74,6 +74,14 @@ func TestReadToolsResourcesAndPrompts(t *testing.T) {
 			t.Fatalf("missing tool %q", expected)
 		}
 	}
+	for _, tool := range tools.Tools {
+		if tool.Name == "get_array" && (tool.Annotations == nil || !tool.Annotations.ReadOnlyHint) {
+			t.Fatal("read tools must declare readOnlyHint")
+		}
+		if tool.Name == "start_vm" && tool.Annotations != nil && tool.Annotations.ReadOnlyHint {
+			t.Fatal("action tools must not declare readOnlyHint")
+		}
+	}
 
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "get_array"})
 	if err != nil || result.IsError {

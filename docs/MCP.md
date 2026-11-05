@@ -47,6 +47,119 @@ The daemon exposes `https://<server>:8484/api/v1/mcp` once authentication succee
 
 Clients without native Streamable HTTP support can use a local bridge such as `mcp-remote`.
 
+## Hermes Agent (Nous Research)
+
+[Hermes Agent](https://hermes-agent.nousresearch.com) reads MCP servers from `~/.hermes/config.yaml`
+under `mcp_servers`. Aurora works over both transports.
+
+### Remote HTTP (recommended)
+
+1. Create a token in Aurora under **Settings → API tokens**. A `viewer` token is enough for read
+   tools; add `operator` or `admin` if Hermes should start or stop workloads. Add the scopes you
+   need (`docker`, `vms`, `storage`, `system`, `ups`, `apps`) or leave scopes empty for the full
+   catalog.
+2. Store the secret in `~/.hermes/.env`, never in `config.yaml`:
+
+   ```bash
+   AURORA_MCP_TOKEN=aurora_...
+   ```
+
+3. If Unraid uses its self-signed certificate, copy the bundle to the Hermes host and point
+   `ssl_verify` at it:
+
+   ```bash
+   scp root@homeserver:/boot/config/ssl/certs/homeserver_unraid_bundle.pem \
+     ~/.hermes/certs/homeserver.pem
+   ```
+
+4. Add the server to `~/.hermes/config.yaml`:
+
+   ```yaml
+   mcp_servers:
+     aurora:
+       url: "https://homeserver.unifi:8484/api/v1/mcp"
+       headers:
+         Authorization: "Bearer ${AURORA_MCP_TOKEN}"
+       ssl_verify: "~/.hermes/certs/homeserver.pem"   # or true with a trusted CA
+       connect_timeout: 30
+       trust: "untrusted"                              # lifecycle actions ask for approval
+       tools:
+         include:
+           - get_system
+           - get_array
+           - list_disks
+           - list_shares
+           - list_pools
+           - list_containers
+           - container_logs
+           - list_vms
+           - get_vm
+           - vm_logs
+           - list_zfs_pools
+           - list_gpus
+           - get_ups
+           - get_metrics
+           - get_metrics_history
+           - list_tasks
+           - list_notifications
+           - list_plugins
+         resources: true
+         prompts: true
+   ```
+
+   The `include` list keeps Hermes read-only. To allow lifecycle actions, add the action tools you
+   want (`start_container`, `stop_container`, `restart_container`, `start_vm`, `shutdown_vm`,
+   `pause_vm`, `resume_vm`) or remove `include` entirely.
+
+5. Check the connection, review the discovered tools, and reload a running session:
+
+   ```bash
+   hermes mcp test aurora
+   hermes mcp configure aurora
+   ```
+
+   Inside a chat, `/reload-mcp` refreshes the server list after a config change.
+
+6. Hermes prefixes the tools with the server name, for example `mcp__aurora__get_array` and
+   `mcp__aurora__container_logs`.
+
+### Local stdio
+
+If Hermes runs on the Unraid host itself:
+
+```yaml
+mcp_servers:
+  aurora:
+    command: "/usr/local/bin/aurora"
+    args: ["mcp"]            # add "--allow-actions" to enable lifecycle actions
+    env:
+      AURORA_READ_ONLY: "1"  # optional hard read-only guard
+```
+
+From another machine, tunnel stdio over SSH:
+
+```yaml
+mcp_servers:
+  aurora:
+    command: "ssh"
+    args: ["-T", "root@homeserver", "/usr/local/bin/aurora", "mcp", "--allow-actions"]
+```
+
+`-T` avoids allocating a TTY. Aurora sends JSON-RPC on stdout and all logs to stderr, so the
+transport stays clean.
+
+### Hermes notes
+
+- Read tools declare `readOnlyHint`, so `trust: untrusted` only prompts for write-capable actions.
+- Scoped tokens only expose calls in their scopes; calls outside a scope return an explicit tool
+  error instead of hiding the tool.
+- `${AURORA_MCP_TOKEN}` is expanded from `~/.hermes/.env` (or the profile secret scope). Keep the
+  secret out of `config.yaml`.
+- Prefer the Unraid certificate bundle for `ssl_verify`; `ssl_verify: false` is acceptable only on a
+  trusted lab network.
+- `hermes mcp test aurora` prints the HTTP status and the start of the response body when a
+  connection fails, which is usually enough to spot a token scope or TLS problem.
+
 ## Tools
 
 Read tools are available to every allowed session:
