@@ -5420,6 +5420,67 @@
         ]
       }
     },
+    "/api/v1/vms/{id}/logs": {
+      "get": {
+        "tags": [
+          "Virtual machines"
+        ],
+        "summary": "Per-domain libvirt log (last N lines)",
+        "description": "Per-domain libvirt log (last N lines)",
+        "operationId": "get_vms_id_logs",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Container or VM identifier."
+          }
+        ]
+      }
+    },
     "/api/v1/vms/{id}/snapshots": {
       "get": {
         "tags": [

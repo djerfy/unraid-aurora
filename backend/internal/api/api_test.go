@@ -161,6 +161,15 @@ func (f *fakeProvider) UpdateDisplaySettings(ctx context.Context, settings model
 	return nil
 }
 
+func (f *fakeProvider) VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error) {
+	return []model.LogLine{{
+		Time:    time.Unix(0, 0),
+		Level:   "info",
+		Source:  "libvirt",
+		Message: "starting up",
+	}}, nil
+}
+
 func (f *fakeProvider) VMAdvanced(ctx context.Context, id string) (model.VMAdvancedConfig, error) {
 	return model.VMAdvancedConfig{VCPUs: 2, MemoryMB: 2048, Networks: []model.VMNetworkConfig{{Bridge: "br0", Model: "virtio"}}}, nil
 }
@@ -555,6 +564,27 @@ func TestContainerConnectionsEndpoint(t *testing.T) {
 	}
 	if !out.Available || len(out.Connections) != 1 || out.Connections[0].RemoteAddress != "1.1.1.1" {
 		t.Fatalf("unexpected connections: %+v", out)
+	}
+}
+
+func TestVMLogsEndpoint(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/vms/vm-plex/logs?lines=20", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var lines []model.LogLine
+	if err := json.NewDecoder(resp.Body).Decode(&lines); err != nil {
+		t.Fatal(err)
+	}
+	if len(lines) != 1 || lines[0].Message != "starting up" || lines[0].Source != "libvirt" {
+		t.Fatalf("unexpected log lines: %+v", lines)
 	}
 }
 

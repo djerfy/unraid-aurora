@@ -31,7 +31,7 @@ export function Modal({
   headerExtra?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "logs";
 }) {
   useBodyScrollLock(open);
   const { t } = useI18n();
@@ -46,7 +46,7 @@ export function Modal({
 
   if (!open) return null;
 
-  const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-[1344px]" };
+  const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-[1344px]", logs: "max-w-[1040px]" };
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">

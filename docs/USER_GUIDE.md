@@ -461,6 +461,8 @@ The **Applications** page browses the official Community Applications feed:
 - **Expand disk** grows the first file-backed vDisk, online with `virsh blockresize` or offline with
   `qemu-img resize`.
 - **Console** opens the VNC/SPICE console.
+- **Logs** opens the libvirt domain log (`/var/log/libvirt/qemu/<domain>.log`), with the same
+  filter, reload, copy and download actions as container logs.
 
 ![VM XML](screenshots/vm-xml.png)
 
@@ -482,8 +484,8 @@ utilisation, autostart and actions.
   guests.
 - **Paste clipboard** forwards the local clipboard to the guest through the RFB client cut-text
   message.
-- If keystrokes do not reach a guest, see the tracked issue:
-  <https://github.com/djerfy/unraid-aurora/issues/1>.
+- If keystrokes do not reach a guest, check that the domain defines an `<input type="keyboard">`
+  device; Aurora shows a warning in the console when it is missing.
 
 ---
 

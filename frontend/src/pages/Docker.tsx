@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -7,9 +7,7 @@ import {
   Cable,
   Check,
   CloudDownload,
-  Copy,
   ChevronDown,
-  Download,
   Cpu,
   ExternalLink,
   Globe2,
@@ -41,6 +39,7 @@ import { ContainerConnections } from "../components/containers/ContainerConnecti
 import { ContainerSecurityOverview } from "../components/containers/ContainerSecurityOverview";
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
+import { LogViewer } from "../components/ui/log-viewer";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
   Badge,
@@ -1100,9 +1099,6 @@ function ContainerDrawer({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { t } = useI18n();
-  const [copied, setCopied] = useState(false);
-  const [logQuery, setLogQuery] = useState("");
-  const logRef = useRef<HTMLDivElement>(null);
   const running = container?.state === "running";
   const publishedPorts = (container?.ports ?? []).filter((port) => port.host > 0);
   const autostart = useMutation({
@@ -1126,36 +1122,6 @@ function ContainerDrawer({
     enabled: Boolean(container),
     refetchInterval: 6000,
   });
-
-  useEffect(() => {
-    if (!logs.data || !logRef.current) return;
-    logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [logs.data]);
-
-  const filteredLogs = (logs.data ?? []).filter((line) => {
-    const query = logQuery.trim().toLowerCase();
-    return !query || `${line.level} ${line.message}`.toLowerCase().includes(query);
-  });
-
-  const logText = () => filteredLogs.map((line) => `${line.time} ${line.level.toUpperCase()} ${line.message}`).join("\n");
-
-  const copyLogs = async () => {
-    if (!logs.data) return;
-    await navigator.clipboard.writeText(logText());
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  };
-
-  const downloadLogs = () => {
-    if (!container) return;
-    const blob = new Blob([logText()], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${container.name}.log`;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
 
   if (!container) return null;
 
@@ -1296,56 +1262,14 @@ function ContainerDrawer({
 
         <ContainerConnections container={container} compact />
 
-        <div>
-          <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-subtle">
-              <Terminal className="size-3.5" /> {t("Container logs")}
-            </h3>
-            <div className="flex items-center gap-1">
-              <input
-                value={logQuery}
-                onChange={(event) => setLogQuery(event.target.value)}
-                placeholder={t("Filter logs…")}
-                aria-label={t("Filter logs")}
-                className="h-7 w-36 rounded-md border border-line bg-[var(--surface-2)] px-2 text-[10px] text-ink outline-none focus:border-[var(--accent-line)]"
-              />
-              <IconButton label={t("Reload logs")} size="sm" onClick={() => void logs.refetch()}>
-                <RefreshCw className={cn("size-3.5", logs.isFetching && "animate-spin")} />
-              </IconButton>
-              <IconButton label={t("Download logs")} size="sm" onClick={downloadLogs}>
-                <Download className="size-3.5" />
-              </IconButton>
-              <IconButton label={t("Copy logs")} size="sm" onClick={() => void copyLogs()}>
-                {copied ? <Check className="size-3.5 text-[var(--success)]" /> : <Copy className="size-3.5" />}
-              </IconButton>
-            </div>
-          </div>
-          <div
-            ref={logRef}
-            className="mt-2 h-[32rem] overflow-y-auto rounded-xl border border-[#23252e] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed"
-          >
-            {logs.isLoading ? (
-              <p className="text-[#6b7280]">{t("Loading logs…")}</p>
-            ) : filteredLogs.length ? (
-              filteredLogs.map((line, index) => (
-                <div key={`${line.time}-${index}`} className="flex gap-2">
-                  <span className="shrink-0 text-[#4b5563]">{new Date(line.time).toLocaleTimeString([], { hour12: false })}</span>
-                  <span
-                    className={cn(
-                      "shrink-0 uppercase",
-                      line.level === "error" ? "text-[#ff6b81]" : line.level === "warn" ? "text-[#f5b44a]" : "text-[#5aa9ff]",
-                    )}
-                  >
-                    {line.level}
-                  </span>
-                  <span className="text-[#c7cbd6]">{line.message}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-[#6b7280]">{logQuery.trim() ? t("No log line matches this filter.") : t("No logs available.")}</p>
-            )}
-          </div>
-        </div>
+        <LogViewer
+          lines={logs.data}
+          loading={logs.isLoading}
+          refreshing={logs.isFetching}
+          onRefresh={() => void logs.refetch()}
+          downloadName={`${container.name}.log`}
+          title={t("Container logs")}
+        />
       </div>
     </Drawer>
   );

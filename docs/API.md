@@ -212,6 +212,7 @@ Response:
 | POST | `/vms/{id}/snapshots/{snapshot}/revert` | operator | Restore a snapshot |
 | DELETE | `/vms/{id}/snapshots/{snapshot}` | operator | Delete a snapshot |
 | GET | `/vms/{id}/console` | operator+ | WebSocket VNC/SPICE proxy |
+| GET | `/vms/{id}/logs` | viewer+ | Per-domain libvirt log (last N lines) |
 
 ### Network
 

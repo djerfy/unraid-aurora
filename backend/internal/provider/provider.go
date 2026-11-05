@@ -34,6 +34,7 @@ type Provider interface {
 	DockerNetworks(ctx context.Context) ([]string, error)
 	ContainerTemplates(ctx context.Context) ([]model.ContainerTemplate, error)
 	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
+	VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)
 	SetVMAutostart(ctx context.Context, id string, enabled bool) error
 	VMXML(ctx context.Context, id string) (string, error)
 	CreateVM(ctx context.Context, opts model.VMCreateOptions) (model.VM, error)

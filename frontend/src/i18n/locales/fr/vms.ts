@@ -125,6 +125,8 @@ const vms: Record<string, string> = {
   "USB device attached": "Périphérique USB attaché",
   "USB device detached": "Périphérique USB détaché",
   "Unable to change the USB device": "Impossible de modifier le périphérique USB",
+  "VM logs": "Journaux de la VM",
+  "libvirt domain log": "Journal du domaine libvirt",
   "Shared folders (virtiofs)": "Dossiers partagés (virtiofs)",
   "Share a host directory under /mnt with the guest through virtiofs.": "Partage un dossier de l’hôte sous /mnt avec l’invité via virtiofs.",
   "Add folder": "Ajouter un dossier",

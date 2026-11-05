@@ -359,6 +359,8 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  vmLogs: (id: string, lines = 240) =>
+    request<LogLine[]>(`/api/v1/vms/${encodeURIComponent(id)}/logs?lines=${lines}`),
   createVM: (options: import("./types").VMCreateOptions) =>
     request<import("./types").VM>("/api/v1/vms", { method: "POST", body: JSON.stringify(options) }),
   vmHostDevices: () => request<import("./types").VMHostDevice[]>("/api/v1/vms/host-devices"),

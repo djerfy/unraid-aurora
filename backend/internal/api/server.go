@@ -107,6 +107,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/vms/{id}/usb/attach", s.attachVMUSB)
 	api.HandleFunc("POST /api/v1/vms/{id}/usb/detach", s.detachVMUSB)
 	api.HandleFunc("GET /api/v1/vms/{id}/console", s.vmConsole)
+	api.HandleFunc("GET /api/v1/vms/{id}/logs", s.vmLogs)
 	api.HandleFunc("PUT /api/v1/vms/{id}/autostart", s.vmAutostart)
 	api.HandleFunc("GET /api/v1/vms/{id}/xml", s.vmXML)
 	api.HandleFunc("PUT /api/v1/vms/{id}/xml", s.updateVMXML)

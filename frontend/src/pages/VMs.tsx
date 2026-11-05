@@ -21,6 +21,7 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  ScrollText,
   Square,
   SquareTerminal,
   Trash2,
@@ -28,6 +29,7 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { VMConsoleModal } from "../components/vms/VMConsoleModal";
+import { VMLogsModal } from "../components/vms/VMLogsModal";
 import { VMAdvancedModal } from "../components/vms/VMAdvancedModal";
 import { VMUSBHotplug } from "../components/vms/VMUSBHotplug";
 import { VMCloneModal, VMResizeModal } from "../components/vms/VMManagementModals";
@@ -56,6 +58,7 @@ export function VMsPage() {
   const action = useAction();
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
+  const [logsVm, setLogsVm] = useState<VM | null>(null);
   const [xmlVm, setXmlVm] = useState<VM | null>(null);
   const [advancedVm, setAdvancedVm] = useState<VM | null>(null);
   const [cloneVm, setCloneVm] = useState<VM | null>(null);
@@ -357,6 +360,9 @@ export function VMsPage() {
                 <Button size="sm" variant="secondary" icon={<HardDrive className="size-3" />} onClick={() => setResizeVm(selected)}>
                   {t("Expand disk")}
                 </Button>
+                <Button size="sm" variant="secondary" icon={<ScrollText className="size-3" />} onClick={() => setLogsVm(selected)}>
+                  {t("Logs")}
+                </Button>
                 <Switch
                   checked={selected.autostart}
                   onChange={(enabled) => autostart.mutate({ id: selected.id, enabled })}
@@ -403,6 +409,8 @@ export function VMsPage() {
           </div>
         ) : null}
       </Drawer>
+
+      <VMLogsModal vm={logsVm} onClose={() => setLogsVm(null)} />
 
       <VMConsoleModal
         vm={consoleVm}
