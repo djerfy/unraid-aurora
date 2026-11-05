@@ -1322,7 +1322,7 @@ function ContainerDrawer({
           </div>
           <div
             ref={logRef}
-            className="mt-2 h-64 overflow-y-auto rounded-xl border border-[#23252e] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed"
+            className="mt-2 h-[32rem] overflow-y-auto rounded-xl border border-[#23252e] bg-[#08090d] p-3 font-mono text-[10px] leading-relaxed"
           >
             {logs.isLoading ? (
               <p className="text-[#6b7280]">{t("Loading logs…")}</p>
