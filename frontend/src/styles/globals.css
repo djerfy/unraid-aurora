@@ -125,6 +125,14 @@
   --accent-line: rgba(34, 181, 115, 0.32);
   --shadow-glow: 0 0 0 1px var(--accent-line), 0 24px 60px -28px rgba(34, 181, 115, 0.45);
 }
+[data-accent="blue"] {
+  --accent: #3b82f6;
+  --accent-2: #60a5fa;
+  --accent-soft: rgba(59, 130, 246, 0.14);
+  --accent-softer: rgba(59, 130, 246, 0.07);
+  --accent-line: rgba(59, 130, 246, 0.32);
+  --shadow-glow: 0 0 0 1px var(--accent-line), 0 24px 60px -28px rgba(59, 130, 246, 0.45);
+}
 [data-accent="amber"] {
   --accent: #e8a020;
   --accent-2: #ffd066;

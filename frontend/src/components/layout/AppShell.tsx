@@ -134,7 +134,7 @@ export function AppShell() {
       if (localStorage.getItem("aurora.theme")) return;
       setPreferences({
         theme: snapshot.settings.theme as "dark" | "light" | "system",
-        accent: snapshot.settings.accent as "ember" | "violet" | "cyan" | "emerald" | "amber",
+        accent: snapshot.settings.accent as "ember" | "violet" | "cyan" | "emerald" | "amber" | "blue",
         density: snapshot.settings.density as "comfortable" | "compact",
       });
     } catch {

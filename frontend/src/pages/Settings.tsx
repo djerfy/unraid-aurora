@@ -65,6 +65,7 @@ const ACCENTS: { value: Accent; label: string; color: string; secondary: string 
   { value: "cyan", label: "Cyan", color: "#22b8d6", secondary: "#4de3c0" },
   { value: "emerald", label: "Emerald", color: "#22b573", secondary: "#7ee2a8" },
   { value: "amber", label: "Amber", color: "#e8a020", secondary: "#ffd066" },
+  { value: "blue", label: "Blue", color: "#3b82f6", secondary: "#60a5fa" },
 ];
 
 export function SettingsPage() {

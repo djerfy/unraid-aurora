@@ -885,7 +885,7 @@ export type StorageLayout = {
 
 export type Settings = {
   theme: "dark" | "light" | "system" | string;
-  accent: "ember" | "violet" | "cyan" | "emerald" | "amber" | string;
+  accent: "ember" | "violet" | "cyan" | "emerald" | "amber" | "blue" | string;
   density: "comfortable" | "compact" | string;
   refreshInterval: number;
   language: string;

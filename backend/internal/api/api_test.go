@@ -437,6 +437,13 @@ func TestSettingsValidation(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 for valid settings, got %d", resp.StatusCode)
 	}
+
+	settings.Accent = "blue"
+	resp = env.request(t, http.MethodPut, "/api/v1/settings", settings, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for the blue accent, got %d", resp.StatusCode)
+	}
 }
 
 func TestUnknownActionIsRejected(t *testing.T) {

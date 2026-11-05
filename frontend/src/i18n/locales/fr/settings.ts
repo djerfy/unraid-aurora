@@ -22,6 +22,7 @@ const settings: Record<string, string> = {
   "Cyan": "Cyan",
   "Emerald": "Émeraude",
   "Amber": "Ambre",
+  "Blue": "Bleu",
 
   "Connected to": "Connecté à",
   "Re-sync now": "Resynchroniser",

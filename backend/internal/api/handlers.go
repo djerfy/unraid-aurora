@@ -1815,7 +1815,7 @@ func validateSettings(s *model.Settings) error {
 		s.Accent = "ember"
 	}
 	switch s.Accent {
-	case "ember", "violet", "cyan", "emerald", "amber":
+	case "ember", "violet", "cyan", "emerald", "amber", "blue":
 	default:
 		return fmt.Errorf("unknown accent %q", s.Accent)
 	}

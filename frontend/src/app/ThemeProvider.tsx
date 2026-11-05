@@ -9,7 +9,7 @@ import {
 } from "react";
 
 export type ThemeMode = "dark" | "light" | "system";
-export type Accent = "ember" | "violet" | "cyan" | "emerald" | "amber";
+export type Accent = "ember" | "violet" | "cyan" | "emerald" | "amber" | "blue";
 export type Density = "comfortable" | "compact";
 
 type Preferences = {

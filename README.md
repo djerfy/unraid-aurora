@@ -306,7 +306,7 @@ Deep dives:
 | Shares | Create, rename and edit shares: comment, free-space floor, cache mode, primary/secondary storage, allocator, split level, include/exclude disks, SMB and NFS export/security |
 | Équilibrage | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
 | Historique | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
-| Settings | Dark/light/system, five accents, density, units, refresh cadence, session info, notification channels, UPS policy, API tokens, Unraid OS updates/downgrade, Unraid API process management and Trivy installation/database scheduling |
+| Settings | Dark/light/system, six accents, density, units, refresh cadence, session info, notification channels, UPS policy, API tokens, Unraid OS updates/downgrade, Unraid API process management and Trivy installation/database scheduling |
 | Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 
 ## Security notes
