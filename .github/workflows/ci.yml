@@ -55,6 +55,9 @@ jobs:
       - name: Check OpenAPI structure
         run: python3 scripts/check-openapi.py
 
+      - name: Check MCP coverage
+        run: python3 scripts/mcp_coverage.py
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

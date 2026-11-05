@@ -12,7 +12,7 @@ VERSION := 0.0.0-dev
 endif
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp openapi
+.PHONY: all install build ui backend run dev-api dev-ui test vet fmt clean build-tmp openapi mcp-check
 
 all: build
 
@@ -65,6 +65,9 @@ fmt:
 
 openapi:
 	python3 scripts/openapi.py
+
+mcp-check:
+	python3 scripts/mcp_coverage.py
 
 clean:
 	rm -rf bin frontend/dist

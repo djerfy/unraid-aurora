@@ -94,6 +94,23 @@ Lifecycle actions require an operator/admin session with `AllowActions`:
 | `container-triage` | Diagnose a container from its state and logs |
 | `vm-triage` | Diagnose a virtual machine from its state and libvirt log |
 
+## Keeping MCP in sync
+
+[`docs/mcp-coverage.json`](mcp-coverage.json) maps every route registered in
+`backend/internal/api/server.go` to the MCP tools that expose it, or records why it is intentionally
+excluded. `scripts/mcp_coverage.py` runs in CI and fails when:
+
+- an API route is added or removed without updating the manifest;
+- a manifest entry references a tool that no longer exists;
+- an MCP tool is not mapped to any API route.
+
+When you add a tool, implement it, add its name to the matching route entry, and update the catalog
+above. When you add an API route, either expose it as a tool or add an exclusion reason.
+
+```bash
+python3 scripts/mcp_coverage.py
+```
+
 ## Security
 
 - Stdio runs with the privileges of the Aurora binary. Protect the host account that launches it.

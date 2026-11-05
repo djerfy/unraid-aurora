@@ -1,0 +1,513 @@
+{
+  "version": 1,
+  "routes": {
+    "POST /api/v1/actions": {
+      "tools": [
+        "start_container",
+        "stop_container",
+        "restart_container",
+        "start_vm",
+        "shutdown_vm",
+        "pause_vm",
+        "resume_vm"
+      ]
+    },
+    "GET /api/v1/apps": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/apps/icon": {
+      "excluded": "Binary icon payload; not exposed through MCP."
+    },
+    "GET /api/v1/apps/template": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/array": {
+      "tools": [
+        "get_array"
+      ]
+    },
+    "POST /api/v1/array/start": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/array/stop": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/audit": {
+      "excluded": "Sensitive interactive or audit endpoint; intentionally not exposed."
+    },
+    "POST /api/v1/auth/login": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "POST /api/v1/auth/logout": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "POST /api/v1/auth/revoke-all": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "GET /api/v1/auth/session": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "GET /api/v1/auth/sessions": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "DELETE /api/v1/auth/sessions/{nonce}": {
+      "excluded": "Session management; MCP authenticates with an API token."
+    },
+    "GET /api/v1/balance/browse": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/balance/cancel": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/balance/disks": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/balance/history": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/balance/start": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/balance/status": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/bootstrap": {
+      "excluded": "Aggregated or streaming UI feed; use the dedicated read tools."
+    },
+    "GET /api/v1/config-history": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/config-history/{id}": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/config-history/{id}/rollback": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/config/export": {
+      "excluded": "Sensitive export/import endpoint; intentionally not exposed."
+    },
+    "POST /api/v1/config/import": {
+      "excluded": "Sensitive export/import endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/disks": {
+      "tools": [
+        "list_disks"
+      ]
+    },
+    "GET /api/v1/disks/{device}/smart": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/disks/{device}/smart-test": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/docker/check-updates": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/containers": {
+      "tools": [
+        "list_containers"
+      ]
+    },
+    "POST /api/v1/docker/containers": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/docker/containers/bulk": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "DELETE /api/v1/docker/containers/{id}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "PUT /api/v1/docker/containers/{id}/autostart": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/containers/{id}/config": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/docker/containers/{id}/config": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/containers/{id}/connections": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/docker/containers/{id}/icon": {
+      "excluded": "Binary icon payload; not exposed through MCP."
+    },
+    "GET /api/v1/docker/containers/{id}/logs": {
+      "tools": [
+        "container_logs"
+      ]
+    },
+    "POST /api/v1/docker/containers/{id}/scan": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/containers/{id}/security": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/docker/containers/{id}/update": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/networks": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/docker/scan-all": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/security": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/docker/templates": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/events": {
+      "tools": [
+        "get_metrics"
+      ]
+    },
+    "GET /api/v1/gpus": {
+      "tools": [
+        "list_gpus"
+      ]
+    },
+    "GET /api/v1/health": {
+      "excluded": "Liveness probe; not an MCP tool."
+    },
+    "GET /api/v1/logs": {
+      "excluded": "Sensitive interactive or audit endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/metrics/history": {
+      "tools": [
+        "get_metrics_history"
+      ]
+    },
+    "GET /api/v1/mover": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/mover/start": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/mover/stop": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/network": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/network/apply": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/network/config": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/network/config": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/network/interfaces/{name}/{action}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/network/revert": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/notifications": {
+      "tools": [
+        "list_notifications"
+      ]
+    },
+    "POST /api/v1/notifications/test": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/parity/history": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/plugins": {
+      "tools": [
+        "list_plugins"
+      ]
+    },
+    "POST /api/v1/plugins/check-updates": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/plugins/install": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "DELETE /api/v1/plugins/{name}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/plugins/{name}/update": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/pools": {
+      "tools": [
+        "list_pools"
+      ]
+    },
+    "GET /api/v1/settings": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "PUT /api/v1/settings": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/shares": {
+      "tools": [
+        "list_shares"
+      ]
+    },
+    "POST /api/v1/shares": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/shares/usage/refresh": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "PUT /api/v1/shares/{name}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/shares/{name}/config": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/shares/{name}/nfs": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "PUT /api/v1/shares/{name}/smb": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/storage-layout": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/storage-layout": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/system": {
+      "tools": [
+        "get_system"
+      ]
+    },
+    "PUT /api/v1/system/display": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/system/os": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/system/os/check": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/system/os/restore": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/system/os/update": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/system/scheduler": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/system/scheduler": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/system/scheduler/preview": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/tasks": {
+      "tools": [
+        "list_tasks"
+      ]
+    },
+    "GET /api/v1/terminal": {
+      "excluded": "Sensitive interactive or audit endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/tokens": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "POST /api/v1/tokens": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "DELETE /api/v1/tokens/{id}": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/tools/diagnostics": {
+      "excluded": "Sensitive export/import endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/tools/flash-backup": {
+      "excluded": "Sensitive export/import endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/trivy": {
+      "excluded": "Scanner administration; not exposed through MCP."
+    },
+    "POST /api/v1/trivy/db/update": {
+      "excluded": "Scanner administration; not exposed through MCP."
+    },
+    "POST /api/v1/trivy/install": {
+      "excluded": "Scanner administration; not exposed through MCP."
+    },
+    "GET /api/v1/trivy/versions": {
+      "excluded": "Scanner administration; not exposed through MCP."
+    },
+    "GET /api/v1/unraid-api": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/unraid-api/logs": {
+      "excluded": "Sensitive interactive or audit endpoint; intentionally not exposed."
+    },
+    "POST /api/v1/unraid-api/{action}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/ups": {
+      "tools": [
+        "get_ups"
+      ]
+    },
+    "GET /api/v1/ups/nut": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/ups/nut": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/ups/settings": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/ups/settings": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/user-scripts": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/user-scripts/{id}": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/user-scripts/{id}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/user-scripts/{id}/run": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/users": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "POST /api/v1/users": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "DELETE /api/v1/users/{name}": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "PUT /api/v1/users/{name}": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/users/{name}/icon": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "PUT /api/v1/users/{name}/password": {
+      "excluded": "Credential or secret-bearing endpoint; intentionally not exposed."
+    },
+    "GET /api/v1/vms": {
+      "tools": [
+        "list_vms",
+        "get_vm"
+      ]
+    },
+    "POST /api/v1/vms": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/autostart-order": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/vms/autostart-order": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/autostart-order/apply": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/host-devices": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "GET /api/v1/vms/{id}/advanced": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/vms/{id}/advanced": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "PUT /api/v1/vms/{id}/autostart": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/backup": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/vms/{id}/backup": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/backup/cancel": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/clone": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/console": {
+      "excluded": "Interactive console stream; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/icon": {
+      "excluded": "Binary icon payload; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/logs": {
+      "tools": [
+        "vm_logs"
+      ]
+    },
+    "POST /api/v1/vms/{id}/resize": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/restore": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/snapshots": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/vms/{id}/snapshots": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "DELETE /api/v1/vms/{id}/snapshots/{snapshot}": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/snapshots/{snapshot}/revert": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/usb/attach": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/vms/{id}/usb/detach": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/vms/{id}/xml": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "PUT /api/v1/vms/{id}/xml": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "DELETE /api/v1/zfs/datasets": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/zfs/datasets": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "PUT /api/v1/zfs/datasets": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/zfs/pools": {
+      "tools": [
+        "list_zfs_pools"
+      ]
+    },
+    "POST /api/v1/zfs/pools/{name}/scrub": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "DELETE /api/v1/zfs/snapshots": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/zfs/snapshots": {
+      "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
+    },
+    "POST /api/v1/zfs/snapshots": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/zfs/snapshots/clone": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "POST /api/v1/zfs/snapshots/rollback": {
+      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    }
+  }
+}
