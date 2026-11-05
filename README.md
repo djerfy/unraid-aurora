@@ -103,7 +103,9 @@ Full page-by-page guide with screenshots: [`docs/USER_GUIDE.md`](docs/USER_GUIDE
 
 ## Requirements
 
-- Unraid 7.x (the state files and `/etc/shadow` must be readable).
+- Unraid **7.x only**. The state files and `/etc/shadow` must be readable. Aurora refuses to
+  start on Unraid 6.x, 8.x or an undetectable version: the version is read from
+  `/etc/unraid-version`, with `var.ini` as a fallback.
 - A TLS certificate bundle at `/boot/config/ssl/certs/<server>_unraid_bundle.pem`, where `<server>` is the Unraid server name (standard self-signed cert).
 - Go 1.27+ and Node 22+ to build.
 - Root privileges at runtime: shadow access, Docker socket, `emcmd`, `mdcmd`, `virsh`.

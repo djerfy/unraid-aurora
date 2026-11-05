@@ -750,6 +750,8 @@ canvas so they never steal keystrokes from a console.
 | Symptom | What to check |
 |---|---|
 | Login fails | Confirm the `root` password works over SSH or the Unraid console; Aurora reads `/etc/shadow`. |
+| "unsupported Unraid version" at startup | Aurora only runs on **Unraid 7.x**. Version 6.x, 8.x and unknown builds are refused; check `/etc/unraid-version` and `var.ini`. |
+| "cannot verify the Unraid version" at startup | Neither `/etc/unraid-version` nor the `version` field in `var.ini` is readable. Aurora fails closed instead of running against an unknown state format. |
 | "Cannot locate the TLS certificate" | Check `/boot/config/ssl/certs/<server>_unraid_bundle.pem` or set `AURORA_TLS_CERT` / `AURORA_TLS_KEY`. |
 | A log source returns "unavailable" | The file does not exist on this host (for example `libvirtd.log` or `maillog`); enable the corresponding service logging. |
 | Container update check fails | The host needs outbound HTTPS access to the registry; private registries need credentials in `/root/.docker/config.json`. |

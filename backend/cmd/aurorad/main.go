@@ -78,6 +78,17 @@ func main() {
 		log.Error("invalid configuration", "error", err)
 		os.Exit(2)
 	}
+	unraidVersion, err := config.DetectUnraidVersion(cfg.StateDir)
+	if err != nil {
+		log.Error("cannot verify the Unraid version", "error", err,
+			"hint", "Aurora requires Unraid 7.x and reads /etc/unraid-version or var.ini")
+		os.Exit(1)
+	}
+	if err := config.RequireUnraid7(unraidVersion); err != nil {
+		log.Error("unsupported Unraid version", "version", unraidVersion, "error", err,
+			"hint", "Aurora only supports Unraid 7.x; 6.x and 8.x are refused")
+		os.Exit(1)
+	}
 	if *addr != "" {
 		cfg.Addr = *addr
 	}
@@ -128,7 +139,7 @@ func main() {
 	}
 
 	log.Info("aurora is starting",
-		"addr", cfg.Addr, "version", version,
+		"addr", cfg.Addr, "version", version, "unraid", unraidVersion,
 		"auth", "native root/shadow", "readOnly", cfg.ReadOnly,
 		"stateDir", cfg.StateDir, "tls", certPath,
 	)
