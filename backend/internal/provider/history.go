@@ -365,6 +365,24 @@ func historyToModel(meta historyMeta) model.ConfigHistory {
 	}
 }
 
+// recordConfigEvent writes a history entry without file changes. Used for
+// operations whose artifacts live outside the configuration tree (VM backups).
+func (l *Live) recordConfigEvent(action, description string) {
+	if l.configDir() == "" {
+		return
+	}
+	id := newHistoryID()
+	dir := filepath.Join(l.configDir(), configHistoryDir, id)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return
+	}
+	meta := historyMeta{ID: id, Created: time.Now().UTC(), Action: action, Description: description}
+	if raw, err := json.MarshalIndent(meta, "", "  "); err == nil {
+		_ = os.WriteFile(filepath.Join(dir, "meta.json"), raw, 0o600)
+	}
+	l.pruneConfigHistory()
+}
+
 func (l *Live) pruneConfigHistory() {
 	if l.configDir() == "" {
 		return

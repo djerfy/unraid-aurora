@@ -78,6 +78,10 @@ type Live struct {
 	balance        *balanceRuntime
 	balanceHistory []model.BalanceJob
 
+	vmJobMu       sync.Mutex
+	vmJobs        map[string]*vmJobRuntime
+	vmAutostartMu sync.Mutex
+
 	statsMu        sync.Mutex
 	containerStats map[string]cachedContainerStats
 	vmCPU          map[string]vmCPUSample

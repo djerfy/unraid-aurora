@@ -121,6 +121,7 @@ func main() {
 	go hub.Run(ctx, 2*time.Second)
 	go notify.Run(ctx, p, log)
 	go p.Start(ctx)
+	go p.RunVMAutostart(ctx)
 
 	authManager := auth.New(cfg.SessionTTL, auth.WithPersistence(cfg.ConfigDir))
 	srv := &http.Server{

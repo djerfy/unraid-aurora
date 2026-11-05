@@ -35,6 +35,13 @@ type Provider interface {
 	ContainerTemplates(ctx context.Context) ([]model.ContainerTemplate, error)
 	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
 	VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)
+	StartVMBackup(ctx context.Context, id, targetDir string) (model.VMBackup, error)
+	VMBackupStatus(ctx context.Context, id string) (model.VMBackup, error)
+	CancelVMBackup(ctx context.Context, id string) error
+	StartVMRestore(ctx context.Context, id, backupDir string, confirm bool) (model.VMBackup, error)
+	VMAutostartOrder(ctx context.Context) (model.VMAutostartOrder, error)
+	SetVMAutostartOrder(ctx context.Context, order []string, managed bool) (model.VMAutostartOrder, error)
+	ApplyVMAutostartOrder(ctx context.Context) (model.VMAutostartResult, error)
 	SetVMAutostart(ctx context.Context, id string, enabled bool) error
 	VMXML(ctx context.Context, id string) (string, error)
 	CreateVM(ctx context.Context, opts model.VMCreateOptions) (model.VM, error)

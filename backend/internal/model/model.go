@@ -440,6 +440,55 @@ type VM struct {
 	ConsoleKeyboard  bool   `json:"consoleKeyboard"`
 }
 
+type VMBackupFile struct {
+	Name   string `json:"name"`
+	Kind   string `json:"kind"`
+	Target string `json:"target,omitempty"`
+	Format string `json:"format,omitempty"`
+	Size   uint64 `json:"size"`
+	SHA256 string `json:"sha256"`
+}
+
+type VMBackup struct {
+	ID         string         `json:"id"`
+	Kind       string         `json:"kind"`
+	VMID       string         `json:"vmId"`
+	VMName     string         `json:"vmName"`
+	Dir        string         `json:"dir"`
+	State      string         `json:"state"`
+	Phase      string         `json:"phase"`
+	Message    string         `json:"message"`
+	StartedAt  time.Time      `json:"startedAt"`
+	FinishedAt *time.Time     `json:"finishedAt,omitempty"`
+	TotalBytes uint64         `json:"totalBytes"`
+	DoneBytes  uint64         `json:"doneBytes"`
+	Files      []VMBackupFile `json:"files"`
+	Error      string         `json:"error,omitempty"`
+}
+
+type VMRestoreResult struct {
+	Job      VMBackup       `json:"job"`
+	Restored []VMBackupFile `json:"restored"`
+}
+
+type VMAutostartOrder struct {
+	Order      []string  `json:"order"`
+	Managed    bool      `json:"managed"`
+	ManagedVMs []string  `json:"managedVms"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+
+type VMAutostartFailure struct {
+	Name  string `json:"name"`
+	Error string `json:"error"`
+}
+
+type VMAutostartResult struct {
+	Started []string             `json:"started"`
+	Skipped []string             `json:"skipped"`
+	Failed  []VMAutostartFailure `json:"failed"`
+}
+
 type UPSSettings struct {
 	Service          string `json:"service"`
 	Cable            string `json:"cable"`

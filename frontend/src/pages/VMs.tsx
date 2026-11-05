@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Apple,
+  Archive,
   Camera,
   Check,
   Clock3,
@@ -13,6 +14,7 @@ import {
   HardDrive,
   LayoutGrid,
   List,
+  ListOrdered,
   MemoryStick,
   Monitor,
   Network,
@@ -30,6 +32,8 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { EntityIcon, vmIconURL } from "../components/ui/entity-icon";
 import { VMConsoleModal } from "../components/vms/VMConsoleModal";
 import { VMLogsModal } from "../components/vms/VMLogsModal";
+import { VMBackupModal } from "../components/vms/VMBackupModal";
+import { VMAutostartModal } from "../components/vms/VMAutostartModal";
 import { VMAdvancedModal } from "../components/vms/VMAdvancedModal";
 import { VMUSBHotplug } from "../components/vms/VMUSBHotplug";
 import { VMCloneModal, VMResizeModal } from "../components/vms/VMManagementModals";
@@ -59,6 +63,8 @@ export function VMsPage() {
   const [params, setParams] = useSearchParams();
   const [consoleVm, setConsoleVm] = useState<VM | null>(null);
   const [logsVm, setLogsVm] = useState<VM | null>(null);
+  const [backupVm, setBackupVm] = useState<VM | null>(null);
+  const [orderOpen, setOrderOpen] = useState(false);
   const [xmlVm, setXmlVm] = useState<VM | null>(null);
   const [advancedVm, setAdvancedVm] = useState<VM | null>(null);
   const [cloneVm, setCloneVm] = useState<VM | null>(null);
@@ -129,6 +135,9 @@ export function VMsPage() {
         }
         actions={
           <>
+            <Button variant="secondary" icon={<ListOrdered className="size-3.5" />} onClick={() => setOrderOpen(true)}>
+              {t("Autostart order")}
+            </Button>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
               {t("Refresh")}
             </Button>
@@ -363,6 +372,9 @@ export function VMsPage() {
                 <Button size="sm" variant="secondary" icon={<ScrollText className="size-3" />} onClick={() => setLogsVm(selected)}>
                   {t("Logs")}
                 </Button>
+                <Button size="sm" variant="secondary" icon={<Archive className="size-3" />} onClick={() => setBackupVm(selected)}>
+                  {t("Backup")}
+                </Button>
                 <Switch
                   checked={selected.autostart}
                   onChange={(enabled) => autostart.mutate({ id: selected.id, enabled })}
@@ -411,6 +423,8 @@ export function VMsPage() {
       </Drawer>
 
       <VMLogsModal vm={logsVm} onClose={() => setLogsVm(null)} />
+      <VMBackupModal vm={backupVm} onClose={() => setBackupVm(null)} />
+      <VMAutostartModal open={orderOpen} vms={vms} onClose={() => setOrderOpen(false)} />
 
       <VMConsoleModal
         vm={consoleVm}

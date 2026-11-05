@@ -361,6 +361,34 @@ export const api = {
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
   vmLogs: (id: string, lines = 240) =>
     request<LogLine[]>(`/api/v1/vms/${encodeURIComponent(id)}/logs?lines=${lines}`),
+  vmBackup: (id: string, dir: string) =>
+    request<import("./types").VMBackup>(`/api/v1/vms/${encodeURIComponent(id)}/backup`, {
+      method: "POST",
+      body: JSON.stringify({ dir }),
+    }),
+  vmBackupStatus: (id: string) =>
+    request<import("./types").VMBackup>(`/api/v1/vms/${encodeURIComponent(id)}/backup`),
+  cancelVMBackup: (id: string) =>
+    request<{ ok: boolean }>(`/api/v1/vms/${encodeURIComponent(id)}/backup/cancel`, {
+      method: "POST",
+      body: "{}",
+    }),
+  restoreVMBackup: (id: string, dir: string, confirm: boolean) =>
+    request<import("./types").VMBackup>(`/api/v1/vms/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+      body: JSON.stringify({ dir, confirm }),
+    }),
+  vmAutostartOrder: () => request<import("./types").VMAutostartOrder>("/api/v1/vms/autostart-order"),
+  setVMAutostartOrder: (order: string[], managed: boolean) =>
+    request<import("./types").VMAutostartOrder>("/api/v1/vms/autostart-order", {
+      method: "PUT",
+      body: JSON.stringify({ order, managed }),
+    }),
+  applyVMAutostartOrder: () =>
+    request<import("./types").VMAutostartResult>("/api/v1/vms/autostart-order/apply", {
+      method: "POST",
+      body: "{}",
+    }),
   createVM: (options: import("./types").VMCreateOptions) =>
     request<import("./types").VM>("/api/v1/vms", { method: "POST", body: JSON.stringify(options) }),
   vmHostDevices: () => request<import("./types").VMHostDevice[]>("/api/v1/vms/host-devices"),

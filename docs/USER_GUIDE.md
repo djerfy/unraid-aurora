@@ -463,6 +463,15 @@ The **Applications** page browses the official Community Applications feed:
 - **Console** opens the VNC/SPICE console.
 - **Logs** opens the libvirt domain log (`/var/log/libvirt/qemu/<domain>.log`), with the same
   filter, reload, copy and download actions as container logs.
+- **Backup** opens an offline backup and restore dialog. A backup writes a manifest, the domain XML,
+  NVRAM and a qcow2 copy of each disk into a new folder under `/mnt`; it reports progress, supports
+  cancellation and verifies checksums on restore. Backups and restores require a stopped VM.
+  Restoring moves existing disks to `*.aurora-pre-restore-*` files before replacing them, and rolls
+  them back if the operation fails. Both operations appear in **Historique**.
+- **Autostart order** (page header) stores a deterministic start order, can start the VMs immediately,
+  and can take over libvirt autostart: Aurora then disables the per-VM libvirt autostart flags and
+  starts the ordered VMs once the array reaches `STARTED`. The takeover is reversible and visible in
+  the dialog.
 
 ![VM XML](screenshots/vm-xml.png)
 

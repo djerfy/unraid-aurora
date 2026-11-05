@@ -213,6 +213,13 @@ Response:
 | DELETE | `/vms/{id}/snapshots/{snapshot}` | operator | Delete a snapshot |
 | GET | `/vms/{id}/console` | operator+ | WebSocket VNC/SPICE proxy |
 | GET | `/vms/{id}/logs` | viewer+ | Per-domain libvirt log (last N lines) |
+| POST | `/vms/{id}/backup` | operator | Back up a stopped VM (XML, NVRAM, disks) under `/mnt` |
+| GET | `/vms/{id}/backup` | viewer+ | Latest backup or restore job for the VM |
+| POST | `/vms/{id}/backup/cancel` | operator | Cancel a running backup or restore |
+| POST | `/vms/{id}/restore` | operator | Restore a stopped VM from a backup (confirmation required) |
+| GET | `/vms/autostart-order` | viewer+ | Persisted VM autostart order |
+| PUT | `/vms/autostart-order` | operator | Save the order and optionally take over libvirt autostart |
+| POST | `/vms/autostart-order/apply` | operator | Start the ordered VMs now |
 
 ### Network
 

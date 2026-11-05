@@ -997,6 +997,45 @@ export type AuditEntry = {
 
 export type LogLine = { time: string; level: string; source: string; message: string };
 
+export type VMBackupFile = {
+  name: string;
+  kind: string;
+  target?: string;
+  format?: string;
+  size: number;
+  sha256: string;
+};
+
+export type VMBackup = {
+  id: string;
+  kind: string;
+  vmId: string;
+  vmName: string;
+  dir: string;
+  state: string;
+  phase: string;
+  message: string;
+  startedAt: string;
+  finishedAt?: string;
+  totalBytes: number;
+  doneBytes: number;
+  files: VMBackupFile[];
+  error?: string;
+};
+
+export type VMAutostartOrder = {
+  order: string[];
+  managed: boolean;
+  managedVms: string[];
+  updatedAt: string;
+};
+
+export type VMAutostartResult = {
+  started: string[];
+  skipped: string[];
+  failed: { name: string; error: string }[];
+};
+
 export type Metrics = {
   t: number;
   cpu: number;

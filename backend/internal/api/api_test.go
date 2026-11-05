@@ -161,6 +161,32 @@ func (f *fakeProvider) UpdateDisplaySettings(ctx context.Context, settings model
 	return nil
 }
 
+func (f *fakeProvider) StartVMBackup(ctx context.Context, id, targetDir string) (model.VMBackup, error) {
+	return model.VMBackup{ID: "b1", Kind: "backup", VMID: id, VMName: "plex", Dir: targetDir, State: "running", Phase: "preparing"}, nil
+}
+
+func (f *fakeProvider) VMBackupStatus(ctx context.Context, id string) (model.VMBackup, error) {
+	return model.VMBackup{ID: "b1", Kind: "backup", VMID: id, VMName: "plex", State: "completed", Phase: "done"}, nil
+}
+
+func (f *fakeProvider) CancelVMBackup(ctx context.Context, id string) error { return nil }
+
+func (f *fakeProvider) StartVMRestore(ctx context.Context, id, backupDir string, confirm bool) (model.VMBackup, error) {
+	return model.VMBackup{ID: "r1", Kind: "restore", VMID: id, VMName: "plex", Dir: backupDir, State: "running", Phase: "verifying"}, nil
+}
+
+func (f *fakeProvider) VMAutostartOrder(ctx context.Context) (model.VMAutostartOrder, error) {
+	return model.VMAutostartOrder{Order: []string{"plex"}}, nil
+}
+
+func (f *fakeProvider) SetVMAutostartOrder(ctx context.Context, order []string, managed bool) (model.VMAutostartOrder, error) {
+	return model.VMAutostartOrder{Order: order, Managed: managed}, nil
+}
+
+func (f *fakeProvider) ApplyVMAutostartOrder(ctx context.Context) (model.VMAutostartResult, error) {
+	return model.VMAutostartResult{Started: []string{"plex"}, Skipped: []string{}, Failed: []model.VMAutostartFailure{}}, nil
+}
+
 func (f *fakeProvider) VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error) {
 	return []model.LogLine{{
 		Time:    time.Unix(0, 0),
@@ -585,6 +611,67 @@ func TestVMLogsEndpoint(t *testing.T) {
 	}
 	if len(lines) != 1 || lines[0].Message != "starting up" || lines[0].Source != "libvirt" {
 		t.Fatalf("unexpected log lines: %+v", lines)
+	}
+}
+
+func TestVMBackupEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodPost, "/api/v1/vms/vm-plex/backup",
+		map[string]string{"dir": "/mnt/user/backups"}, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var job model.VMBackup
+	if err := json.NewDecoder(resp.Body).Decode(&job); err != nil {
+		t.Fatal(err)
+	}
+	if job.Kind != "backup" || job.Dir != "/mnt/user/backups" {
+		t.Fatalf("unexpected job: %+v", job)
+	}
+
+	resp = env.request(t, http.MethodGet, "/api/v1/vms/vm-plex/backup", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	resp = env.request(t, http.MethodPost, "/api/v1/vms/vm-plex/restore",
+		map[string]any{"dir": "/mnt/user/backups/aurora-plex-1", "confirm": true}, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	resp = env.request(t, http.MethodGet, "/api/v1/vms/autostart-order", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var order model.VMAutostartOrder
+	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
+		t.Fatal(err)
+	}
+	if len(order.Order) != 1 || order.Order[0] != "plex" {
+		t.Fatalf("unexpected order: %+v", order)
+	}
+
+	resp = env.request(t, http.MethodPut, "/api/v1/vms/autostart-order",
+		map[string]any{"order": []string{"plex"}, "managed": true}, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	resp = env.request(t, http.MethodPost, "/api/v1/vms/autostart-order/apply", nil, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 }
 

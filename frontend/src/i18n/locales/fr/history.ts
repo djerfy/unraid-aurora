@@ -1,4 +1,5 @@
 const history: Record<string, string> = {
+  "Event": "Événement",
   "Rollback applied": "Restauration appliquée",
   "The previous file contents were restored.":
     "Le contenu précédent des fichiers a été restauré.",

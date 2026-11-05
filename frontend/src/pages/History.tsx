@@ -117,7 +117,9 @@ export function HistoryPage() {
                   <span className="font-mono text-[9px]">{entry.action}</span>
                 </span>
                 <Badge tone="neutral">
-                  {t(entry.files.length === 1 ? "{count} file" : "{count} files", { count: entry.files.length })}
+                  {entry.files.length === 0
+                    ? t("Event")
+                    : t(entry.files.length === 1 ? "{count} file" : "{count} files", { count: entry.files.length })}
                 </Badge>
                 <Button size="sm" variant="secondary" icon={<FileDiff className="size-3" />} onClick={() => open(entry)}>
                   {t("Details")}
@@ -141,20 +143,24 @@ export function HistoryPage() {
         footer={
           detail.data ? (
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                icon={<FileDiff className="size-3.5" />}
-                onClick={() => setShowDiff((value) => !value)}
-              >
-                {showDiff ? t("Hide diff") : t("Diff")}
-              </Button>
-              <Button
-                variant="danger"
-                icon={<RotateCcw className="size-3.5" />}
-                onClick={() => setRollbackTarget(detail.data ?? null)}
-              >
-                {t("Rollback")}
-              </Button>
+              {detail.data.files.length > 0 ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    icon={<FileDiff className="size-3.5" />}
+                    onClick={() => setShowDiff((value) => !value)}
+                  >
+                    {showDiff ? t("Hide diff") : t("Diff")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    icon={<RotateCcw className="size-3.5" />}
+                    onClick={() => setRollbackTarget(detail.data ?? null)}
+                  >
+                    {t("Rollback")}
+                  </Button>
+                </>
+              ) : null}
             </div>
           ) : null
         }
