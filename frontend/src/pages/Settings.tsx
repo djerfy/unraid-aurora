@@ -358,6 +358,27 @@ export function SettingsPage() {
                   </div>
                 </SettingsRow>
 
+                <SettingsRow
+                  label={t("Surfaces")}
+                  description={t("Glass gives cards, panels and popovers a frosted, translucent material. Stored on this device.")}
+                >
+                  <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+                    {([false, true] as const).map((value) => (
+                      <button
+                        key={String(value)}
+                        type="button"
+                        onClick={() => theme.setGlass(value)}
+                        className={cn(
+                          "rounded-md px-3 py-1 text-[11px] font-medium transition",
+                          theme.glass === value ? "bg-[var(--surface)] text-ink shadow-sm" : "text-muted hover:text-ink",
+                        )}
+                      >
+                        {t(value ? "Glass" : "Standard")}
+                      </button>
+                    ))}
+                  </div>
+                </SettingsRow>
+
                 <SettingsRow label={t("Temperature unit")} description={t("Used for disks, CPU and sensors.")}>
                   <Select
                     ariaLabel={t("Temperature unit")}

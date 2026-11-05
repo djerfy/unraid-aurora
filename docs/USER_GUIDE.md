@@ -650,6 +650,8 @@ can itself be reverted.
 - **Theme**: dark, light, or automatic.
 - **Accent**: five palettes.
 - **Density**: comfortable or compact.
+- **Surfaces**: Standard (default) or Glass, a frosted, translucent material applied to cards, panels and
+  popovers. The preference is stored on the current device and respects reduced-transparency settings.
 - **Temperature unit**: Celsius or Fahrenheit.
 - **Server display name**.
 - **Refresh interval**.

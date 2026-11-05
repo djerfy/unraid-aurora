@@ -10,6 +10,7 @@
     document.documentElement.classList.toggle("light", !dark);
     if (parsed && parsed.accent) document.documentElement.dataset.accent = parsed.accent;
     if (parsed && parsed.density) document.documentElement.dataset.density = parsed.density;
+    if (parsed && parsed.glass === true) document.documentElement.dataset.glass = "on";
   } catch {
     document.documentElement.classList.add("dark");
   }

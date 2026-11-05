@@ -44,6 +44,11 @@ const settings: Record<string, string> = {
     "Le mode compact réduit les marges internes et la hauteur des lignes dans toute l'interface.",
   "Comfortable": "Confortable",
   "Compact": "Compact",
+  "Surfaces": "Surfaces",
+  "Glass gives cards, panels and popovers a frosted, translucent material. Stored on this device.":
+    "Le verre donne aux cartes, panneaux et popovers un matériau givré et translucide. Enregistré sur cet appareil.",
+  "Standard": "Standard",
+  "Glass": "Verre",
   "Temperature unit": "Unité de température",
   "Used for disks, CPU and sensors.": "Utilisée pour les disques, le CPU et les capteurs.",
 
