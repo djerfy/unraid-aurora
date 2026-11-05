@@ -226,6 +226,7 @@ func (l *Live) ApplyNetworkConfig(ctx context.Context) error {
 	if info, err := os.Stat(script); err != nil || info.IsDir() {
 		return errors.New("the Unraid network service is not available")
 	}
+	// #nosec G204 -- script is the fixed rc.inet1 path; the name is validated elsewhere.
 	command := exec.Command("/bin/sh", "-c", "sleep 3; "+script+" restart >/tmp/aurora-network-apply.log 2>&1")
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := command.Start(); err != nil {
@@ -546,6 +547,7 @@ func (l *Live) SetNetworkInterfaceState(ctx context.Context, name string, up boo
 		}
 		return nil
 	}
+	// #nosec G204 -- name is restricted by networkNameFormat above.
 	command := exec.Command("/bin/sh", "-c", "sleep 2; ip link set dev "+name+" down >/tmp/aurora-interface.log 2>&1")
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := command.Start(); err != nil {

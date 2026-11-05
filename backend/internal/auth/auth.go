@@ -433,6 +433,7 @@ func (m *Manager) clearFailures(ip string) {
 // lookupShadow uses getent first so NSS-backed directories work, then falls
 // back to reading /etc/shadow directly.
 func lookupShadow(username string) (string, error) {
+	// #nosec G204 -- getent is a fixed binary, used without a shell.
 	if out, err := exec.Command("/usr/bin/getent", "shadow", username).Output(); err == nil {
 		if hash, err := parseShadowLine(strings.TrimSpace(string(out))); err == nil {
 			return hash, nil

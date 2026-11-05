@@ -20,7 +20,7 @@ func (l *Live) configDir() string {
 func (l *Live) configPath(name string) string {
 	dir := l.configDir()
 	name = strings.TrimSpace(name)
-	if dir == "" || name == "" || filepath.Base(name) != name {
+	if dir == "" || name == "" || name == "." || name == ".." || filepath.Base(name) != name {
 		return ""
 	}
 	return filepath.Join(dir, name)

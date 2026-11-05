@@ -229,5 +229,6 @@ func defaultVMIcon(osName string) string {
 }
 
 func execCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	// #nosec G204 -- callers pass fixed system binaries; VM names are validated.
 	return exec.CommandContext(ctx, name, args...).Output()
 }

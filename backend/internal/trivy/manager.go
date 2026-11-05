@@ -679,6 +679,8 @@ func (m *Manager) updateDBNow(ctx context.Context) error {
 	m.mu.Unlock()
 
 	m.setStage("Downloading vulnerability database")
+	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
+	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	command := exec.CommandContext(runCtx, executable, "image", "--download-db-only", "--cache-dir", m.cacheDir, "--quiet", "--timeout", "20m")
 	command.Env = append(os.Environ(), "TRIVY_NO_PROGRESS=true")
 	output, err := command.CombinedOutput()
@@ -691,6 +693,7 @@ func (m *Manager) updateDBNow(ctx context.Context) error {
 	}
 
 	m.setStage("Downloading Java vulnerability database")
+	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	javaCommand := exec.CommandContext(runCtx, executable, "image", "--download-java-db-only", "--cache-dir", m.cacheDir, "--quiet", "--timeout", "20m")
 	javaCommand.Env = append(os.Environ(), "TRIVY_NO_PROGRESS=true")
 	javaOutput, err := javaCommand.CombinedOutput()
@@ -736,6 +739,7 @@ func (m *Manager) scan(ctx context.Context, image, imageID string, onStart func(
 	}
 	runCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
+	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	command := exec.CommandContext(runCtx, executable, "image",
 		"--format", "json",
 		"--skip-db-update",
@@ -1047,6 +1051,7 @@ func (m *Manager) validateRuntime(ctx context.Context) (string, error) {
 	}
 	runCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
+	// #nosec G204 -- path is the managed Trivy binary under m.dir.
 	output, err := exec.CommandContext(runCtx, path, "--version").Output()
 	if err != nil {
 		return "", err

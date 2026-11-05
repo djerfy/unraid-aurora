@@ -115,6 +115,7 @@ func runDiagnosticsCommand(ctx context.Context, argv []string) string {
 	}
 	commandCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	// #nosec G204 -- argv comes from Aurora's fixed diagnostics command list.
 	output, err := exec.CommandContext(commandCtx, argv[0], argv[1:]...).CombinedOutput()
 	header := "$ " + strings.Join(argv, " ") + "\n"
 	if err != nil {
