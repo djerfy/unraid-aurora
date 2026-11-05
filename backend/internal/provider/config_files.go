@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func (l *Live) configDir() string {
@@ -18,7 +19,8 @@ func (l *Live) configDir() string {
 
 func (l *Live) configPath(name string) string {
 	dir := l.configDir()
-	if dir == "" {
+	name = strings.TrimSpace(name)
+	if dir == "" || name == "" || filepath.Base(name) != name {
 		return ""
 	}
 	return filepath.Join(dir, name)
@@ -30,8 +32,11 @@ func (l *Live) readConfigFile(name string) ([]byte, error) {
 	if err == nil {
 		return raw, nil
 	}
+	if l.dataDir == "" {
+		return nil, err
+	}
 	legacy := filepath.Join(l.dataDir, name)
-	if l.dataDir == "" || legacy == path {
+	if legacy == path {
 		return nil, err
 	}
 	raw, err = os.ReadFile(legacy)
@@ -39,6 +44,7 @@ func (l *Live) readConfigFile(name string) ([]byte, error) {
 		return nil, err
 	}
 	_ = os.MkdirAll(filepath.Dir(path), 0o750)
+	// #nosec G703 -- configPath rejects anything that is not a base name.
 	_ = os.WriteFile(path, raw, 0o600)
 	return raw, nil
 }
@@ -51,6 +57,7 @@ func (l *Live) saveConfigFile(name string, raw []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
+	// #nosec G703 -- configPath rejects anything that is not a base name.
 	return os.WriteFile(path, raw, 0o600)
 }
 
@@ -75,6 +82,7 @@ func (l *Live) migrateDurableState() {
 		if err != nil {
 			continue
 		}
+		// #nosec G703 -- target is under the root-owned Aurora config directory.
 		_ = os.WriteFile(target, raw, 0o600)
 	}
 	copyDirIfMissing(filepath.Join(l.dataDir, configHistoryDir), filepath.Join(l.configDir(), configHistoryDir))
@@ -100,11 +108,13 @@ func copyDirIfMissing(source, target string) {
 			_ = os.MkdirAll(destination, 0o750)
 			return nil
 		}
+		// #nosec G122 -- source is the root-owned Aurora config directory.
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return nil
 		}
 		_ = os.MkdirAll(filepath.Dir(destination), 0o750)
+		// #nosec G703 G122 -- destination is under the root-owned config directory.
 		_ = os.WriteFile(destination, raw, 0o600)
 		return nil
 	})

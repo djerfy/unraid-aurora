@@ -98,6 +98,7 @@ func (l *Live) writeConfigChanges(action, description string, changes []configCh
 				mode = uint32(info.Mode().Perm())
 			}
 			backupName := fmt.Sprintf("%03d.bak", index)
+			// #nosec G703 -- history paths come from Aurora's root-owned metadata.
 			if err := os.WriteFile(filepath.Join(filesDir, backupName), current, 0o600); err != nil {
 				firstErr = fmt.Errorf("write history backup: %w", err)
 				break
@@ -133,7 +134,7 @@ func applyConfigChange(change configChange) error {
 		}
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(change.Path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(change.Path), 0o750); err != nil {
 		return fmt.Errorf("create directory for %s: %w", change.Path, err)
 	}
 	mode := os.FileMode(0o644)
@@ -324,9 +325,10 @@ func (l *Live) RollbackConfig(_ context.Context, id string) error {
 		if mode == 0 {
 			mode = 0o644
 		}
-		if err := os.MkdirAll(filepath.Dir(file.Path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(file.Path), 0o750); err != nil {
 			return fmt.Errorf("create directory for %s: %w", file.Path, err)
 		}
+		// #nosec G703 -- history paths come from Aurora's root-owned metadata.
 		if err := os.WriteFile(file.Path, backup, mode); err != nil {
 			return fmt.Errorf("restore %s: %w", file.Path, err)
 		}

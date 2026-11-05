@@ -38,6 +38,7 @@ func daemonize(logFile string) error {
 		output = handle
 	}
 
+	// #nosec G702 -- re-executes the current trusted binary with its own arguments.
 	command := exec.Command(executable, os.Args[1:]...)
 	command.Env = append(os.Environ(), daemonChildEnv+"=1")
 	command.Stdin = devNull

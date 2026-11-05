@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -419,8 +418,8 @@ func (l *Live) Array(ctx context.Context) (model.Array, error) {
 			used += parseKiB(d["fsUsed"])
 		}
 	}
-	resync := uint64(parseInt(varIni.get("", "mdResyncPos")))
-	resyncSize := uint64(parseInt(varIni.get("", "mdResyncSize")))
+	resync := safeUint64Int(parseInt(varIni.get("", "mdResyncPos")))
+	resyncSize := safeUint64Int(parseInt(varIni.get("", "mdResyncSize")))
 	progress := 0.0
 	if resyncSize > 0 {
 		progress = float64(resync) / float64(resyncSize) * 100
@@ -1671,6 +1670,8 @@ func colorFor(seed string) string {
 }
 
 func slug(s string) string {
-	h := sha1.Sum([]byte(s))
-	return fmt.Sprintf("%x", h[:4])
+	// Stable non-cryptographic identifier for VM paths and IDs.
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(s))
+	return fmt.Sprintf("%08x", h.Sum32())
 }

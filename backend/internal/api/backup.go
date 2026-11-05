@@ -81,6 +81,7 @@ func (s *Server) writeZip(w http.ResponseWriter, name, root string, include func
 		header.Name = filepath.ToSlash(rel)
 		header.Method = zip.Deflate
 		if redactData && strings.HasSuffix(strings.ToLower(rel), ".json") {
+			// #nosec G122 -- fixed root-owned backup roots; diagnostics are read-only.
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return nil
@@ -97,6 +98,7 @@ func (s *Server) writeZip(w http.ResponseWriter, name, root string, include func
 		if err != nil {
 			return nil
 		}
+		// #nosec G122 -- fixed root-owned backup roots; diagnostics are read-only.
 		file, err := os.Open(path)
 		if err != nil {
 			return nil

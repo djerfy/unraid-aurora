@@ -56,6 +56,7 @@ func (s *Server) terminal(w http.ResponseWriter, r *http.Request) {
 			_ = conn.Write(r.Context(), websocket.MessageText, []byte("Invalid container id.\r\n"))
 			return
 		}
+		// #nosec G702 -- the container id is validated above and no shell is used.
 		cmd = exec.Command("docker", "exec", "-it", container, "/bin/sh")
 	} else {
 		cmd = exec.Command(shell, loginShellArgs(shell)...)
@@ -164,6 +165,7 @@ func usableShell(path string) bool {
 	case "nologin", "false", "sync", "shutdown", "halt":
 		return false
 	}
+	// #nosec G703 -- shell paths come from root-owned /etc/passwd and are absolute.
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
 		return false

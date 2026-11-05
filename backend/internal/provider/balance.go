@@ -134,7 +134,7 @@ func (l *Live) BalanceBrowse(ctx context.Context, disk, relative string) ([]mode
 			continue
 		}
 		relativePath := path.Join(cleaned, entry.Name())
-		size := uint64(info.Size())
+		size := safeUint64(info.Size())
 		if info.IsDir() {
 			size = quickDirSize(ctx, filepath.Join(directory, entry.Name()))
 		}
@@ -430,10 +430,10 @@ func (l *Live) scanBalance(ctx context.Context, runtime *balanceRuntime, source 
 				}
 				file.Link = link
 			} else if info.Mode().IsRegular() {
-				file.Size = uint64(info.Size())
+				file.Size = safeUint64(info.Size())
 				if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-					file.Inode = uint64(stat.Ino)
-					file.Device = uint64(stat.Dev)
+					file.Inode = stat.Ino
+					file.Device = safeUint64(int64(stat.Dev))
 				}
 			} else {
 				return nil
@@ -503,6 +503,7 @@ func (l *Live) moveBalanceFile(ctx context.Context, runtime *balanceRuntime, sou
 	} else if !os.IsNotExist(err) {
 		return "failed", err
 	}
+	// #nosec G301 -- target share directory keeps the share permissions.
 	if err := os.MkdirAll(filepath.Dir(destinationPath), 0o755); err != nil {
 		return "failed", err
 	}
@@ -530,7 +531,7 @@ func (l *Live) moveBalanceFile(ctx context.Context, runtime *balanceRuntime, sou
 		if err != nil {
 			return "failed", err
 		}
-		if uint64(info.Size()) != file.Size {
+		if safeUint64(info.Size()) != file.Size {
 			_ = os.Remove(destinationPath)
 			return "failed", fmt.Errorf("size mismatch after copy (%d != %d)", info.Size(), file.Size)
 		}

@@ -371,11 +371,12 @@ func (m *Manager) mac(payload string) []byte {
 }
 
 func (m *Manager) Cookie(token string, secure bool) *http.Cookie {
-	return &http.Cookie{
+	return &http.Cookie{ // #nosec G124 -- Secure is set from the request TLS state.
 		Name:     CookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		// #nosec G124 -- Secure follows the actual request TLS state.
 		Secure:   secure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(m.ttl.Seconds()),
@@ -385,7 +386,7 @@ func (m *Manager) Cookie(token string, secure bool) *http.Cookie {
 func (m *Manager) ClearCookie() *http.Cookie {
 	return &http.Cookie{
 		Name: CookieName, Value: "", Path: "/", HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, MaxAge: -1,
+		Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1,
 	}
 }
 

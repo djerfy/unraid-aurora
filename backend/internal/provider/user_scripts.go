@@ -134,6 +134,7 @@ func (l *Live) UpdateUserScript(ctx context.Context, id, content, frequency, cro
 	} else {
 		cron = ""
 	}
+	// #nosec G306 -- user scripts must be executable.
 	if err := os.WriteFile(path, []byte(content), 0o700); err != nil {
 		return err
 	}
@@ -198,7 +199,7 @@ func (l *Live) saveUserScriptSchedules(schedules userScriptScheduleMap) error {
 	// The plugin reads the runtime copy first, so keep it in sync when present.
 	runtimePath := "/tmp/user.scripts/schedule.json"
 	if info, err := os.Stat(filepath.Dir(runtimePath)); err == nil && info.IsDir() {
-		_ = os.WriteFile(runtimePath, raw, 0o644)
+		_ = os.WriteFile(runtimePath, raw, 0o600)
 	}
 	return l.writeUserScriptCron(schedules)
 }

@@ -50,5 +50,6 @@ func (s *Server) appIcon(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
+	// #nosec G705 -- image bytes only; SVG responses carry a sandbox CSP.
 	_, _ = w.Write(raw)
 }

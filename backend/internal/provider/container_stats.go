@@ -249,7 +249,7 @@ func (l *Live) fetchContainerStats(ctx context.Context, id string) (cachedContai
 		systemDelta := float64(raw.CPUStats.SystemCPUUsage - raw.PreCPUStats.SystemCPUUsage)
 		online := raw.CPUStats.OnlineCPUs
 		if online == 0 {
-			online = uint32(len(raw.CPUStats.CPUUsage.PercpuUsage))
+			online = safeUint32(len(raw.CPUStats.CPUUsage.PercpuUsage))
 		}
 		if online == 0 {
 			online = 1

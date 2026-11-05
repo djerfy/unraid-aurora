@@ -63,8 +63,8 @@ func (l *Live) wireGuard(ctx context.Context) model.WireGuard {
 			PublicKey:  fields[0],
 			Endpoint:   strings.TrimSpace(fields[2]),
 			AllowedIPs: splitList(fields[3]),
-			Rx:         uint64(parseInt(fields[5])),
-			Tx:         uint64(parseInt(fields[6])),
+			Rx:         safeUint64Int(parseInt(fields[5])),
+			Tx:         safeUint64Int(parseInt(fields[6])),
 		}
 		if peer.Name == "" {
 			peer.Name = shortKey(peer.PublicKey)

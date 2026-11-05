@@ -123,6 +123,7 @@ func (l *Live) RefreshShareUsage(ctx context.Context, name string) (int, error) 
 		l.shareUsageTrigger[shareName] = "manual"
 		l.shareUsageMu.Unlock()
 		started++
+		// #nosec G118 -- the scan must outlive the HTTP request that started it.
 		go l.refreshShareUsage(shareName)
 	}
 	return started, nil

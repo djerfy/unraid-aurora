@@ -252,7 +252,7 @@ func (l *Live) RestorePreviousOS(ctx context.Context) (string, error) {
 	_ = os.RemoveAll(temporary)
 	_ = os.RemoveAll(filepath.Join(boot, "config", "plugins-nextboot"))
 	if version != "" {
-		_ = os.WriteFile(unraidOSReadme, []byte("**DOWNGRADE TO VERSION "+version+"**\n"), 0o644)
+		_ = os.WriteFile(unraidOSReadme, []byte("**DOWNGRADE TO VERSION "+version+"**\n"), 0o644) // #nosec G306 -- public downgrade notice on the flash drive
 	}
 	_ = ctx
 	return version, nil

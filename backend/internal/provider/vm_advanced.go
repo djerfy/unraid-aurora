@@ -460,6 +460,7 @@ func (l *Live) CloneVM(ctx context.Context, id string, opts model.VMCloneOptions
 	if info, err := os.Stat(targetDir); err == nil && info.IsDir() {
 		return model.VM{}, errors.New("the clone directory already exists")
 	}
+	// #nosec G301 -- qemu/libvirt needs access to the domain directory.
 	if err := os.MkdirAll(targetDir, 0o775); err != nil {
 		return model.VM{}, fmt.Errorf("create clone directory: %w", err)
 	}
@@ -516,11 +517,17 @@ func (l *Live) CloneVM(ctx context.Context, id string, opts model.VMCloneOptions
 			if !strings.HasPrefix(clean, "/mnt/") {
 				return model.VM{}, fmt.Errorf("NVRAM %q is outside /mnt", oldPath)
 			}
-			newPath := filepath.Join(targetDir, filepath.Base(clean))
-			raw, err := os.ReadFile(clean)
+			resolved, err := filepath.EvalSymlinks(clean)
+			if err != nil || !strings.HasPrefix(resolved, "/mnt/") {
+				return model.VM{}, fmt.Errorf("NVRAM %q resolves outside /mnt", oldPath)
+			}
+			newPath := filepath.Join(targetDir, filepath.Base(resolved))
+			// #nosec G703 -- resolved path is verified inside /mnt above.
+			raw, err := os.ReadFile(resolved)
 			if err != nil {
 				return model.VM{}, fmt.Errorf("read NVRAM: %w", err)
 			}
+			// #nosec G703 -- target is inside the VM clone directory.
 			if err := os.WriteFile(newPath, raw, 0o600); err != nil {
 				return model.VM{}, fmt.Errorf("copy NVRAM: %w", err)
 			}
@@ -740,7 +747,8 @@ func newUUID() string {
 func newMAC() string {
 	raw := make([]byte, 3)
 	if _, err := rand.Read(raw); err != nil {
-		raw = []byte{byte(time.Now().UnixNano()), byte(time.Now().UnixNano() >> 8), byte(time.Now().UnixNano() >> 16)}
+		// A fixed locally administered address is safer than a truncated clock.
+		return "52:54:00:00:00:00"
 	}
 	return fmt.Sprintf("52:54:00:%02x:%02x:%02x", raw[0], raw[1], raw[2])
 }

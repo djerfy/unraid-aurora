@@ -76,7 +76,7 @@ func openLogFile(path string) (*os.File, error) {
 			return nil, fmt.Errorf("create log directory: %w", err)
 		}
 	}
-	handle, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o640)
+	handle, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open log file: %w", err)
 	}

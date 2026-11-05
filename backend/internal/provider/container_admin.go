@@ -457,7 +457,7 @@ func writeAutostartFile(path, name string, enabled bool) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return fmt.Errorf("create autostart directory: %w", err)
 	}
 	if len(kept) == 0 {
@@ -466,7 +466,7 @@ func writeAutostartFile(path, name string, enabled bool) error {
 		}
 		return nil
 	}
-	if err := os.WriteFile(path, []byte(strings.Join(kept, "\n")+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Join(kept, "\n")+"\n"), 0o600); err != nil {
 		return fmt.Errorf("write autostart file: %w", err)
 	}
 	return nil
@@ -759,6 +759,7 @@ func dockerCredentialsFor(server string) dockerCredentials {
 		}
 		dir = filepath.Join(home, ".docker")
 	}
+	// #nosec G304 G703 -- DOCKER_CONFIG is set by the host administrator.
 	raw, err := os.ReadFile(filepath.Join(dir, "config.json"))
 	if err != nil {
 		return dockerCredentials{}

@@ -545,7 +545,7 @@ func (m *Manager) downloadAndInstall(ctx context.Context, version string) error 
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.dir, 0o755); err != nil {
+	if err := os.MkdirAll(m.dir, 0o750); err != nil {
 		return err
 	}
 	expected, err := m.checksumFor(ctx, version, asset)
@@ -569,6 +569,7 @@ func (m *Manager) downloadAndInstall(ctx context.Context, version string) error 
 	if err := extractBinary(archive, binary); err != nil {
 		return err
 	}
+	// #nosec G302 -- the Trivy binary must be executable.
 	if err := os.Chmod(binary, 0o755); err != nil {
 		return err
 	}
@@ -906,7 +907,7 @@ func (m *Manager) worker() {
 }
 
 func (m *Manager) saveScan(key, image, imageID string, detail model.ContainerSecurityDetail) {
-	if err := os.MkdirAll(m.scansDir, 0o755); err != nil {
+	if err := os.MkdirAll(m.scansDir, 0o750); err != nil {
 		return
 	}
 	summary := detail.ContainerSecurity
@@ -1139,7 +1140,7 @@ func copyRuntimeBinary(source, destination string, sourceInfo os.FileInfo) error
 		info.Size() == sourceInfo.Size() && !info.ModTime().Before(sourceInfo.ModTime()) {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(destination), 0o750); err != nil {
 		return err
 	}
 	in, err := os.Open(source)
@@ -1164,6 +1165,7 @@ func copyRuntimeBinary(source, destination string, sourceInfo os.FileInfo) error
 	if err := temporary.Close(); err != nil {
 		return err
 	}
+	// #nosec G302 -- the Trivy binary must be executable.
 	if err := os.Chmod(name, 0o755); err != nil {
 		return err
 	}
@@ -1190,7 +1192,7 @@ func (m *Manager) persistState() error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.dir, 0o755); err != nil {
+	if err := os.MkdirAll(m.dir, 0o750); err != nil {
 		return err
 	}
 	return writeAtomic(m.statePath, raw, 0o600)

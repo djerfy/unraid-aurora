@@ -287,6 +287,7 @@ func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
+	// #nosec G705 -- image bytes only; SVG responses carry a sandbox CSP.
 	_, _ = w.Write(data)
 }
 
@@ -485,10 +486,20 @@ func serveIcon(w http.ResponseWriter, data []byte, contentType string) {
 	if contentType == "" {
 		contentType = "image/png"
 	}
+	if !strings.HasPrefix(contentType, "image/") {
+		contentType = "application/octet-stream"
+	}
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "private, max-age=3600")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
+	if strings.EqualFold(contentType, "image/svg+xml") {
+		// An SVG opened directly would run in Aurora's origin. The sandbox
+		// directive blocks scripts while keeping the icon usable in <img>.
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	}
 	w.WriteHeader(http.StatusOK)
+	// #nosec G705 -- image bytes only; SVG responses carry a sandbox CSP.
 	_, _ = w.Write(data)
 }
 

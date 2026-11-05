@@ -63,6 +63,7 @@ func (l *Live) CreateVM(ctx context.Context, opts model.VMCreateOptions) (model.
 	}
 	slug := slug(opts.Name)
 	dir := filepath.Join("/mnt/user/domains", slug)
+	// #nosec G301 -- qemu/libvirt needs access to the domain directory.
 	if err := os.MkdirAll(dir, 0o775); err != nil {
 		return model.VM{}, fmt.Errorf("create VM directory: %w", err)
 	}

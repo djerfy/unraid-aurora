@@ -281,8 +281,8 @@ func vmDiskUsage(ctx context.Context, name string) (uint64, uint64) {
 			continue
 		}
 		info := virshColonInfoFrom(string(infoOut))
-		total += uint64(firstInt(info["Capacity"]))
-		used += uint64(firstInt(info["Allocation"]))
+		total += safeUint64Int(firstInt(info["Capacity"]))
+		used += safeUint64Int(firstInt(info["Allocation"]))
 	}
 	return total, used
 }

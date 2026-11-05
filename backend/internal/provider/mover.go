@@ -73,12 +73,12 @@ func (l *Live) readMoverStatus(ctx context.Context) (model.MoverStatus, error) {
 	}
 	status.ProgressSource = "mover.ini"
 	get := func(key string) string { return ini.get("", key) }
-	status.Total = uint64(parseInt(get("TotalSize")))
-	status.Remain = uint64(parseInt(get("RemainSize")))
+	status.Total = safeUint64Int(parseInt(get("TotalSize")))
+	status.Remain = safeUint64Int(parseInt(get("RemainSize")))
 	status.Throughput = float64(parseInt(get("Throughput")))
 	status.ETA = int64(parseInt(get("ETA")))
-	status.ShareTotal = uint64(parseInt(get("ShareTotal")))
-	status.ShareRemain = uint64(parseInt(get("ShareRemain")))
+	status.ShareTotal = safeUint64Int(parseInt(get("ShareTotal")))
+	status.ShareRemain = safeUint64Int(parseInt(get("ShareRemain")))
 	status.ShareThroughput = float64(parseInt(get("ShareThroughput")))
 	status.ShareETA = int64(parseInt(get("ShareETA")))
 	status.File = get("File")
@@ -304,8 +304,8 @@ func (l *Live) updateMoverCandidatesLocked(limit int) {
 			continue
 		}
 		delete(l.moverCandidates, path)
-		if uint64(size) <= l.moverCandidateRemain {
-			l.moverCandidateRemain -= uint64(size)
+		if safeUint64(size) <= l.moverCandidateRemain {
+			l.moverCandidateRemain -= safeUint64(size)
 		} else {
 			l.moverCandidateRemain = 0
 		}
