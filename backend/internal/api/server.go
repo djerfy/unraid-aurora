@@ -15,6 +15,7 @@ import (
 	"aurora/internal/audit"
 	"aurora/internal/auth"
 	"aurora/internal/config"
+	"aurora/internal/mcpserver"
 	"aurora/internal/metrics"
 	"aurora/internal/model"
 	"aurora/internal/provider"
@@ -213,6 +214,35 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 
+	root.Handle("/api/v1/mcp", mcpserver.HTTPHandler(func(r *http.Request) mcpserver.Options {
+		principal, _ := r.Context().Value(tokenContextKey{}).(tokenPrincipal)
+		role := principal.Role
+		if role == "" {
+			// Cookie sessions belong to the root operator.
+			role = TokenRoleAdmin
+		}
+		readOnly := s.cfg.ReadOnly || principal.ReadOnly
+		user := s.auditUser(r)
+		remote := auth.ClientIP(r)
+		return mcpserver.Options{
+			Provider:     s.provider,
+			Version:      s.cfg.Version,
+			ReadOnly:     readOnly,
+			AllowActions: !readOnly && (role == TokenRoleAdmin || role == TokenRoleOperator),
+			Role:         role,
+			OnAction: func(tool, target string, err error) {
+				status := http.StatusOK
+				if err != nil {
+					status = http.StatusInternalServerError
+				}
+				s.audit.Record(audit.Entry{
+					Time: time.Now(), User: user, Method: "MCP",
+					Path: "/api/v1/mcp/" + tool + "?" + target, Status: status, Remote: remote,
+				})
+			},
+		}
+	}))
+
 	if ui, err := webui.Handler(); err == nil {
 		root.Handle("/", ui)
 	} else {
@@ -243,6 +273,11 @@ type tokenPrincipal struct {
 // operators can run day-to-day workload and array actions, and admins retain
 // full control over host configuration.
 func tokenRoleAllows(role string, scopes []string, method, path string) bool {
+	// MCP exposes a broad tool surface. Require an unscoped token so a
+	// docker-only or vms-only token cannot reach the whole host through it.
+	if path == "/api/v1/mcp" {
+		return len(scopes) == 0
+	}
 	if !tokenScopeAllows(scopes, path) {
 		return false
 	}
@@ -527,6 +562,12 @@ func (s *Server) prometheus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) auditMutations(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// MCP actions write their own, tool-level audit entries through the
+		// OnAction callback; avoid a duplicate transport-level line.
+		if r.URL.Path == "/api/v1/mcp" {
 			next.ServeHTTP(w, r)
 			return
 		}

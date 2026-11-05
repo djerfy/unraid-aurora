@@ -20,6 +20,7 @@ import (
 	"aurora/internal/api"
 	"aurora/internal/auth"
 	"aurora/internal/config"
+	"aurora/internal/mcpserver"
 	"aurora/internal/metrics"
 	"aurora/internal/notify"
 	"aurora/internal/provider"
@@ -28,6 +29,13 @@ import (
 var version = "0.0.0-dev"
 
 func main() {
+	// `aurora mcp` serves MCP over stdio. Strip the subcommand before parsing
+	// the regular flags so `aurora mcp --allow-actions` works.
+	mcpMode := len(os.Args) > 1 && os.Args[1] == "mcp"
+	if mcpMode {
+		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+	}
+
 	var (
 		addr      = flag.String("addr", "", "listen address (overrides AURORA_ADDR)")
 		logFile   = flag.String("log-file", envString("AURORA_LOG_FILE", ""), "append logs to this file instead of stdout")
@@ -35,6 +43,7 @@ func main() {
 		logLevel  = flag.String("log-level", envString("AURORA_LOG_LEVEL", "info"), "log level: debug, info, warn or error")
 		daemon    = flag.Bool("daemon", envBool("AURORA_DAEMON", false), "run in the background")
 		showVer   = flag.Bool("version", false, "print version and exit")
+		allowActs = flag.Bool("allow-actions", envBool("AURORA_MCP_ALLOW_ACTIONS", false), "allow lifecycle actions in MCP stdio mode")
 	)
 	flag.Parse()
 	if *showVer {
@@ -48,11 +57,15 @@ func main() {
 		os.Exit(2)
 	}
 	logPath := strings.TrimSpace(*logFile)
-	if *daemon && logPath == "" {
+	if *daemon && !mcpMode && logPath == "" {
 		// Without an explicit file a daemon would silently discard its logs.
 		logPath = "/var/log/aurora.log"
 	}
-	if *daemon && !isDaemonChild() {
+	if mcpMode && logPath == "" {
+		// stdout is the MCP transport; logs must never corrupt the JSON-RPC stream.
+		logPath = "/dev/stderr"
+	}
+	if *daemon && !mcpMode && !isDaemonChild() {
 		if err := daemonize(logPath); err != nil {
 			fmt.Fprintln(os.Stderr, "aurora:", err)
 			os.Exit(1)
@@ -93,6 +106,29 @@ func main() {
 		cfg.Addr = *addr
 	}
 
+	p, err := provider.NewLive(cfg.StateDir, cfg.BootDir, cfg.DockerSocket, cfg.DataDir, cfg.ConfigDir)
+	if err != nil {
+		log.Error("cannot read the Unraid host", "error", err,
+			"hint", "Aurora must run on Unraid with access to /var/local/emhttp, /etc/shadow and the Docker socket")
+		os.Exit(1)
+	}
+	defer p.Close()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if mcpMode {
+		options := mcpserver.Options{
+			Provider: p, Version: version, ReadOnly: cfg.ReadOnly,
+			AllowActions: *allowActs && !cfg.ReadOnly, Role: "admin",
+		}
+		if err := mcpserver.RunStdio(ctx, options); err != nil {
+			log.Error("MCP server stopped", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	certPath, keyPath, err := resolveTLS(cfg)
 	if err != nil {
 		log.Error("cannot locate the TLS certificate", "error", err,
@@ -105,17 +141,6 @@ func main() {
 			"hint", "generate the certificate in Unraid or set AURORA_TLS_CERT/AURORA_TLS_KEY")
 		os.Exit(1)
 	}
-
-	p, err := provider.NewLive(cfg.StateDir, cfg.BootDir, cfg.DockerSocket, cfg.DataDir, cfg.ConfigDir)
-	if err != nil {
-		log.Error("cannot read the Unraid host", "error", err,
-			"hint", "Aurora must run on Unraid with access to /var/local/emhttp, /etc/shadow and the Docker socket")
-		os.Exit(1)
-	}
-	defer p.Close()
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	hub := metrics.NewHub(p, filepath.Join(cfg.ConfigDir, "metrics-archive.json"))
 	go hub.Run(ctx, 2*time.Second)

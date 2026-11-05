@@ -672,7 +672,8 @@ can itself be reverted.
   custom headers and body template with `{title}`, `{subject}`, `{description}`, `{importance}`,
   `{source}` and `{timestamp}` placeholders), with a test button. New Unraid notifications are
   forwarded after Aurora starts.
-- **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Viewers can only
+- **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Unscoped tokens
+  can also authenticate the MCP endpoint (`/api/v1/mcp`); see [`MCP.md`](MCP.md). Viewers can only
   read, operators manage containers, VMs, array and mover actions, and admins control everything.
   Tokens can expire after 30, 90 or 365 days (or never) and can be limited to specific scopes.
   The secret is shown once; token management itself requires a signed-in session. The **Security**
