@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -155,5 +157,37 @@ func TestActionsRunWhenAllowed(t *testing.T) {
 	}
 	if len(fake.performed) != 1 || fake.performed[0].Kind != provider.ActionVMStart || fake.performed[0].Target != "plex" {
 		t.Fatalf("unexpected actions: %+v", fake.performed)
+	}
+}
+
+type jsonOnlyTransport struct{}
+
+func (jsonOnlyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	clone := request.Clone(request.Context())
+	clone.Header.Set("Accept", "application/json")
+	return http.DefaultTransport.RoundTrip(clone)
+}
+
+func TestHTTPJSONOnlyClient(t *testing.T) {
+	server := httptest.NewServer(HTTPHandler(func(*http.Request) Options {
+		return Options{Provider: &fakeProvider{}, Version: "test"}
+	}))
+	defer server.Close()
+
+	transport := &mcp.StreamableClientTransport{
+		Endpoint:             server.URL,
+		HTTPClient:           &http.Client{Transport: jsonOnlyTransport{}},
+		DisableStandaloneSSE: true,
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "json-only"}, nil)
+	session, err := client.Connect(context.Background(), transport, nil)
+	if err != nil {
+		t.Fatalf("a JSON-only client could not connect: %v", err)
+	}
+	defer session.Close()
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_array"})
+	if err != nil || result.IsError {
+		t.Fatalf("get_array failed: %v %+v", err, result)
 	}
 }

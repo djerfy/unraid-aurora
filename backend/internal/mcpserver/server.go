@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -57,9 +58,34 @@ func RunStdio(ctx context.Context, opts Options) error {
 // for every new session and can read the authenticated principal from the
 // request context.
 func HTTPHandler(options func(*http.Request) Options) http.Handler {
-	return mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
+	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		return New(options(r))
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{
+		// JSON responses are easier for the lightweight MCP clients used by
+		// agent frameworks; the official SDK accepts both JSON and SSE.
+		JSONResponse: true,
+		Logger:       slog.Default(),
+	})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		originalAccept := r.Header.Get("Accept")
+		// Some clients only send "Accept: application/json", while the
+		// Streamable HTTP transport requires both media types. Complete the
+		// header instead of rejecting an otherwise valid client.
+		if !strings.Contains(originalAccept, "application/json") || !strings.Contains(originalAccept, "text/event-stream") {
+			r.Header.Set("Accept", "application/json, text/event-stream")
+		}
+		recorder := &mcpStatusWriter{ResponseWriter: w, status: http.StatusOK}
+		handler.ServeHTTP(recorder, r)
+		if recorder.status == http.StatusBadRequest {
+			slog.Warn("MCP request rejected",
+				"method", r.Method,
+				"accept", originalAccept,
+				"contentType", r.Header.Get("Content-Type"),
+				"protocol", r.Header.Get("MCP-Protocol-Version"),
+				"session", r.Header.Get("Mcp-Session-Id"),
+			)
+		}
+	})
 }
 
 func (s *service) text(value any) (*mcp.CallToolResult, any, error) {
@@ -76,6 +102,20 @@ func (s *service) fail(label string, err error) (*mcp.CallToolResult, any, error
 
 // require enforces the scopes of the API token. An unscoped token may use the
 // whole tool catalog.
+type mcpStatusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *mcpStatusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *mcpStatusWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
 func (s *service) require(scope string) error {
 	if len(s.opts.Scopes) == 0 {
 		return nil
