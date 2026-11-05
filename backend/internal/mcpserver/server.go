@@ -23,6 +23,7 @@ type Options struct {
 	ReadOnly     bool
 	AllowActions bool
 	Role         string
+	Scopes       []string
 	// OnAction is called after every lifecycle action attempt so the HTTP
 	// server can write a precise audit entry.
 	OnAction func(tool, target string, err error)
@@ -73,6 +74,20 @@ func (s *service) fail(label string, err error) (*mcp.CallToolResult, any, error
 	return nil, nil, fmt.Errorf("%s: %w", label, err)
 }
 
+// require enforces the scopes of the API token. An unscoped token may use the
+// whole tool catalog.
+func (s *service) require(scope string) error {
+	if len(s.opts.Scopes) == 0 {
+		return nil
+	}
+	for _, allowed := range s.opts.Scopes {
+		if allowed == scope {
+			return nil
+		}
+	}
+	return fmt.Errorf("this API token has no %q scope", scope)
+}
+
 type emptyArgs struct{}
 
 type targetArgs struct {
@@ -91,6 +106,9 @@ type historyArgs struct {
 func addReadTools(s *service, server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{Name: "get_system", Description: "Host identity, CPU, memory, load, uptime and array summary."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			system, err := s.opts.Provider.System(ctx)
 			if err != nil {
 				return s.fail("get system", err)
@@ -100,6 +118,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "get_array", Description: "Array state, capacity, parity, rebuild and sync status."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("storage"); err != nil {
+				return nil, nil, err
+			}
 			array, err := s.opts.Provider.Array(ctx)
 			if err != nil {
 				return s.fail("get array", err)
@@ -109,6 +130,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_disks", Description: "Physical array disks with state, temperature, usage and SMART summary."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("storage"); err != nil {
+				return nil, nil, err
+			}
 			disks, err := s.opts.Provider.Disks(ctx)
 			if err != nil {
 				return s.fail("list disks", err)
@@ -118,6 +142,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_shares", Description: "User shares with allocation, cache and export settings."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("storage"); err != nil {
+				return nil, nil, err
+			}
 			shares, err := s.opts.Provider.Shares(ctx)
 			if err != nil {
 				return s.fail("list shares", err)
@@ -127,6 +154,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_pools", Description: "Storage pools and their devices."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("storage"); err != nil {
+				return nil, nil, err
+			}
 			pools, err := s.opts.Provider.Pools(ctx)
 			if err != nil {
 				return s.fail("list pools", err)
@@ -136,6 +166,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_containers", Description: "Docker containers with state, image, uptime and live resources."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
 			containers, err := s.opts.Provider.Containers(ctx)
 			if err != nil {
 				return s.fail("list containers", err)
@@ -145,6 +178,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "container_logs", Description: "Tail the logs of a Docker container."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, args logsArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
 			lines := args.Lines
 			if lines <= 0 {
 				lines = 120
@@ -158,6 +194,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_vms", Description: "libvirt virtual machines with state, resources, IP and autostart."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("vms"); err != nil {
+				return nil, nil, err
+			}
 			vms, err := s.opts.Provider.VMs(ctx)
 			if err != nil {
 				return s.fail("list virtual machines", err)
@@ -167,6 +206,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "get_vm", Description: "Details of one virtual machine by ID or name."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, args targetArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("vms"); err != nil {
+				return nil, nil, err
+			}
 			vms, err := s.opts.Provider.VMs(ctx)
 			if err != nil {
 				return s.fail("get virtual machine", err)
@@ -181,6 +223,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "vm_logs", Description: "Tail the libvirt domain log of a virtual machine."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, args logsArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("vms"); err != nil {
+				return nil, nil, err
+			}
 			lines := args.Lines
 			if lines <= 0 {
 				lines = 240
@@ -194,6 +239,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_zfs_pools", Description: "ZFS pools, datasets and health."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("storage"); err != nil {
+				return nil, nil, err
+			}
 			pools, err := s.opts.Provider.ZFSPools(ctx)
 			if err != nil {
 				return s.fail("list ZFS pools", err)
@@ -203,6 +251,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_gpus", Description: "GPU inventory, driver, utilisation and temperature."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			gpus, err := s.opts.Provider.GPUs(ctx)
 			if err != nil {
 				return s.fail("list GPUs", err)
@@ -212,6 +263,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "get_ups", Description: "UPS battery, load, runtime and power state."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("ups"); err != nil {
+				return nil, nil, err
+			}
 			ups, err := s.opts.Provider.UPS(ctx)
 			if err != nil {
 				return s.fail("get UPS", err)
@@ -221,6 +275,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "get_metrics", Description: "Latest CPU, memory, network, disk and temperature sample."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			metrics, err := s.opts.Provider.Metrics(ctx)
 			if err != nil {
 				return s.fail("get metrics", err)
@@ -230,6 +287,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "get_metrics_history", Description: "Recent metric samples for trend analysis."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, args historyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			minutes := args.Minutes
 			if minutes <= 0 {
 				minutes = 60
@@ -253,6 +313,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_tasks", Description: "Background tasks with status and PID."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			tasks, err := s.opts.Provider.Tasks(ctx)
 			if err != nil {
 				return s.fail("list tasks", err)
@@ -262,6 +325,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_notifications", Description: "Unraid notifications and their importance."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("system"); err != nil {
+				return nil, nil, err
+			}
 			notifications, err := s.opts.Provider.Notifications(ctx)
 			if err != nil {
 				return s.fail("list notifications", err)
@@ -271,6 +337,9 @@ func addReadTools(s *service, server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_plugins", Description: "Installed Unraid plugins and update state."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("apps"); err != nil {
+				return nil, nil, err
+			}
 			plugins, err := s.opts.Provider.Plugins(ctx)
 			if err != nil {
 				return s.fail("list plugins", err)
@@ -284,14 +353,15 @@ func addActionTools(s *service, server *mcp.Server) {
 		name        string
 		description string
 		kind        string
+		scope       string
 	}{
-		{"start_container", "Start a Docker container (operator+).", provider.ActionContainerStart},
-		{"stop_container", "Stop a Docker container (operator+).", provider.ActionContainerStop},
-		{"restart_container", "Restart a Docker container (operator+).", provider.ActionContainerRestart},
-		{"start_vm", "Start a virtual machine (operator+).", provider.ActionVMStart},
-		{"shutdown_vm", "Gracefully shut down a virtual machine (operator+).", provider.ActionVMStop},
-		{"pause_vm", "Suspend a virtual machine (operator+).", provider.ActionVMPause},
-		{"resume_vm", "Resume a suspended virtual machine (operator+).", provider.ActionVMResume},
+		{"start_container", "Start a Docker container (operator+).", provider.ActionContainerStart, "docker"},
+		{"stop_container", "Stop a Docker container (operator+).", provider.ActionContainerStop, "docker"},
+		{"restart_container", "Restart a Docker container (operator+).", provider.ActionContainerRestart, "docker"},
+		{"start_vm", "Start a virtual machine (operator+).", provider.ActionVMStart, "vms"},
+		{"shutdown_vm", "Gracefully shut down a virtual machine (operator+).", provider.ActionVMStop, "vms"},
+		{"pause_vm", "Suspend a virtual machine (operator+).", provider.ActionVMPause, "vms"},
+		{"resume_vm", "Resume a suspended virtual machine (operator+).", provider.ActionVMResume, "vms"},
 	}
 	for _, action := range actions {
 		action := action
@@ -299,6 +369,9 @@ func addActionTools(s *service, server *mcp.Server) {
 			func(ctx context.Context, _ *mcp.CallToolRequest, args targetArgs) (*mcp.CallToolResult, any, error) {
 				if s.opts.ReadOnly || !s.opts.AllowActions {
 					return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+				}
+				if err := s.require(action.scope); err != nil {
+					return nil, nil, err
 				}
 				target := strings.TrimSpace(args.Target)
 				if target == "" {

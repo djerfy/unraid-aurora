@@ -34,10 +34,13 @@ Claude Desktop / Cursor configuration:
 
 The daemon exposes `https://<server>:8484/api/v1/mcp` once authentication succeeds.
 
-- Use an **unscoped API token** created in **Settings → API tokens**. Scoped tokens are refused on
-  this endpoint because MCP spans every subsystem.
+- Use an API token created in **Settings → API tokens**. An unscoped token exposes the full catalog;
+  a scoped token only allows calls in its scopes.
 - `viewer` tokens get the read tools only. `operator` and `admin` tokens can also run lifecycle
   actions, unless the server is in read-only mode or the token itself is read-only.
+- Scope mapping: `docker` for containers and container actions, `vms` for VMs and VM actions,
+  `storage` for array/disks/shares/pools/ZFS, `system` for host/metrics/tasks/notifications/GPUs,
+  `ups` for the UPS and `apps` for plugins. Calls outside the token scopes return a tool error.
 - Authenticate with `Authorization: Bearer <token>`. Browser cookie sessions require CSRF headers,
   so they are not usable from MCP clients.
 - The endpoint inherits Aurora's TLS configuration, security headers and access log.

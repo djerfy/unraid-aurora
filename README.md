@@ -172,9 +172,9 @@ aurora mcp                  # stdio, read-only
 aurora mcp --allow-actions  # stdio, operator actions
 ```
 
-The daemon also serves Streamable HTTP at `https://<server>:8484/api/v1/mcp` with an unscoped
-API token (`Authorization: Bearer …`). Viewer tokens are read-only; operator/admin tokens can start
-and stop containers or VMs. See [`docs/MCP.md`](docs/MCP.md) for client configuration, the tool
+The daemon also serves Streamable HTTP at `https://<server>:8484/api/v1/mcp` with an API token
+(`Authorization: Bearer …`). Scoped tokens only reach the matching tools; viewer tokens are
+read-only, while operator/admin tokens can start and stop containers or VMs. See [`docs/MCP.md`](docs/MCP.md) for client configuration, the tool
 catalog, resources and prompts.
 
 ## Authentication

@@ -230,6 +230,7 @@ func (s *Server) Handler() http.Handler {
 			ReadOnly:     readOnly,
 			AllowActions: !readOnly && (role == TokenRoleAdmin || role == TokenRoleOperator),
 			Role:         role,
+			Scopes:       principal.Scopes,
 			OnAction: func(tool, target string, err error) {
 				status := http.StatusOK
 				if err != nil {
@@ -267,16 +268,17 @@ type tokenPrincipal struct {
 	Name     string
 	Role     string
 	ReadOnly bool
+	Scopes   []string
 }
 
 // tokenRoleAllows applies the token role policy. Viewers are read-only,
 // operators can run day-to-day workload and array actions, and admins retain
 // full control over host configuration.
 func tokenRoleAllows(role string, scopes []string, method, path string) bool {
-	// MCP exposes a broad tool surface. Require an unscoped token so a
-	// docker-only or vms-only token cannot reach the whole host through it.
+	// MCP authenticates every valid token; the tool scope checks happen inside
+	// the MCP server, which returns a precise error for scoped tokens.
 	if path == "/api/v1/mcp" {
-		return len(scopes) == 0
+		return true
 	}
 	if !tokenScopeAllows(scopes, path) {
 		return false
@@ -379,7 +381,7 @@ func (s *Server) authenticate(next http.Handler) http.Handler {
 				}
 				return
 			}
-			ctx := context.WithValue(r.Context(), tokenContextKey{}, tokenPrincipal{Name: token.Name, Role: token.Role, ReadOnly: token.ReadOnly})
+			ctx := context.WithValue(r.Context(), tokenContextKey{}, tokenPrincipal{Name: token.Name, Role: token.Role, ReadOnly: token.ReadOnly, Scopes: append([]string(nil), token.Scopes...)})
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

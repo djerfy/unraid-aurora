@@ -37,12 +37,57 @@ func (f *fakeProvider) Containers(context.Context) ([]model.Container, error) {
 	return []model.Container{{ID: "abc", Name: "plex", State: "running"}}, nil
 }
 
-func TestMCPRequiresUnscopedToken(t *testing.T) {
+func TestMCPTokenScopes(t *testing.T) {
 	if !tokenRoleAllows(TokenRoleViewer, nil, http.MethodPost, "/api/v1/mcp") {
 		t.Fatal("an unscoped viewer token must be allowed to open an MCP session")
 	}
-	if tokenRoleAllows(TokenRoleViewer, []string{"docker"}, http.MethodPost, "/api/v1/mcp") {
-		t.Fatal("a scoped token must not reach the MCP endpoint")
+	if !tokenRoleAllows(TokenRoleViewer, []string{"docker"}, http.MethodPost, "/api/v1/mcp") {
+		t.Fatal("a scoped viewer token must be allowed to open an MCP session")
+	}
+}
+
+func TestMCPHTTPScopedViewer(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodPost, "/api/v1/tokens",
+		map[string]any{"name": "mcp-scoped", "role": "viewer", "scopes": []string{"docker"}}, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("token creation failed: %d", resp.StatusCode)
+	}
+	var created struct {
+		Secret string `json:"secret"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
+
+	transport := &mcp.StreamableClientTransport{
+		Endpoint:             env.server.URL + "/api/v1/mcp",
+		HTTPClient:           &http.Client{Transport: bearerTransport{secret: created.Secret}},
+		DisableStandaloneSSE: true,
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "aurora-test"}, nil)
+	session, err := client.Connect(context.Background(), transport, nil)
+	if err != nil {
+		t.Fatalf("a scoped read-only token must be able to connect: %v", err)
+	}
+	defer session.Close()
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "list_containers"})
+	if err != nil || result.IsError {
+		t.Fatalf("docker-scoped token could not list containers: %v %+v", err, result)
+	}
+	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_array"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatal("docker-scoped token must not read the array")
 	}
 }
 

@@ -115,6 +115,35 @@ func TestActionsRequirePermission(t *testing.T) {
 	}
 }
 
+func TestScopedTokenLimitsTools(t *testing.T) {
+	fake := &fakeProvider{}
+	session := connect(t, Options{Provider: fake, Version: "test", Scopes: []string{"docker"}, AllowActions: true})
+	ctx := context.Background()
+
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "list_containers"})
+	if err != nil || result.IsError {
+		t.Fatalf("docker scope should list containers: %v %+v", err, result)
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "get_array"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatal("docker scope must not read the array")
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "start_vm", Arguments: map[string]any{"target": "plex"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Fatal("docker scope must not start a VM")
+	}
+	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "start_container", Arguments: map[string]any{"target": "abc"}})
+	if err != nil || result.IsError {
+		t.Fatalf("docker scope should start a container: %v %+v", err, result)
+	}
+}
+
 func TestActionsRunWhenAllowed(t *testing.T) {
 	fake := &fakeProvider{}
 	session := connect(t, Options{Provider: fake, Version: "test", AllowActions: true})
