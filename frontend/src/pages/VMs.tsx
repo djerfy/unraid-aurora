@@ -18,6 +18,7 @@ import {
   MemoryStick,
   Monitor,
   Network,
+  PanelRightOpen,
   Pause,
   Play,
   Plus,
@@ -117,6 +118,9 @@ export function VMsPage() {
 
   const totalVcpu = vms.reduce((sum, vm) => sum + vm.vcpus, 0);
   const totalMemory = vms.reduce((sum, vm) => sum + vm.memory, 0);
+  const runningVcpu = running.reduce((sum, vm) => sum + vm.vcpus, 0);
+  const runningMemory = running.reduce((sum, vm) => sum + vm.memory, 0);
+  const runningMemoryUsed = running.reduce((sum, vm) => sum + vm.memory * (vm.memoryUsage / 100), 0);
 
   return (
     <>
@@ -273,6 +277,51 @@ export function VMsPage() {
                 <span key={vm.id} className="chip text-[9px]">{vm.primaryGpu}</span>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="my-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-line" />
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-subtle">
+            {t("In use by running machines")}
+          </span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-muted">{t("vCPU in use")}</span>
+              <span className="num text-soft">
+                {running.length ? `${runningVcpu} / ${totalVcpu}` : "—"}
+              </span>
+            </div>
+            <Progress
+              value={running.length && totalVcpu ? (runningVcpu / totalVcpu) * 100 : 0}
+              height={5}
+              tone="var(--accent-2)"
+              className="mt-2"
+            />
+            <p className="mt-1.5 text-[9.5px] text-subtle">
+              {running.length ? t("{count} machines powered on", { count: running.length }) : t("No running machine")}
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-muted">{t("Memory in use")}</span>
+              <span className="num text-soft">
+                {running.length ? `${formatMemory(runningMemoryUsed)} / ${formatMemory(runningMemory)}` : "—"}
+              </span>
+            </div>
+            <Progress
+              value={running.length && runningMemory ? (runningMemoryUsed / runningMemory) * 100 : 0}
+              height={5}
+              tone="var(--info)"
+              className="mt-2"
+            />
+            <p className="mt-1.5 text-[9.5px] text-subtle">
+              {running.length ? t("actual usage reported by libvirt") : t("No running machine")}
+            </p>
           </div>
         </div>
       </Card>
@@ -885,7 +934,7 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
             <Square className="size-3.5" />
           </button>
         ) : (
-          <span className="size-7" aria-hidden="true" />
+          <span className="grid size-7 place-items-center text-[11px] leading-none text-subtle" aria-hidden="true">—</span>
         )}
         {vm.ip ? (
           <button
@@ -897,7 +946,7 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
             <Network className="size-3.5" />
           </button>
         ) : (
-          <span className="size-7" aria-hidden="true" />
+          <span className="grid size-7 place-items-center text-[11px] leading-none text-subtle" aria-hidden="true">—</span>
         )}
       </div>
     </Card>
@@ -961,10 +1010,10 @@ function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; on
             <Square className="size-3.5" />
           </IconButton>
         ) : (
-          <span className="size-8" aria-hidden="true" />
+          <span className="grid size-8 place-items-center text-[11px] leading-none text-subtle" aria-hidden="true">—</span>
         )}
         <IconButton label={t("Details")} size="sm" onClick={onOpen}>
-          <Monitor className="size-3.5" />
+          <PanelRightOpen className="size-3.5" />
         </IconButton>
       </div>
     </div>
