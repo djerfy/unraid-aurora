@@ -316,9 +316,9 @@ new container starts at zero and fills in on the next refresh.
 
 ![Container resource map](screenshots/container-map.png)
 
-### Network calls
+### Network → Calls
 
-The **Network calls** tab lists the network sockets of a selected running container:
+The **Calls** sub-page of the **Network** tab lists the network sockets of a selected running container:
 
 - Choose a container in the selector; the view stays empty until one is selected.
 - Aurora enters the container network namespace with `nsenter` and reads `ss -tunap`.
@@ -330,9 +330,9 @@ The **Network calls** tab lists the network sockets of a selected running contai
 Country and city are optional: install `geoiplookup` and a GeoIP database on the host. Aurora never
 sends addresses to an external geolocation API.
 
-### Network map
+### Network → Map
 
-The **Network map** tab turns the live sockets of running containers into a graph:
+The **Map** sub-page of the **Network** tab turns the live sockets of running containers into a graph:
 
 - Nothing is loaded until a container is selected. Choose a specific container, or **All containers**
   to aggregate every running container.
@@ -454,7 +454,7 @@ and the containers using it.
 - The container drawer shows the full severity breakdown, scan date, Trivy and database versions,
   filters, and the finding list with package versions, fixed versions and advisory links. **Scan now**
   forces a fresh scan.
-- The **Security** tab next to **Network calls** merges every scan into one overview. Totals are
+- The **Security** tab next to **Network** merges every scan into one overview. Totals are
   deduplicated by image ID, and the same data can be grouped by image, container, CVE, package or
   severity. Search and severity filters narrow the result; container chips open the container drawer.
 

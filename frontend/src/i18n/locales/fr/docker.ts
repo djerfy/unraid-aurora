@@ -131,6 +131,8 @@ const docker: Record<string, string> = {
   "Recreate container": "Recréer le conteneur",
   "Remove previous container": "Retirer le conteneur précédent",
   "Network calls": "Appels réseau",
+  "Calls": "Appels",
+  "Map": "Carte",
   "Images": "Images",
   "Docker images on the host. Images used by a container are protected from deletion.":
     "Images Docker présentes sur l'hôte. Les images utilisées par un conteneur sont protégées contre la suppression.",

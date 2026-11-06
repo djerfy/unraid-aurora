@@ -131,19 +131,29 @@ export function DockerPage() {
   const tab =
     tabParam === "map"
       ? "map"
-      : tabParam === "connections"
-        ? "connections"
-        : tabParam === "network"
-          ? "network"
-          : tabParam === "images"
-            ? "images"
-            : tabParam === "security"
-              ? "security"
-              : "containers";
+      : tabParam === "connections" || tabParam === "network"
+        ? "network"
+        : tabParam === "images"
+          ? "images"
+          : tabParam === "security"
+            ? "security"
+            : "containers";
   const setTab = (value: string) => {
     const next = new URLSearchParams(params);
-    if (value === "map" || value === "connections" || value === "network" || value === "images" || value === "security") next.set("tab", value);
-    else next.delete("tab");
+    if (value === "map" || value === "network" || value === "images" || value === "security") {
+      next.set("tab", value);
+      if (value !== "network") next.delete("sub");
+    } else {
+      next.delete("tab");
+      next.delete("sub");
+    }
+    setParams(next, { replace: true });
+  };
+  const networkView = params.get("sub") === "map" ? "map" : "calls";
+  const setNetworkView = (value: string) => {
+    const next = new URLSearchParams(params);
+    next.set("tab", "network");
+    next.set("sub", value === "map" ? "map" : "calls");
     setParams(next, { replace: true });
   };
 
@@ -540,8 +550,7 @@ export function DockerPage() {
           items={[
             { value: "containers", label: t("Containers"), count: containers.length },
             { value: "map", label: t("Resource map"), icon: <Network className="size-3.5" />, count: running.length },
-            { value: "connections", label: t("Network calls"), icon: <Globe2 className="size-3.5" /> },
-            { value: "network", label: t("Network map"), icon: <Waypoints className="size-3.5" />, count: running.length },
+            { value: "network", label: t("Network"), icon: <Waypoints className="size-3.5" />, count: running.length },
             { value: "images", label: t("Images"), icon: <Layers className="size-3.5" /> },
             { value: "security", label: t("Security"), icon: <ShieldCheck className="size-3.5" /> },
           ]}
@@ -570,10 +579,23 @@ export function DockerPage() {
 
       {tab === "map" ? (
         <ContainerMap containers={running} onOpen={openContainer} />
-      ) : tab === "connections" ? (
-        <ContainerConnections containers={running} />
       ) : tab === "network" ? (
-        <ContainerNetworkMap containers={running} />
+        <div className="space-y-4">
+          <Tabs
+            size="sm"
+            items={[
+              { value: "calls", label: t("Calls"), icon: <Globe2 className="size-3.5" /> },
+              { value: "map", label: t("Map"), icon: <Waypoints className="size-3.5" />, count: running.length },
+            ]}
+            value={networkView}
+            onChange={setNetworkView}
+          />
+          {networkView === "map" ? (
+            <ContainerNetworkMap containers={running} />
+          ) : (
+            <ContainerConnections containers={running} />
+          )}
+        </div>
       ) : tab === "images" ? (
         <ContainerImages />
       ) : tab === "security" ? (
@@ -764,7 +786,7 @@ export function DockerPage() {
         </>
       )}
 
-      {tab !== "connections" && tab !== "network" && tab !== "images" ? (
+      {tab !== "network" && tab !== "images" ? (
         <ContainerDrawer
           container={selected}
           onClose={closeContainer}
