@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -10,6 +10,7 @@ import {
   Copy,
   Cpu,
   FileCode2,
+  Folder as FolderIcon,
   Gauge,
   HardDrive,
   LayoutGrid,
@@ -35,6 +36,10 @@ import { VMConsoleModal } from "../components/vms/VMConsoleModal";
 import { VMLogsModal } from "../components/vms/VMLogsModal";
 import { VMBackupModal } from "../components/vms/VMBackupModal";
 import { VMAutostartModal } from "../components/vms/VMAutostartModal";
+import { FolderBar } from "../components/folders/FolderBar";
+import { FolderPicker } from "../components/folders/FolderPicker";
+import { FolderManager } from "../components/folders/FolderManager";
+import { useVisualFolders } from "../components/folders/use-visual-folders";
 import { VMAdvancedModal } from "../components/vms/VMAdvancedModal";
 import { VMUSBHotplug } from "../components/vms/VMUSBHotplug";
 import { VMCloneModal, VMResizeModal } from "../components/vms/VMManagementModals";
@@ -66,6 +71,13 @@ export function VMsPage() {
   const [logsVm, setLogsVm] = useState<VM | null>(null);
   const [backupVm, setBackupVm] = useState<VM | null>(null);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [folderManager, setFolderManager] = useState(false);
+  const visualFolders = useVisualFolders("vms");
+  useEffect(() => {
+    if (folderFilter === "all" || folderFilter === "none") return;
+    if (!visualFolders.folders.some((folder) => folder.id === folderFilter)) setFolderFilter("all");
+  }, [folderFilter, visualFolders.folders]);
   const [xmlVm, setXmlVm] = useState<VM | null>(null);
   const [advancedVm, setAdvancedVm] = useState<VM | null>(null);
   const [cloneVm, setCloneVm] = useState<VM | null>(null);
@@ -118,6 +130,21 @@ export function VMsPage() {
 
   const totalVcpu = vms.reduce((sum, vm) => sum + vm.vcpus, 0);
   const totalMemory = vms.reduce((sum, vm) => sum + vm.memory, 0);
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const vm of vms) {
+      const folderID = visualFolders.assignment(vm.name) || "none";
+      counts[folderID] = (counts[folderID] ?? 0) + 1;
+    }
+    return counts;
+  }, [vms, visualFolders.assignments, visualFolders.folders]);
+  const visibleVms = vms.filter((vm) => {
+    if (folderFilter === "all") return true;
+    const folderID = visualFolders.assignment(vm.name);
+    if (folderFilter === "none") return !folderID;
+    return folderID === folderFilter;
+  });
+
   const runningVcpu = running.reduce((sum, vm) => sum + vm.vcpus, 0);
   const runningMemory = running.reduce((sum, vm) => sum + vm.memory, 0);
   const runningMemoryUsed = running.reduce((sum, vm) => sum + vm.memory * (vm.memoryUsage / 100), 0);
@@ -169,6 +196,16 @@ export function VMsPage() {
         </Card>
       ) : (
         <>
+          <FolderBar
+            folders={visualFolders.folders}
+            selected={folderFilter}
+            onSelect={setFolderFilter}
+            total={vms.length}
+            ungrouped={folderCounts.none ?? 0}
+            counts={folderCounts}
+            onManage={() => setFolderManager(true)}
+          />
+
           <div className="mb-4 flex justify-end">
             <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
               <button
@@ -191,12 +228,13 @@ export function VMsPage() {
           </div>
           {view === "grid" ? (
             <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {vms.map((vm) => (
+              {visibleVms.map((vm) => (
                 <VMCard
                   key={vm.id}
                   vm={vm}
                   onOpen={() => setSelected(vm)}
                   onConsole={() => setConsoleVm(vm)}
+                  folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(vm.name))?.name}
                   busy={action.isPending && action.variables?.target === vm.name}
                 />
               ))}
@@ -213,7 +251,7 @@ export function VMsPage() {
                 <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
               </div>
               <div className="divide-y divide-line/60">
-                {vms.map((vm) => (
+                {visibleVms.map((vm) => (
                   <VMRow
                     key={vm.id}
                     vm={vm}
@@ -433,6 +471,17 @@ export function VMsPage() {
               </div>
             </div>
 
+            <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+              <FolderPicker
+                folders={visualFolders.folders}
+                value={visualFolders.assignment(selected.name)}
+                onChange={(folderID) => visualFolders.setAssignment(selected.name, folderID)}
+                onCreate={visualFolders.createFolder}
+                label={t("Folder")}
+                disabled={visualFolders.loading}
+              />
+            </div>
+
             <div>
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-muted">{t("CPU utilisation")}</span>
@@ -473,6 +522,14 @@ export function VMsPage() {
 
       <VMLogsModal vm={logsVm} onClose={() => setLogsVm(null)} />
       <VMBackupModal vm={backupVm} onClose={() => setBackupVm(null)} />
+      <FolderManager
+        open={folderManager}
+        onClose={() => setFolderManager(false)}
+        folders={visualFolders.folders}
+        assignments={visualFolders.assignments}
+        counts={folderCounts}
+        onSave={visualFolders.saveFolders}
+      />
       <VMAutostartModal open={orderOpen} vms={vms} onClose={() => setOrderOpen(false)} />
 
       <VMConsoleModal
@@ -699,6 +756,8 @@ function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const folders = useVisualFolders("vms");
+  const [folder, setFolder] = useState("");
   const [draft, setDraft] = useState({
     name: "",
     vcpus: 2,
@@ -712,6 +771,7 @@ function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (open) {
       setDraft({ name: "", vcpus: 2, memoryMB: 2048, diskGB: 32, isoPath: "", network: "br0", start: true });
+      setFolder("");
     }
   }, [open]);
 
@@ -719,6 +779,7 @@ function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     mutationFn: () => api.createVM(draft),
     onSuccess: (vm) => {
       toast({ kind: "success", title: t("Virtual machine created"), description: vm.name });
+      folders.setAssignment(vm.name, folder);
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       onClose();
     },
@@ -753,6 +814,15 @@ function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       }
     >
       <div className="space-y-3">
+        <FolderPicker
+          folders={folders.folders}
+          value={folder}
+          onChange={setFolder}
+          onCreate={folders.createFolder}
+          label={t("Folder")}
+          disabled={folders.loading}
+        />
+
         <label className="block">
           <span className={label}>{t("Name")}</span>
           <input
@@ -831,7 +901,7 @@ function NewVMModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
-function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
+function VMCard({ vm, onOpen, onConsole, busy, folderName }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean; folderName?: string }) {
   const { t } = useI18n();
   const action = useAction();
   const running = vm.state === "running";
@@ -888,6 +958,7 @@ function VMCard({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; o
 
       <div className="relative mt-3 flex flex-wrap gap-1.5">
         {vm.ip ? <span className="chip font-mono text-[9.5px]">{vm.ip}</span> : null}
+        {folderName ? <span className="chip text-[9.5px]"><FolderIcon className="size-2.5" /> {folderName}</span> : null}
         {vm.primaryGpu ? <span className="chip text-[9.5px]">{vm.primaryGpu}</span> : null}
         {vm.state === "running" ? <span className="chip text-[9.5px]"><Clock3 className="size-2.5" /> {formatUptime(vm.uptime)}</span> : null}
       </div>

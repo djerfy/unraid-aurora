@@ -15,6 +15,8 @@ import {
   validateContainerFields,
 } from "./container-form";
 import { ContainerAdvancedFields, emptyContainerAdvanced, normalizeContainerAdvanced } from "./ContainerAdvancedFields";
+import { FolderPicker } from "../folders/FolderPicker";
+import { useVisualFolders } from "../folders/use-visual-folders";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
 const PROTOCOLS = ["tcp", "udp", "sctp"];
@@ -54,6 +56,8 @@ export function ContainerCreateModal({ open, onClose, preset }: { open: boolean;
   const [draft, setDraft] = useState<ContainerCreateOptions>(emptyOptions);
   const [error, setError] = useState("");
   const [templateID, setTemplateID] = useState("");
+  const [folder, setFolder] = useState("");
+  const folders = useVisualFolders("containers");
 
   const templates = useQuery({
     queryKey: ["docker-templates"],
@@ -85,6 +89,7 @@ export function ContainerCreateModal({ open, onClose, preset }: { open: boolean;
         description: t("{name} was created and started.", { name: draft.name }),
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      folders.setAssignment(draft.name.trim(), folder);
       onClose();
     },
     onError: (err: Error) => {
@@ -172,6 +177,17 @@ export function ContainerCreateModal({ open, onClose, preset }: { open: boolean;
       }
     >
       <div className="space-y-5">
+        <section>
+          <FolderPicker
+            folders={folders.folders}
+            value={folder}
+            onChange={setFolder}
+            onCreate={folders.createFolder}
+            label={t("Folder")}
+            disabled={folders.loading}
+          />
+        </section>
+
         <section>
           <SectionHeader title={t("Template")} hint={t("Load an existing Unraid XML to recreate a container")} />
           <div className="flex items-center gap-2">

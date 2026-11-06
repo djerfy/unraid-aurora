@@ -14,6 +14,8 @@ import {
   validateContainerFields,
 } from "./container-form";
 import { ContainerAdvancedFields, normalizeContainerAdvanced } from "./ContainerAdvancedFields";
+import { FolderPicker } from "../folders/FolderPicker";
+import { useVisualFolders } from "../folders/use-visual-folders";
 import { useToast } from "../../app/ToastProvider";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
@@ -31,6 +33,8 @@ export function ContainerSettingsModal({
   const { toast } = useToast();
   const [draft, setDraft] = useState<ContainerConfig | null>(null);
   const [error, setError] = useState("");
+  const [folder, setFolder] = useState("");
+  const folders = useVisualFolders("containers");
 
   const configQuery = useQuery({
     queryKey: ["container-config", container?.id],
@@ -56,8 +60,11 @@ export function ContainerSettingsModal({
     if (!container) {
       setDraft(null);
       setError("");
+      setFolder("");
+      return;
     }
-  }, [container]);
+    if (!folders.loading) setFolder(folders.assignment(container.name));
+  }, [container?.id, folders.loading]);
 
   const save = useMutation({
     mutationFn: (cfg: ContainerConfig) => api.updateContainerConfig(container?.id ?? "", cfg),
@@ -69,6 +76,7 @@ export function ContainerSettingsModal({
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       void queryClient.invalidateQueries({ queryKey: ["container-config", container?.id] });
+      if (container) folders.setAssignment(container.name, folder);
       onClose();
     },
     onError: (err: Error) => {
@@ -159,6 +167,15 @@ export function ContainerSettingsModal({
               {t("Applying changes stops and recreates the container. Its current ID and uptime reset. Only the paths listed below are kept; other bind mounts are removed.")}
             </span>
           </div>
+
+          <FolderPicker
+            folders={folders.folders}
+            value={folder}
+            onChange={setFolder}
+            onCreate={folders.createFolder}
+            label={t("Folder")}
+            disabled={folders.loading}
+          />
 
           {/* Paths ------------------------------------------------------- */}
           <section>

@@ -31,6 +31,7 @@ type fakeProvider struct {
 	provider.Provider
 	settings model.Settings
 	layout   model.StorageLayout
+	folders  map[string]model.VisualFolders
 }
 
 func (f *fakeProvider) Name() string { return "live" }
@@ -185,6 +186,21 @@ func (f *fakeProvider) SetVMAutostartOrder(ctx context.Context, order []string, 
 
 func (f *fakeProvider) ApplyVMAutostartOrder(ctx context.Context) (model.VMAutostartResult, error) {
 	return model.VMAutostartResult{Started: []string{"plex"}, Skipped: []string{}, Failed: []model.VMAutostartFailure{}}, nil
+}
+
+func (f *fakeProvider) VisualFolders(ctx context.Context, kind string) (model.VisualFolders, error) {
+	if f.folders == nil {
+		return model.VisualFolders{Version: 1, Folders: []model.VisualFolder{}, Assignments: map[string]string{}}, nil
+	}
+	return f.folders[kind], nil
+}
+
+func (f *fakeProvider) SaveVisualFolders(ctx context.Context, kind string, layout model.VisualFolders) error {
+	if f.folders == nil {
+		f.folders = make(map[string]model.VisualFolders)
+	}
+	f.folders[kind] = layout
+	return nil
 }
 
 func (f *fakeProvider) VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error) {
@@ -611,6 +627,44 @@ func TestVMLogsEndpoint(t *testing.T) {
 	}
 	if len(lines) != 1 || lines[0].Message != "starting up" || lines[0].Source != "libvirt" {
 		t.Fatalf("unexpected log lines: %+v", lines)
+	}
+}
+
+func TestVisualFolderEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/docker/folders", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	body := map[string]any{
+		"version":     1,
+		"folders":     []map[string]any{{"id": "media", "name": "Media", "order": 0}},
+		"assignments": map[string]string{"plex": "media"},
+	}
+	resp = env.request(t, http.MethodPut, "/api/v1/docker/folders", body, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var saved model.VisualFolders
+	if err := json.NewDecoder(resp.Body).Decode(&saved); err != nil {
+		t.Fatal(err)
+	}
+	if len(saved.Folders) != 1 || saved.Assignments["plex"] != "media" {
+		t.Fatalf("unexpected folders: %+v", saved)
+	}
+
+	resp = env.request(t, http.MethodGet, "/api/v1/vms/folders", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 }
 

@@ -35,6 +35,8 @@ type Provider interface {
 	ContainerTemplates(ctx context.Context) ([]model.ContainerTemplate, error)
 	VMConsole(ctx context.Context, id string) (model.VMConsole, error)
 	VMLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)
+	VisualFolders(ctx context.Context, kind string) (model.VisualFolders, error)
+	SaveVisualFolders(ctx context.Context, kind string, layout model.VisualFolders) error
 	StartVMBackup(ctx context.Context, id, targetDir string) (model.VMBackup, error)
 	VMBackupStatus(ctx context.Context, id string) (model.VMBackup, error)
 	CancelVMBackup(ctx context.Context, id string) error

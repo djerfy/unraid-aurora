@@ -164,6 +164,8 @@ are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 | GET | `/docker/containers/{id}/icon` | viewer+ | Cached Unraid icon |
 | GET | `/docker/networks` | viewer+ | Docker networks |
 | GET | `/docker/templates` | viewer+ | Unraid XML templates |
+| GET | `/docker/folders` | viewer+ | Visual container folders and assignments |
+| PUT | `/docker/folders` | operator | Replace the visual container folders |
 | POST | `/docker/check-updates` | operator | Compare local and registry digests |
 | POST | `/docker/containers/{id}/update` | operator | NDJSON pull/recreate stream |
 | GET | `/docker/security` | viewer+ | Merged Trivy overview |
@@ -217,6 +219,8 @@ Response:
 | GET | `/vms/{id}/backup` | viewer+ | Latest backup or restore job for the VM |
 | POST | `/vms/{id}/backup/cancel` | operator | Cancel a running backup or restore |
 | POST | `/vms/{id}/restore` | operator | Restore a stopped VM from a backup (confirmation required) |
+| GET | `/vms/folders` | viewer+ | Visual VM folders and assignments |
+| PUT | `/vms/folders` | operator | Replace the visual VM folders |
 | GET | `/vms/autostart-order` | viewer+ | Persisted VM autostart order |
 | PUT | `/vms/autostart-order` | operator | Save the order and optionally take over libvirt autostart |
 | POST | `/vms/autostart-order/apply` | operator | Start the ordered VMs now |

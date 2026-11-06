@@ -73,6 +73,23 @@ const common: Record<string, string> = {
   "Dismiss notification": "Ignorer la notification",
   "Action failed": "Échec de l'action",
   "Select": "Sélectionner",
+  "Folders": "Dossiers",
+  "Folder": "Dossier",
+  "No folder": "Aucun dossier",
+  "New folder": "Nouveau dossier",
+  "New folder…": "Nouveau dossier…",
+  "Folder name": "Nom du dossier",
+  "Unfiled": "Non classés",
+  "Delete folder": "Supprimer le dossier",
+  "Save folders": "Enregistrer les dossiers",
+  "No folders yet.": "Aucun dossier pour l'instant.",
+  "Folder name is required.": "Le nom du dossier est requis.",
+  "A folder with this name already exists.": "Un dossier avec ce nom existe déjà.",
+  "Folder names must be unique.": "Les noms de dossiers doivent être uniques.",
+  "Folder names must be 64 characters or fewer.": "Les noms de dossiers doivent contenir 64 caractères maximum.",
+  "Visual organization only. Containers and VMs are not moved on disk.": "Organisation uniquement visuelle. Les conteneurs et VM ne sont pas déplacés sur le disque.",
+  "Deleting a folder moves its items to Unfiled. Renaming is purely visual.": "Supprimer un dossier déplace ses éléments dans Non classés. Le renommage est purement visuel.",
+  "{count} items": "{count} éléments",
 };
 
 export default common;

@@ -271,6 +271,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(options),
     }),
+  containerFolders: () => request<import("./types").VisualFolders>("/api/v1/docker/folders"),
+  saveContainerFolders: (layout: import("./types").VisualFolders) =>
+    request<import("./types").VisualFolders>("/api/v1/docker/folders", {
+      method: "PUT",
+      body: JSON.stringify(layout),
+    }),
   bulkContainerAction: (action: "start" | "stop" | "restart", targets: string[]) =>
     request<{ ok: boolean; succeeded: string[]; failed: { target: string; error: string }[] }>(
       "/api/v1/docker/containers/bulk",
@@ -359,6 +365,12 @@ export const api = {
     }),
   vmXML: (id: string) =>
     request<{ xml: string }>(`/api/v1/vms/${encodeURIComponent(id)}/xml`),
+  vmFolders: () => request<import("./types").VisualFolders>("/api/v1/vms/folders"),
+  saveVMFolders: (layout: import("./types").VisualFolders) =>
+    request<import("./types").VisualFolders>("/api/v1/vms/folders", {
+      method: "PUT",
+      body: JSON.stringify(layout),
+    }),
   vmLogs: (id: string, lines = 240) =>
     request<LogLine[]>(`/api/v1/vms/${encodeURIComponent(id)}/logs?lines=${lines}`),
   vmBackup: (id: string, dir: string) =>

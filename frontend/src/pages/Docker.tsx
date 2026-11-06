@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Cpu,
   ExternalLink,
+  Folder as FolderIcon,
   Globe2,
   HardDrive,
   Info as InfoIcon,
@@ -40,6 +41,9 @@ import { ContainerSecurityOverview } from "../components/containers/ContainerSec
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { LogViewer } from "../components/ui/log-viewer";
+import { FolderBar } from "../components/folders/FolderBar";
+import { FolderManager } from "../components/folders/FolderManager";
+import { useVisualFolders } from "../components/folders/use-visual-folders";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
   Badge,
@@ -77,6 +81,13 @@ export function DockerPage() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [folderManager, setFolderManager] = useState(false);
+  const visualFolders = useVisualFolders("containers");
+  useEffect(() => {
+    if (folderFilter === "all" || folderFilter === "none") return;
+    if (!visualFolders.folders.some((folder) => folder.id === folderFilter)) setFolderFilter("all");
+  }, [folderFilter, visualFolders.folders]);
   const [view, setView] = useState<"grid" | "list">(() => {
     try {
       return localStorage.getItem("aurora.docker.view") === "list" ? "list" : "grid";
@@ -124,6 +135,15 @@ export function DockerPage() {
   const running = containers.filter((container) => container.state === "running");
   const stopped = containers.filter((container) => container.state !== "running");
   const updates = containers.filter((container) => container.updateAvailable);
+
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const container of containers) {
+      const folderID = visualFolders.assignment(container.name) || "none";
+      counts[folderID] = (counts[folderID] ?? 0) + 1;
+    }
+    return counts;
+  }, [containers, visualFolders.assignments, visualFolders.folders]);
 
   const filtered = useMemo(() => {
     return containers
@@ -414,6 +434,16 @@ export function DockerPage() {
         <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
       ) : (
         <>
+      <FolderBar
+        folders={visualFolders.folders}
+        selected={folderFilter}
+        onSelect={setFolderFilter}
+        total={containers.length}
+        ungrouped={folderCounts.none ?? 0}
+        counts={folderCounts}
+        onManage={() => setFolderManager(true)}
+      />
+
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Tabs
           size="md"
@@ -521,6 +551,7 @@ export function DockerPage() {
               selectable={selecting}
               selected={selectedIds.has(container.id)}
               onSelect={() => toggleSelected(container.id)}
+              folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(container.name))?.name}
             />
           ))}
         </div>
@@ -585,6 +616,14 @@ export function DockerPage() {
       <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
 
       <ContainerCreateModal open={creating} onClose={() => setCreating(false)} />
+      <FolderManager
+        open={folderManager}
+        onClose={() => setFolderManager(false)}
+        folders={visualFolders.folders}
+        assignments={visualFolders.assignments}
+        counts={folderCounts}
+        onSave={visualFolders.saveFolders}
+      />
 
       <ContainerUpdateModal
         run={updateRun}
@@ -683,6 +722,7 @@ function ContainerCard({
   selectable,
   selected,
   onSelect,
+  folderName,
 }: {
   container: Container;
   onOpen: () => void;
@@ -693,6 +733,7 @@ function ContainerCard({
   selectable?: boolean;
   selected?: boolean;
   onSelect?: () => void;
+  folderName?: string;
 }) {
   const action = useAction();
   const { t } = useI18n();
@@ -743,6 +784,11 @@ function ContainerCard({
               {container.updateAvailable ? <span className="size-1.5 shrink-0 rounded-full bg-[var(--warning)]" /> : null}
             </span>
             <span className="mt-0.5 block truncate text-[10px] text-subtle">{container.image}</span>
+            {folderName ? (
+              <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded border border-line bg-[var(--surface-2)] px-1.5 py-0.5 text-[9px] text-subtle">
+                <FolderIcon className="size-2.5 shrink-0" /> {folderName}
+              </span>
+            ) : null}
           </span>
         </button>
         <Menu
@@ -955,6 +1001,7 @@ function ContainerRow({
   selectable,
   selected,
   onSelect,
+  folderName,
 }: {
   container: Container;
   onOpen: () => void;
@@ -965,6 +1012,7 @@ function ContainerRow({
   selectable?: boolean;
   selected?: boolean;
   onSelect?: () => void;
+  folderName?: string;
 }) {
   const action = useAction();
   const { t } = useI18n();
@@ -991,6 +1039,11 @@ function ContainerRow({
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-[12px] font-medium text-ink">{container.name}</span>
           {container.updateAvailable ? <Badge tone="warning">{t("update")}</Badge> : null}
+          {folderName ? (
+            <span className="hidden items-center gap-1 rounded border border-line bg-[var(--surface-2)] px-1 py-0.5 text-[8px] text-subtle lg:inline-flex">
+              <FolderIcon className="size-2.5" /> {folderName}
+            </span>
+          ) : null}
         </span>
       </button>
       <span className="hidden w-44 shrink-0 truncate text-[9.5px] text-subtle md:block" title={container.image}>

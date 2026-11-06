@@ -380,6 +380,18 @@ type ContainerCreateOptions struct {
 	Advanced      ContainerAdvanced `json:"advanced"`
 }
 
+type VisualFolder struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Order int    `json:"order"`
+}
+
+type VisualFolders struct {
+	Version     int               `json:"version"`
+	Folders     []VisualFolder    `json:"folders"`
+	Assignments map[string]string `json:"assignments"`
+}
+
 type ContainerUpdateEvent struct {
 	Step     string  `json:"step"`
 	Message  string  `json:"message"`

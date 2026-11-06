@@ -997,6 +997,18 @@ export type AuditEntry = {
 
 export type LogLine = { time: string; level: string; source: string; message: string };
 
+export type VisualFolder = {
+  id: string;
+  name: string;
+  order: number;
+};
+
+export type VisualFolders = {
+  version: number;
+  folders: VisualFolder[];
+  assignments: Record<string, string>;
+};
+
 export type VMBackupFile = {
   name: string;
   kind: string;

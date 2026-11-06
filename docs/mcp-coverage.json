@@ -508,6 +508,18 @@
     },
     "POST /api/v1/zfs/snapshots/rollback": {
       "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+    },
+    "GET /api/v1/docker/folders": {
+      "excluded": "Visual organization only; not exposed through MCP."
+    },
+    "PUT /api/v1/docker/folders": {
+      "excluded": "Visual organization only; not exposed through MCP."
+    },
+    "GET /api/v1/vms/folders": {
+      "excluded": "Visual organization only; not exposed through MCP."
+    },
+    "PUT /api/v1/vms/folders": {
+      "excluded": "Visual organization only; not exposed through MCP."
     }
   }
 }
