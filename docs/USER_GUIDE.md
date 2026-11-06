@@ -288,12 +288,11 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
   creation or in **Edit settings**. Folders are stored in Aurora's configuration, are purely visual
   and never move data on disk. **Unfiled** is the default; deleting a folder moves its containers
   back to Unfiled.
-- **Folder entries**: folders are listed first, in their configured order, followed by the unfiled
-  containers. Containers assigned to a folder are shown inside it rather than at the root. The chevron
-  on a grid card or a list row expands the folder and renders its containers exactly like the default
-  cards/rows (icon, image, state, metrics and actions); expanded rows are slightly indented so the
-  container icon aligns with the folder icon. Picking a folder in the toolbar dropdown applies the
-  same filter.
+- **Folder entries**: in the list view every folder gets its own table, listed first in their
+  configured order, followed by an **Unfiled** table for the remaining containers. The chevron in a
+  folder table header collapses it. Each table uses the standard columns and rows (icon, image, state,
+  metrics and actions). In the grid view, folders stay as cards and expand into the default container
+  cards. Picking a folder in the toolbar dropdown applies the same filter.
 
 ![Container list](screenshots/docker-list.png)
 
@@ -480,10 +479,11 @@ The **Applications** page browses the official Community Applications feed:
   them back if the operation fails. Both operations appear in **Historique**.
 - **Folder** (drawer) and the picker in **New VM** assign a visual folder. Folders are shared with the
   folder dropdown in the page toolbar, stored in Aurora's configuration and never change the domain or disks.
-- **Folder entries**: folders are listed first, in their configured order, followed by the unfiled
-  machines. Machines assigned to a folder live inside it. The chevron expands the folder and renders
-  its machines exactly like the default cards/rows, with console access, state and actions; expanded
-  rows are slightly indented so the machine icon aligns with the folder icon.
+- **Folder entries**: in the list view every folder gets its own table, listed first in their
+  configured order, followed by an **Unfiled** table for the remaining machines. The chevron in a
+  folder table header collapses it. Each table uses the standard columns and rows, with console
+  access, state and actions. In the grid view, folders stay as cards and expand into the default
+  machine cards.
 - **Autostart order** (page header) stores a deterministic start order, can start the VMs immediately,
   and can take over libvirt autostart: Aurora then disables the per-VM libvirt autostart flags and
   starts the ordered VMs once the array reaches `STARTED`. The takeover is reversible and visible in

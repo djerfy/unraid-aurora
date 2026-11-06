@@ -14,6 +14,7 @@ import {
   Folder as FolderIcon,
   Gauge,
   HardDrive,
+  Inbox,
   LayoutGrid,
   List,
   ListOrdered,
@@ -39,7 +40,7 @@ import { VMBackupModal } from "../components/vms/VMBackupModal";
 import { VMAutostartModal } from "../components/vms/VMAutostartModal";
 import { FolderDropdown } from "../components/folders/FolderDropdown";
 import { FolderCard } from "../components/folders/FolderCard";
-import { FolderRow } from "../components/folders/FolderRow";
+import { FolderTable } from "../components/folders/FolderTable";
 import { FolderPicker } from "../components/folders/FolderPicker";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
@@ -176,15 +177,29 @@ export function VMsPage() {
     />
   );
 
-  const renderVMRow = (vm: VM, indent = false) => (
+  const renderVMRow = (vm: VM) => (
     <VMRow
       key={vm.id}
-      indent={indent}
       vm={vm}
       onOpen={() => setSelected(vm)}
       onConsole={() => setConsoleVm(vm)}
       busy={action.isPending && action.variables?.target === vm.name}
     />
+  );
+
+  const unfiledVms = visibleVms.filter((vm) => !visualFolders.assignment(vm.name));
+  const tableItems = showFolders ? unfiledVms : visibleVms;
+
+  const vmColumns = (
+    <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
+      <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Machine")}</span>
+      <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
+      <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("vCPUs")}</span>
+      <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
+      <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("CPU")}</span>
+      <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("RAM")}</span>
+      <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
+    </div>
   );
 
   return (
@@ -290,32 +305,41 @@ export function VMsPage() {
               )}
             </div>
           ) : (
-            <Card>
-              <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
-                <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Machine")}</span>
-                <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
-                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("vCPUs")}</span>
-                <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
-                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("CPU")}</span>
-                <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("RAM")}</span>
-                <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
-              </div>
-              <div className="divide-y divide-line/60">
-                {entries.map((entry) =>
-                  entry.kind === "folder" ? (
-                    <FolderRow
-                      key={`folder-${entry.folder.id}`}
-                      name={entry.folder.name}
-                      count={entry.items.length}
+            <>
+              {showFolders
+                ? folderEntries.map(({ folder, items }) => (
+                    <FolderTable
+                      key={folder.id}
+                      name={folder.name}
+                      count={items.length}
+                      columns={vmColumns}
                     >
-                      {entry.items.map((vm) => renderVMRow(vm, true))}
-                    </FolderRow>
-                  ) : (
-                    renderVMRow(entry.vm)
-                  ),
-                )}
-              </div>
-            </Card>
+                      {items.length ? (
+                        items.map(renderVMRow)
+                      ) : (
+                        <p className="px-4 py-3 text-[10.5px] text-subtle">{t("No items")}</p>
+                      )}
+                    </FolderTable>
+                  ))
+                : null}
+              {tableItems.length > 0 || !showFolders || folderEntries.length === 0 ? (
+                <Card className="overflow-hidden">
+                  {showFolders && folderEntries.length ? (
+                    <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[var(--surface-2)]/50 px-4 py-2.5">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-muted">
+                        <Inbox className="size-3.5" />
+                      </span>
+                      <span className="text-[12px] font-semibold text-ink">{t("Unfiled")}</span>
+                      <span className="font-mono text-[9px] text-subtle">{t("{count} items", { count: tableItems.length })}</span>
+                    </div>
+                  ) : null}
+                  {vmColumns}
+                  <div className="divide-y divide-line/60">
+                    {tableItems.map(renderVMRow)}
+                  </div>
+                </Card>
+              ) : null}
+            </>
           )}
         </>
       )}
@@ -1078,18 +1102,13 @@ function VMCard({ vm, onOpen, onConsole, busy, folderName }: { vm: VM; onOpen: (
   );
 }
 
-function VMRow({ vm, onOpen, onConsole, busy, indent }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean; indent?: boolean }) {
+function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
   const { t } = useI18n();
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-3 py-3 pr-4 transition hover:bg-[var(--surface-2)]/50",
-        indent ? "pl-[38px]" : "pl-4",
-      )}
-    >
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <EntityIcon src={vmIconURL(vm.id)} name={vm.name} size={32} fallback={<Icon className="size-4" />} />
         <span className="min-w-0">

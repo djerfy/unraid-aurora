@@ -44,7 +44,7 @@ import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { LogViewer } from "../components/ui/log-viewer";
 import { FolderDropdown } from "../components/folders/FolderDropdown";
 import { FolderCard } from "../components/folders/FolderCard";
-import { FolderRow } from "../components/folders/FolderRow";
+import { FolderTable } from "../components/folders/FolderTable";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
@@ -369,10 +369,9 @@ export function DockerPage() {
     />
   );
 
-  const renderContainerRow = (container: Container, indent = false) => (
+  const renderContainerRow = (container: Container) => (
     <ContainerRow
       key={container.id}
-      indent={indent}
       container={container}
       onOpen={() => openContainer(container)}
       onEdit={() => setEditing(container)}
@@ -386,6 +385,30 @@ export function DockerPage() {
       selected={selectedIds.has(container.id)}
       onSelect={() => toggleSelected(container.id)}
     />
+  );
+
+  const unfiledItems = filtered.filter((container) => !visualFolders.assignment(container.name));
+  const tableItems = showFolders ? unfiledItems : filtered;
+
+  const containerColumns = (
+    <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
+      <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-52 lg:flex-none">
+        {t("Container")}
+      </span>
+      <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Image")}</span>
+      <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">{t("Network")}</span>
+      <span className="hidden w-28 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">IP</span>
+      <span className="hidden w-[124px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1600px]:block min-[1800px]:w-64">
+        {t("Mounts")}
+      </span>
+      <span className="hidden flex-1 lg:block" aria-hidden="true" />
+      <span className="hidden w-[176px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1500px]:block">{t("Security")}</span>
+      <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
+      <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
+      <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
+      <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Uptime")}</span>
+      <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
+    </div>
   );
 
   return (
@@ -624,41 +647,41 @@ export function DockerPage() {
           )}
         </div>
       ) : (
-        <Card>
-          <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
-            <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-52 lg:flex-none">
-              {t("Container")}
-            </span>
-            <span className="hidden w-44 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Image")}</span>
-            <span className="hidden w-24 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">{t("Network")}</span>
-            <span className="hidden w-28 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:block">IP</span>
-            <span className="hidden w-[124px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1600px]:block min-[1800px]:w-64">
-              {t("Mounts")}
-            </span>
-            <span className="hidden flex-1 lg:block" aria-hidden="true" />
-            <span className="hidden w-[176px] shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle min-[1500px]:block">{t("Security")}</span>
-            <span className="w-20 shrink-0 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("State")}</span>
-            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">CPU</span>
-            <span className="hidden w-20 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle sm:block">{t("Memory")}</span>
-            <span className="hidden w-16 shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle md:block">{t("Uptime")}</span>
-            <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
-          </div>
-          <div className="divide-y divide-line/60">
-            {entries.map((entry) =>
-              entry.kind === "folder" ? (
-                <FolderRow
-                  key={`folder-${entry.folder.id}`}
-                  name={entry.folder.name}
-                  count={entry.items.length}
+        <>
+          {showFolders
+            ? folderEntries.map(({ folder, items }) => (
+                <FolderTable
+                  key={folder.id}
+                  name={folder.name}
+                  count={items.length}
+                  columns={containerColumns}
                 >
-                  {entry.items.map((container) => renderContainerRow(container, true))}
-                </FolderRow>
-              ) : (
-                renderContainerRow(entry.container)
-              ),
-            )}
-          </div>
-        </Card>
+                  {items.length ? (
+                    items.map(renderContainerRow)
+                  ) : (
+                    <p className="px-4 py-3 text-[10.5px] text-subtle">{t("No items")}</p>
+                  )}
+                </FolderTable>
+              ))
+            : null}
+          {tableItems.length > 0 || !showFolders ? (
+            <Card className="overflow-hidden">
+              {showFolders && folderEntries.length ? (
+                <div className="flex flex-wrap items-center gap-3 border-b border-line bg-[var(--surface-2)]/50 px-4 py-2.5">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-muted">
+                    <Boxes className="size-3.5" />
+                  </span>
+                  <span className="text-[12px] font-semibold text-ink">{t("Unfiled")}</span>
+                  <span className="font-mono text-[9px] text-subtle">{t("{count} items", { count: tableItems.length })}</span>
+                </div>
+              ) : null}
+              {containerColumns}
+              <div className="divide-y divide-line/60">
+                {tableItems.map(renderContainerRow)}
+              </div>
+            </Card>
+          ) : null}
+        </>
       )}
         </>
       )}
@@ -1065,7 +1088,6 @@ function ContainerRow({
   selected,
   onSelect,
   folderName,
-  indent,
 }: {
   container: Container;
   onOpen: () => void;
@@ -1077,19 +1099,13 @@ function ContainerRow({
   selected?: boolean;
   onSelect?: () => void;
   folderName?: string;
-  indent?: boolean;
 }) {
   const action = useAction();
   const { t } = useI18n();
   const running = container.state === "running";
   const mounts = container.mounts ?? [];
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 py-3 pr-4 transition hover:bg-[var(--surface-2)]/50",
-        indent ? "pl-[38px]" : "pl-4",
-      )}
-    >
+    <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       {selectable ? (
         <input
           type="checkbox"
