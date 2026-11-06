@@ -132,17 +132,27 @@ func TestMCPHTTPReadOnlySession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
+	wanted := map[string]bool{"get_array": false, "list_images": false, "get_network_map": false}
 	for _, tool := range tools.Tools {
-		if tool.Name == "get_array" {
-			found = true
+		if _, ok := wanted[tool.Name]; ok {
+			wanted[tool.Name] = true
 		}
 	}
-	if !found {
-		t.Fatal("get_array is missing from the MCP tool list")
+	for name, found := range wanted {
+		if !found {
+			t.Fatalf("%s is missing from the MCP tool list", name)
+		}
 	}
 
-	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_array"})
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "list_images"})
+	if err != nil || result.IsError {
+		t.Fatalf("list_images failed: %v %+v", err, result)
+	}
+	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_network_map"})
+	if err != nil || result.IsError {
+		t.Fatalf("get_network_map failed: %v %+v", err, result)
+	}
+	result, err = session.CallTool(context.Background(), &mcp.CallToolParams{Name: "get_array"})
 	if err != nil || result.IsError {
 		t.Fatalf("get_array failed: %v %+v", err, result)
 	}

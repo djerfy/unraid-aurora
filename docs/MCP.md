@@ -175,7 +175,9 @@ Read tools are available to every allowed session:
 | `list_disks` | Array disks, temperature, usage and SMART summary |
 | `list_shares` | User shares and their settings |
 | `list_pools` | Storage pools and devices |
-| `list_containers` | Docker containers with state and live resources |
+| `list_containers` | Docker containers with state, live resources and startup priority |
+| `list_images` | Docker images, tags, size and the containers using them |
+| `get_network_map` | Container-to-peer connections with inbound/outbound direction |
 | `container_logs` | Tail a container log |
 | `list_vms` | libvirt virtual machines |
 | `get_vm` | One virtual machine by ID or name |
@@ -191,8 +193,11 @@ Read tools are available to every allowed session:
 
 Lifecycle actions require an operator/admin session with `AllowActions`:
 
-`start_container`, `stop_container`, `restart_container`, `start_vm`, `shutdown_vm`, `pause_vm`,
-`resume_vm`.
+`start_container`, `stop_container`, `restart_container`, `set_container_priority`,
+`remove_image`, `remove_unused_images`, `start_vm`, `shutdown_vm`, `pause_vm`, `resume_vm`.
+
+Image removal never forces Docker. `remove_image` fails cleanly when a container still uses the
+image; `remove_unused_images` skips those images and reports them.
 
 ## Resources
 

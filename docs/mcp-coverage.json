@@ -522,19 +522,29 @@
       "excluded": "Visual organization only; not exposed through MCP."
     },
     "GET /api/v1/docker/network-map": {
-      "excluded": "Aggregated visualization of live sockets; per-container connections remain available through the API."
+      "tools": [
+        "get_network_map"
+      ]
     },
     "PUT /api/v1/docker/priorities": {
-      "excluded": "UI-specific startup preference; not exposed through MCP."
+      "tools": [
+        "set_container_priority"
+      ]
     },
     "GET /api/v1/docker/images": {
-      "excluded": "Docker maintenance inventory; not exposed through MCP."
+      "tools": [
+        "list_images"
+      ]
     },
     "DELETE /api/v1/docker/images/{id}": {
-      "excluded": "Destructive image maintenance; UI-only for now."
+      "tools": [
+        "remove_image"
+      ]
     },
     "POST /api/v1/docker/images/prune": {
-      "excluded": "Destructive image maintenance; UI-only for now."
+      "tools": [
+        "remove_unused_images"
+      ]
     }
   }
 }

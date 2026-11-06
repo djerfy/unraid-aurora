@@ -147,6 +147,36 @@ type historyArgs struct {
 	Minutes int `json:"minutes,omitempty" jsonschema:"lookback window in minutes, between 1 and 1440 (default 60)"`
 }
 
+type networkMapArgs struct {
+	Container string `json:"container,omitempty" jsonschema:"optional container ID or name; omit for every running container"`
+}
+
+type priorityArgs struct {
+	Target   string `json:"target" jsonschema:"container ID or name"`
+	Priority int    `json:"priority" jsonschema:"startup priority from 0 (first) to 100 (last), default 50"`
+}
+
+type imageArgs struct {
+	ID string `json:"id" jsonschema:"Docker image ID"`
+}
+
+func (s *service) findContainer(ctx context.Context, target string) (model.Container, error) {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		return model.Container{}, errors.New("container is required")
+	}
+	containers, err := s.opts.Provider.Containers(ctx)
+	if err != nil {
+		return model.Container{}, err
+	}
+	for _, container := range containers {
+		if container.ID == target || container.Name == target {
+			return container, nil
+		}
+	}
+	return model.Container{}, fmt.Errorf("container %q not found", target)
+}
+
 func addReadTools(s *service, server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{Name: "get_system", Description: "Host identity, CPU, memory, load, uptime and array summary.", Annotations: readOnly},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
@@ -218,6 +248,38 @@ func addReadTools(s *service, server *mcp.Server) {
 				return s.fail("list containers", err)
 			}
 			return s.text(containers)
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "list_images", Description: "Docker images with tags, size and the containers using them.", Annotations: readOnly},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			images, err := s.opts.Provider.ContainerImages(ctx)
+			if err != nil {
+				return s.fail("list images", err)
+			}
+			return s.text(images)
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "get_network_map", Description: "Container-to-peer network graph with connection directions.", Annotations: readOnly},
+		func(ctx context.Context, _ *mcp.CallToolRequest, args networkMapArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			containerID := ""
+			if strings.TrimSpace(args.Container) != "" {
+				container, err := s.findContainer(ctx, args.Container)
+				if err != nil {
+					return s.fail("get network map", err)
+				}
+				containerID = container.ID
+			}
+			networkMap, err := s.opts.Provider.ContainerNetworkMap(ctx, containerID)
+			if err != nil {
+				return s.fail("get network map", err)
+			}
+			return s.text(networkMap)
 		})
 
 	mcp.AddTool(server, &mcp.Tool{Name: "container_logs", Description: "Tail the logs of a Docker container.", Annotations: readOnly},
@@ -431,6 +493,68 @@ func addActionTools(s *service, server *mcp.Server) {
 				return s.text(map[string]any{"ok": true, "action": action.name, "target": target})
 			})
 	}
+
+	mcp.AddTool(server, &mcp.Tool{Name: "set_container_priority", Description: "Set a container startup priority from 0 (first) to 100 (last)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, args priorityArgs) (*mcp.CallToolResult, any, error) {
+			if s.opts.ReadOnly || !s.opts.AllowActions {
+				return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+			}
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			if args.Priority < 0 || args.Priority > 100 {
+				return nil, nil, errors.New("priority must be between 0 and 100")
+			}
+			container, err := s.findContainer(ctx, args.Target)
+			if err != nil {
+				return s.fail("set container priority", err)
+			}
+			_, err = s.opts.Provider.SaveContainerPriorities(ctx, map[string]int{container.Name: args.Priority})
+			if s.opts.OnAction != nil {
+				s.opts.OnAction("set_container_priority", container.Name, err)
+			}
+			if err != nil {
+				return s.fail("set container priority", err)
+			}
+			return s.text(map[string]any{"ok": true, "container": container.Name, "priority": args.Priority})
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "remove_image", Description: "Remove an unused Docker image without force."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, args imageArgs) (*mcp.CallToolResult, any, error) {
+			if s.opts.ReadOnly || !s.opts.AllowActions {
+				return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+			}
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			id := strings.TrimSpace(args.ID)
+			err := s.opts.Provider.RemoveContainerImage(ctx, id)
+			if s.opts.OnAction != nil {
+				s.opts.OnAction("remove_image", id, err)
+			}
+			if err != nil {
+				return s.fail("remove image", err)
+			}
+			return s.text(map[string]any{"ok": true, "id": id})
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "remove_unused_images", Description: "Remove every Docker image not used by a container; used images are skipped."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if s.opts.ReadOnly || !s.opts.AllowActions {
+				return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+			}
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			result, err := s.opts.Provider.RemoveUnusedContainerImages(ctx)
+			if s.opts.OnAction != nil {
+				s.opts.OnAction("remove_unused_images", "", err)
+			}
+			if err != nil {
+				return s.fail("remove unused images", err)
+			}
+			return s.text(result)
+		})
 }
 
 func addResources(s *service, server *mcp.Server) {
