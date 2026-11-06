@@ -191,7 +191,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
   const height = HEADER + Math.max(inbound.length, mapContainers.length, outbound.length, 1) * ROW;
   const viewportWidth = graphWidth > 0 ? Math.max(320, Math.floor(graphWidth * 0.9) - 4) : 900;
   const gutter = Math.min(80, Math.max(24, Math.round(viewportWidth * 0.05)));
-  const columnWidth = Math.min(420, Math.max(0, Math.floor((viewportWidth - 2 * gutter) / 3)));
+  const columnWidth = Math.max(0, Math.floor((viewportWidth - 2 * gutter) / 3));
   const usedWidth = columnWidth * 3 + 2 * gutter;
   const startX = Math.max(0, Math.floor((viewportWidth - usedWidth) / 2));
   const inboundX = startX;
@@ -307,7 +307,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     }
     return (
       <>
-        <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
+        <div className="my-5 overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
           <div className="relative mx-auto" style={{ width: "90%", height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: inboundX + 4 }}>
               {t("Incoming")}
