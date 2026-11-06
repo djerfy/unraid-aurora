@@ -299,11 +299,12 @@ export function NetworkConfigModal({
                   <span className="font-mono text-[9px] normal-case tracking-normal text-subtle">({selected.physicalNic})</span>
                 ) : null}
               </h3>
-              <div className="inline-flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+              <div data-glass-control="segmented" className="inline-flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
                 {([true, false] as const).map((value) => (
                   <button
                     key={String(value)}
                     type="button"
+                    aria-pressed={selected.useDhcp === value}
                     onClick={() => update({ useDhcp: value })}
                     className={cn(
                       "rounded-md px-3 py-1 text-[11px] font-medium transition",

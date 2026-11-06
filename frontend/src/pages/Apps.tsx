@@ -233,7 +233,7 @@ export function AppsPage() {
             icon={<Search className="size-3.5" />}
             className="w-full sm:w-80"
           />
-          <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+          <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
             {[
               { value: "all", label: t("All") },
               { value: "docker", label: t("Docker") },
@@ -242,6 +242,7 @@ export function AppsPage() {
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={kind === option.value}
                 onClick={() => chooseKind(option.value)}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-[10.5px] font-medium transition",

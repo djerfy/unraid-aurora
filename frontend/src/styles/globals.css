@@ -417,6 +417,36 @@
   background: color-mix(in srgb, var(--surface-3) 82%, transparent);
 }
 
+/* Form controls and segmented tracks follow the same material. */
+[data-glass="on"] select,
+[data-glass="on"] main input[type="text"],
+[data-glass="on"] main input[type="search"],
+[data-glass="on"] main input[type="email"],
+[data-glass="on"] main input[type="password"],
+[data-glass="on"] main input[type="number"],
+[data-glass="on"] main textarea,
+[data-glass="on"] [data-glass-control] {
+  background-color: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+[data-glass="on"] main [data-glass-control="input"] input {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-glass="on"] [data-glass-control="input"]:focus-within,
+[data-glass="on"] select:focus {
+  background-color: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+[data-glass="on"] [data-glass-control="tabs"] [aria-selected="true"],
+[data-glass="on"] [data-glass-control="segmented"] [aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
 /* A stronger atmosphere gives the glass something to refract. */
 [data-glass="on"] .app-atmosphere::before {
   opacity: 1;
@@ -445,6 +475,20 @@
     background: var(--surface-2);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  [data-glass="on"] select,
+  [data-glass="on"] main input,
+  [data-glass="on"] main textarea,
+  [data-glass="on"] [data-glass-control] {
+    background: var(--surface-2);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  [data-glass="on"] [data-glass-control="tabs"] [aria-selected="true"],
+  [data-glass="on"] [data-glass-control="segmented"] [aria-pressed="true"] {
+    background: var(--surface);
   }
 }
 

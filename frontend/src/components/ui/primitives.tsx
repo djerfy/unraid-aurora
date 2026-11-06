@@ -276,6 +276,7 @@ export function Tabs({
   return (
     <div
       role="tablist"
+      data-glass-control="tabs"
       className={cn(
         "inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)] p-1",
         className,
@@ -486,6 +487,7 @@ export function InputBase({
 }) {
   return (
     <div
+      data-glass-control="input"
       className={cn(
         "flex h-9 items-center gap-2 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 transition focus-within:border-[var(--accent-line)] focus-within:bg-[var(--surface)]",
         className,

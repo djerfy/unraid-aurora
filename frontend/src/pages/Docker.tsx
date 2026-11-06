@@ -625,11 +625,12 @@ export function DockerPage() {
           >
             {selecting ? t("Cancel selection") : t("Select")}
           </Button>
-          <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+          <div data-glass-control="segmented" className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
             <button
               type="button"
               onClick={() => setView("grid")}
               aria-label={t("Grid view")}
+              aria-pressed={view === "grid"}
               className={cn("grid size-7 place-items-center rounded-md transition", view === "grid" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
             >
               <Boxes className="size-3.5" />
@@ -638,6 +639,7 @@ export function DockerPage() {
               type="button"
               onClick={() => setView("list")}
               aria-label={t("List view")}
+              aria-pressed={view === "list"}
               className={cn("grid size-7 place-items-center rounded-md transition", view === "list" ? "bg-[var(--surface)] text-ink shadow-sm" : "text-subtle hover:text-ink")}
             >
               <List className="size-3.5" />

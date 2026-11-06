@@ -390,11 +390,12 @@ export function SettingsPage() {
                 <div className="my-5 h-px bg-line" />
 
                 <SettingsRow label={t("Density")} description={t("Compact reduces padding and row height across the interface.")}>
-                  <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+                  <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
                     {(["comfortable", "compact"] as const).map((value) => (
                       <button
                         key={value}
                         type="button"
+                        aria-pressed={settings.density === value}
                         onClick={() => {
                           update("density", value);
                           theme.setDensity(value);
@@ -414,11 +415,12 @@ export function SettingsPage() {
                   label={t("Surfaces")}
                   description={t("Glass gives cards, panels and popovers a frosted, translucent material. Stored on this device.")}
                 >
-                  <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+                  <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
                     {([false, true] as const).map((value) => (
                       <button
                         key={String(value)}
                         type="button"
+                        aria-pressed={theme.glass === value}
                         onClick={() => theme.setGlass(value)}
                         className={cn(
                           "rounded-md px-3 py-1 text-[11px] font-medium transition",
@@ -444,6 +446,7 @@ export function SettingsPage() {
                       />
                     ) : null}
                     <label
+                      data-glass-control="button"
                       className={cn(
                         "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] font-medium text-soft transition hover:border-line-strong hover:text-ink",
                         wallpaperBusy && "pointer-events-none opacity-60",

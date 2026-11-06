@@ -237,7 +237,7 @@ export function BalancePage() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+            <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
               {[
                 { value: "empty", label: t("Empty disk") },
                 { value: "selection", label: t("Folders / files") },
@@ -246,6 +246,7 @@ export function BalancePage() {
                   key={item.value}
                   type="button"
                   disabled={running}
+                  aria-pressed={mode === item.value}
                   onClick={() => setMode(item.value as typeof mode)}
                   className={cn(
                     "rounded-md px-2.5 py-1.5 text-[10.5px] font-medium transition",

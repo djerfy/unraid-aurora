@@ -211,7 +211,7 @@ export function ContainerMap({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex items-center gap-0.5 rounded-xl border border-line bg-[var(--surface-2)] p-1">
+        <div data-glass-control="segmented" className="inline-flex items-center gap-0.5 rounded-xl border border-line bg-[var(--surface-2)] p-1">
           {(Object.keys(MODES) as MapMode[]).map((value) => {
             const Icon = MODES[value].icon;
             const active = value === mode;
