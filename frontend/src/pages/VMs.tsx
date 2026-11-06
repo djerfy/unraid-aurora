@@ -152,6 +152,18 @@ export function VMsPage() {
     items: vms.filter((vm) => visualFolders.assignment(vm.name) === folder.id),
   }));
   const showFolders = folderFilter === "all";
+  const entries = showFolders
+    ? [
+        ...folderEntries.map(({ folder, items }) => ({ kind: "folder" as const, folder, items })),
+        ...vms
+          .filter((vm) => !visualFolders.assignment(vm.name))
+          .map((vm) => ({ kind: "vm" as const, vm })),
+      ].sort((a, b) =>
+        (a.kind === "folder" ? a.folder.name : a.vm.name).localeCompare(
+          b.kind === "folder" ? b.folder.name : b.vm.name,
+        ),
+      )
+    : visibleVms.map((vm) => ({ kind: "vm" as const, vm }));
 
   const runningVcpu = running.reduce((sum, vm) => sum + vm.vcpus, 0);
   const runningMemory = running.reduce((sum, vm) => sum + vm.memory, 0);
@@ -244,55 +256,29 @@ export function VMsPage() {
             </div>
           ) : null}
           {view === "grid" ? (
-            <>
-              {showFolders && folderEntries.length ? (
-                <div className="stagger mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {folderEntries.map(({ folder, items }) => (
-                    <FolderCard
-                      key={folder.id}
-                      name={folder.name}
-                      count={items.length}
-                      names={items.map((vm) => vm.name)}
-                      onClick={() => setFolderFilter(folder.id)}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {visibleVms.map((vm) => (
-                <VMCard
-                  key={vm.id}
-                  vm={vm}
-                  onOpen={() => setSelected(vm)}
-                  onConsole={() => setConsoleVm(vm)}
-                  folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(vm.name))?.name}
-                  busy={action.isPending && action.variables?.target === vm.name}
-                />
-                ))}
-              </div>
-            </>
+            <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {entries.map((entry) =>
+                entry.kind === "folder" ? (
+                  <FolderCard
+                    key={`folder-${entry.folder.id}`}
+                    name={entry.folder.name}
+                    count={entry.items.length}
+                    names={entry.items.map((vm) => vm.name)}
+                    onClick={() => setFolderFilter(entry.folder.id)}
+                  />
+                ) : (
+                  <VMCard
+                    key={entry.vm.id}
+                    vm={entry.vm}
+                    onOpen={() => setSelected(entry.vm)}
+                    onConsole={() => setConsoleVm(entry.vm)}
+                    folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(entry.vm.name))?.name}
+                    busy={action.isPending && action.variables?.target === entry.vm.name}
+                  />
+                ),
+              )}
+            </div>
           ) : (
-            <>
-            {showFolders && folderEntries.length ? (
-              <Card className="mb-4">
-                <div className="divide-y divide-line/60">
-                  {folderEntries.map(({ folder, items }) => (
-                    <FolderRow
-                      key={folder.id}
-                      name={folder.name}
-                      count={items.length}
-                      items={items.map((vm) => ({ id: vm.id, name: vm.name }))}
-                      onOpen={() => setFolderFilter(folder.id)}
-                      onOpenItem={(id) => {
-                        const vm = vms.find((item) => item.id === id);
-                        if (vm) setSelected(vm);
-                      }}
-                      openLabel={t("Open a virtual machine…")}
-                    />
-                  ))}
-                </div>
-              </Card>
-            ) : null}
             <Card>
               <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
                 <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Machine")}</span>
@@ -304,18 +290,32 @@ export function VMsPage() {
                 <span className="w-[140px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
               </div>
               <div className="divide-y divide-line/60">
-                {visibleVms.map((vm) => (
-                  <VMRow
-                    key={vm.id}
-                    vm={vm}
-                    onOpen={() => setSelected(vm)}
-                    onConsole={() => setConsoleVm(vm)}
-                    busy={action.isPending && action.variables?.target === vm.name}
-                  />
-                ))}
+                {entries.map((entry) =>
+                  entry.kind === "folder" ? (
+                    <FolderRow
+                      key={`folder-${entry.folder.id}`}
+                      name={entry.folder.name}
+                      count={entry.items.length}
+                      items={entry.items.map((vm) => ({ id: vm.id, name: vm.name }))}
+                      onOpen={() => setFolderFilter(entry.folder.id)}
+                      onOpenItem={(id) => {
+                        const vm = vms.find((item) => item.id === id);
+                        if (vm) setSelected(vm);
+                      }}
+                      openLabel={t("Open a virtual machine…")}
+                    />
+                  ) : (
+                    <VMRow
+                      key={entry.vm.id}
+                      vm={entry.vm}
+                      onOpen={() => setSelected(entry.vm)}
+                      onConsole={() => setConsoleVm(entry.vm)}
+                      busy={action.isPending && action.variables?.target === entry.vm.name}
+                    />
+                  ),
+                )}
               </div>
             </Card>
-            </>
           )}
         </>
       )}

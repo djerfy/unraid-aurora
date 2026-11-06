@@ -175,9 +175,23 @@ export function DockerPage() {
 
   const folderEntries = visualFolders.folders.map((folder) => ({
     folder,
-    items: containers.filter((container) => visualFolders.assignment(container.name) === folder.id),
+    items: filtered.filter((container) => visualFolders.assignment(container.name) === folder.id),
   }));
-  const showFolders = folderFilter === "all" && !query.trim();
+  const showFolders = folderFilter === "all";
+  const entries = showFolders
+    ? [
+        ...folderEntries
+          .filter(({ items }) => items.length > 0 || (filter === "all" && !query.trim()))
+          .map(({ folder, items }) => ({ kind: "folder" as const, folder, items })),
+        ...filtered
+          .filter((container) => !visualFolders.assignment(container.name))
+          .map((container) => ({ kind: "container" as const, container })),
+      ].sort((a, b) =>
+        (a.kind === "folder" ? a.folder.name : a.container.name).localeCompare(
+          b.kind === "folder" ? b.folder.name : b.container.name,
+        ),
+      )
+    : filtered.map((container) => ({ kind: "container" as const, container }));
 
   const openContainer = (container: Container) => {
     const next = new URLSearchParams(params);
@@ -546,7 +560,7 @@ export function DockerPage() {
         </div>
       ) : null}
 
-      {filtered.length === 0 ? (
+      {entries.length === 0 ? (
         <Card>
           <EmptyState
             icon={<Boxes className="size-5" />}
@@ -560,63 +574,37 @@ export function DockerPage() {
           />
         </Card>
       ) : view === "grid" ? (
-        <>
-          {showFolders && folderEntries.length ? (
-            <div className="stagger mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {folderEntries.map(({ folder, items }) => (
-                <FolderCard
-                  key={folder.id}
-                  name={folder.name}
-                  count={items.length}
-                  names={items.map((container) => container.name)}
-                  onClick={() => setFolderFilter(folder.id)}
-                />
-              ))}
-            </div>
-          ) : null}
-          <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((container) => (
-            <ContainerCard
-              key={container.id}
-              container={container}
-              onOpen={() => openContainer(container)}
-              onEdit={() => setEditing(container)}
-              onUpdate={() => void runUpdates([container])}
-              onRemove={() => {
-                setRemoveError("");
-                setRemoving(container);
-              }}
-              busy={action.isPending && action.variables?.target === container.name}
-              selectable={selecting}
-              selected={selectedIds.has(container.id)}
-              onSelect={() => toggleSelected(container.id)}
-              folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(container.name))?.name}
-            />
-          ))}
-          </div>
-        </>
+        <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {entries.map((entry) =>
+            entry.kind === "folder" ? (
+              <FolderCard
+                key={`folder-${entry.folder.id}`}
+                name={entry.folder.name}
+                count={entry.items.length}
+                names={entry.items.map((container) => container.name)}
+                onClick={() => setFolderFilter(entry.folder.id)}
+              />
+            ) : (
+              <ContainerCard
+                key={entry.container.id}
+                container={entry.container}
+                onOpen={() => openContainer(entry.container)}
+                onEdit={() => setEditing(entry.container)}
+                onUpdate={() => void runUpdates([entry.container])}
+                onRemove={() => {
+                  setRemoveError("");
+                  setRemoving(entry.container);
+                }}
+                busy={action.isPending && action.variables?.target === entry.container.name}
+                selectable={selecting}
+                selected={selectedIds.has(entry.container.id)}
+                onSelect={() => toggleSelected(entry.container.id)}
+                folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(entry.container.name))?.name}
+              />
+            ),
+          )}
+        </div>
       ) : (
-        <>
-        {showFolders && folderEntries.length ? (
-          <Card className="mb-4">
-            <div className="divide-y divide-line/60">
-              {folderEntries.map(({ folder, items }) => (
-                <FolderRow
-                  key={folder.id}
-                  name={folder.name}
-                  count={items.length}
-                  items={items.map((container) => ({ id: container.id, name: container.name }))}
-                  onOpen={() => setFolderFilter(folder.id)}
-                  onOpenItem={(id) => {
-                    const container = containers.find((item) => item.id === id);
-                    if (container) openContainer(container);
-                  }}
-                  openLabel={t("Open a container…")}
-                />
-              ))}
-            </div>
-          </Card>
-        ) : null}
         <Card>
           <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
             <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-52 lg:flex-none">
@@ -637,26 +625,40 @@ export function DockerPage() {
             <span className="w-[176px] shrink-0 text-right text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Actions")}</span>
           </div>
           <div className="divide-y divide-line/60">
-            {filtered.map((container) => (
-              <ContainerRow
-                key={container.id}
-                container={container}
-                onOpen={() => openContainer(container)}
-                onEdit={() => setEditing(container)}
-                onUpdate={() => void runUpdates([container])}
-                onRemove={() => {
-                  setRemoveError("");
-                  setRemoving(container);
-                }}
-                busy={action.isPending && action.variables?.target === container.name}
-                selectable={selecting}
-                selected={selectedIds.has(container.id)}
-                onSelect={() => toggleSelected(container.id)}
-              />
-            ))}
+            {entries.map((entry) =>
+              entry.kind === "folder" ? (
+                <FolderRow
+                  key={`folder-${entry.folder.id}`}
+                  name={entry.folder.name}
+                  count={entry.items.length}
+                  items={entry.items.map((container) => ({ id: container.id, name: container.name }))}
+                  onOpen={() => setFolderFilter(entry.folder.id)}
+                  onOpenItem={(id) => {
+                    const container = containers.find((item) => item.id === id);
+                    if (container) openContainer(container);
+                  }}
+                  openLabel={t("Open a container…")}
+                />
+              ) : (
+                <ContainerRow
+                  key={entry.container.id}
+                  container={entry.container}
+                  onOpen={() => openContainer(entry.container)}
+                  onEdit={() => setEditing(entry.container)}
+                  onUpdate={() => void runUpdates([entry.container])}
+                  onRemove={() => {
+                    setRemoveError("");
+                    setRemoving(entry.container);
+                  }}
+                  busy={action.isPending && action.variables?.target === entry.container.name}
+                  selectable={selecting}
+                  selected={selectedIds.has(entry.container.id)}
+                  onSelect={() => toggleSelected(entry.container.id)}
+                />
+              ),
+            )}
           </div>
         </Card>
-        </>
       )}
         </>
       )}
