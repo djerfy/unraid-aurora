@@ -6,6 +6,7 @@ import {
   Boxes,
   Cable,
   Check,
+  ChevronLeft,
   CloudDownload,
   ChevronDown,
   Cpu,
@@ -42,6 +43,8 @@ import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/securi
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { LogViewer } from "../components/ui/log-viewer";
 import { FolderDropdown } from "../components/folders/FolderDropdown";
+import { FolderCard } from "../components/folders/FolderCard";
+import { FolderRow } from "../components/folders/FolderRow";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
@@ -158,11 +161,23 @@ export function DockerPage() {
         const haystack = `${container.name} ${container.image} ${container.category} ${container.network} ${container.ip}`.toLowerCase();
         return haystack.includes(query.toLowerCase());
       })
+      .filter((container) => {
+        if (folderFilter === "all") return true;
+        const folderID = visualFolders.assignment(container.name);
+        if (folderFilter === "none") return !folderID;
+        return folderID === folderFilter;
+      })
       .sort((a, b) => {
         if (a.state !== b.state) return a.state === "running" ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
-  }, [containers, filter, query]);
+  }, [containers, filter, query, folderFilter, visualFolders.assignments, visualFolders.folders]);
+
+  const folderEntries = visualFolders.folders.map((folder) => ({
+    folder,
+    items: containers.filter((container) => visualFolders.assignment(container.name) === folder.id),
+  }));
+  const showFolders = folderFilter === "all" && !query.trim();
 
   const openContainer = (container: Container) => {
     const next = new URLSearchParams(params);
@@ -520,6 +535,17 @@ export function DockerPage() {
         </div>
       ) : null}
 
+      {folderFilter !== "all" && folderFilter !== "none" ? (
+        <div className="mb-3 flex items-center gap-2">
+          <Button size="sm" variant="ghost" icon={<ChevronLeft className="size-3.5" />} onClick={() => setFolderFilter("all")}>
+            {t("All folders")}
+          </Button>
+          <span className="text-[11px] font-medium text-soft">
+            {visualFolders.folders.find((folder) => folder.id === folderFilter)?.name}
+          </span>
+        </div>
+      ) : null}
+
       {filtered.length === 0 ? (
         <Card>
           <EmptyState
@@ -527,15 +553,29 @@ export function DockerPage() {
             title={t("No containers match this view")}
             description={t("Adjust the filter or search query to see your workloads.")}
             action={
-              <Button variant="secondary" onClick={() => { setFilter("all"); setQuery(""); }}>
+              <Button variant="secondary" onClick={() => { setFilter("all"); setQuery(""); setFolderFilter("all"); }}>
                 {t("Clear filters")}
               </Button>
             }
           />
         </Card>
       ) : view === "grid" ? (
-        <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((container) => (
+        <>
+          {showFolders && folderEntries.length ? (
+            <div className="stagger mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {folderEntries.map(({ folder, items }) => (
+                <FolderCard
+                  key={folder.id}
+                  name={folder.name}
+                  count={items.length}
+                  names={items.map((container) => container.name)}
+                  onClick={() => setFolderFilter(folder.id)}
+                />
+              ))}
+            </div>
+          ) : null}
+          <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((container) => (
             <ContainerCard
               key={container.id}
               container={container}
@@ -553,8 +593,30 @@ export function DockerPage() {
               folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(container.name))?.name}
             />
           ))}
-        </div>
+          </div>
+        </>
       ) : (
+        <>
+        {showFolders && folderEntries.length ? (
+          <Card className="mb-4">
+            <div className="divide-y divide-line/60">
+              {folderEntries.map(({ folder, items }) => (
+                <FolderRow
+                  key={folder.id}
+                  name={folder.name}
+                  count={items.length}
+                  items={items.map((container) => ({ id: container.id, name: container.name }))}
+                  onOpen={() => setFolderFilter(folder.id)}
+                  onOpenItem={(id) => {
+                    const container = containers.find((item) => item.id === id);
+                    if (container) openContainer(container);
+                  }}
+                  openLabel={t("Open a container…")}
+                />
+              ))}
+            </div>
+          </Card>
+        ) : null}
         <Card>
           <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 md:flex">
             <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle lg:w-52 lg:flex-none">
@@ -594,8 +656,8 @@ export function DockerPage() {
             ))}
           </div>
         </Card>
+        </>
       )}
-
         </>
       )}
 

@@ -8,6 +8,7 @@ import {
   Check,
   Clock3,
   Copy,
+  ChevronLeft,
   Cpu,
   FileCode2,
   Folder as FolderIcon,
@@ -37,6 +38,8 @@ import { VMLogsModal } from "../components/vms/VMLogsModal";
 import { VMBackupModal } from "../components/vms/VMBackupModal";
 import { VMAutostartModal } from "../components/vms/VMAutostartModal";
 import { FolderDropdown } from "../components/folders/FolderDropdown";
+import { FolderCard } from "../components/folders/FolderCard";
+import { FolderRow } from "../components/folders/FolderRow";
 import { FolderPicker } from "../components/folders/FolderPicker";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
@@ -144,6 +147,11 @@ export function VMsPage() {
     if (folderFilter === "none") return !folderID;
     return folderID === folderFilter;
   });
+  const folderEntries = visualFolders.folders.map((folder) => ({
+    folder,
+    items: vms.filter((vm) => visualFolders.assignment(vm.name) === folder.id),
+  }));
+  const showFolders = folderFilter === "all";
 
   const runningVcpu = running.reduce((sum, vm) => sum + vm.vcpus, 0);
   const runningMemory = running.reduce((sum, vm) => sum + vm.memory, 0);
@@ -225,9 +233,33 @@ export function VMsPage() {
               </button>
             </div>
           </div>
+          {folderFilter !== "all" && folderFilter !== "none" ? (
+            <div className="mb-3 flex items-center gap-2">
+              <Button size="sm" variant="ghost" icon={<ChevronLeft className="size-3.5" />} onClick={() => setFolderFilter("all")}>
+                {t("All folders")}
+              </Button>
+              <span className="text-[11px] font-medium text-soft">
+                {visualFolders.folders.find((folder) => folder.id === folderFilter)?.name}
+              </span>
+            </div>
+          ) : null}
           {view === "grid" ? (
-            <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {visibleVms.map((vm) => (
+            <>
+              {showFolders && folderEntries.length ? (
+                <div className="stagger mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {folderEntries.map(({ folder, items }) => (
+                    <FolderCard
+                      key={folder.id}
+                      name={folder.name}
+                      count={items.length}
+                      names={items.map((vm) => vm.name)}
+                      onClick={() => setFolderFilter(folder.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {visibleVms.map((vm) => (
                 <VMCard
                   key={vm.id}
                   vm={vm}
@@ -236,9 +268,31 @@ export function VMsPage() {
                   folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(vm.name))?.name}
                   busy={action.isPending && action.variables?.target === vm.name}
                 />
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           ) : (
+            <>
+            {showFolders && folderEntries.length ? (
+              <Card className="mb-4">
+                <div className="divide-y divide-line/60">
+                  {folderEntries.map(({ folder, items }) => (
+                    <FolderRow
+                      key={folder.id}
+                      name={folder.name}
+                      count={items.length}
+                      items={items.map((vm) => ({ id: vm.id, name: vm.name }))}
+                      onOpen={() => setFolderFilter(folder.id)}
+                      onOpenItem={(id) => {
+                        const vm = vms.find((item) => item.id === id);
+                        if (vm) setSelected(vm);
+                      }}
+                      openLabel={t("Open a virtual machine…")}
+                    />
+                  ))}
+                </div>
+              </Card>
+            ) : null}
             <Card>
               <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
                 <span className="min-w-0 flex-1 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Machine")}</span>
@@ -261,6 +315,7 @@ export function VMsPage() {
                 ))}
               </div>
             </Card>
+            </>
           )}
         </>
       )}
