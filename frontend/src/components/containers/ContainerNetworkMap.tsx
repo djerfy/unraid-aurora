@@ -307,8 +307,8 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     }
     return (
       <>
-        <div className="mx-auto overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20" style={{ width: "90%" }}>
-          <div className="relative" style={{ width: "100%", height }}>
+        <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
+          <div className="relative mx-auto" style={{ width: "90%", height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: inboundX + 4 }}>
               {t("Incoming")}
             </span>
