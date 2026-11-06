@@ -1,35 +1,55 @@
-import { Folder as FolderIcon } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronRight, Folder as FolderIcon } from "lucide-react";
 import { useI18n } from "../../i18n";
+import { cn } from "../ui/primitives";
 
 export function FolderCard({
   name,
   count,
-  names,
+  children,
 }: {
   name: string;
   count: number;
-  names: string[];
+  children: ReactNode;
 }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+
   return (
-    <div className="card flex min-h-[150px] flex-col items-start p-4">
-      <div className="flex w-full items-center gap-2.5">
+    <section
+      className={cn(
+        "card flex flex-col p-4",
+        open && "md:col-span-2 xl:col-span-3",
+      )}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-2.5 text-left"
+      >
+        <ChevronRight
+          className={cn("size-3.5 shrink-0 text-subtle transition-transform", open && "rotate-90")}
+        />
         <span className="grid size-9 shrink-0 place-items-center rounded-[9px] border border-[var(--border-accent)] bg-[var(--accent-soft)] text-[var(--accent)]">
           <FolderIcon className="size-4" />
         </span>
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-semibold text-ink">{name}</span>
           <span className="font-mono text-[9.5px] text-subtle">{t("{count} items", { count })}</span>
         </span>
-      </div>
-      <ul className="mt-2.5 max-h-36 w-full space-y-0.5 overflow-y-auto pr-1">
-        {names.map((item) => (
-          <li key={item} className="truncate rounded px-1 py-0.5 text-[10px] text-muted">
-            {item}
-          </li>
-        ))}
-        {count === 0 ? <li className="px-1 py-0.5 text-[10px] text-subtle">{t("No items")}</li> : null}
-      </ul>
-    </div>
+      </button>
+      {open ? (
+        <div className="mt-4">
+          {count === 0 ? (
+            <p className="rounded-lg border border-line bg-[var(--surface-2)]/50 px-3 py-3 text-center text-[10.5px] text-subtle">
+              {t("No items")}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+          )}
+        </div>
+      ) : null}
+    </section>
   );
 }

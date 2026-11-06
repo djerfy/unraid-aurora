@@ -354,6 +354,43 @@ export function DockerPage() {
     if (targets.length) bulk.mutate({ action, targets });
   };
 
+  const renderContainerCard = (container: Container) => (
+    <ContainerCard
+      key={container.id}
+      container={container}
+      onOpen={() => openContainer(container)}
+      onEdit={() => setEditing(container)}
+      onUpdate={() => void runUpdates([container])}
+      onRemove={() => {
+        setRemoveError("");
+        setRemoving(container);
+      }}
+      busy={action.isPending && action.variables?.target === container.name}
+      selectable={selecting}
+      selected={selectedIds.has(container.id)}
+      onSelect={() => toggleSelected(container.id)}
+      folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(container.name))?.name}
+    />
+  );
+
+  const renderContainerRow = (container: Container) => (
+    <ContainerRow
+      key={container.id}
+      container={container}
+      onOpen={() => openContainer(container)}
+      onEdit={() => setEditing(container)}
+      onUpdate={() => void runUpdates([container])}
+      onRemove={() => {
+        setRemoveError("");
+        setRemoving(container);
+      }}
+      busy={action.isPending && action.variables?.target === container.name}
+      selectable={selecting}
+      selected={selectedIds.has(container.id)}
+      onSelect={() => toggleSelected(container.id)}
+    />
+  );
+
   return (
     <>
       <PageHeader
@@ -581,25 +618,11 @@ export function DockerPage() {
                 key={`folder-${entry.folder.id}`}
                 name={entry.folder.name}
                 count={entry.items.length}
-                names={entry.items.map((container) => container.name)}
-              />
+              >
+                {entry.items.map(renderContainerCard)}
+              </FolderCard>
             ) : (
-              <ContainerCard
-                key={entry.container.id}
-                container={entry.container}
-                onOpen={() => openContainer(entry.container)}
-                onEdit={() => setEditing(entry.container)}
-                onUpdate={() => void runUpdates([entry.container])}
-                onRemove={() => {
-                  setRemoveError("");
-                  setRemoving(entry.container);
-                }}
-                busy={action.isPending && action.variables?.target === entry.container.name}
-                selectable={selecting}
-                selected={selectedIds.has(entry.container.id)}
-                onSelect={() => toggleSelected(entry.container.id)}
-                folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(entry.container.name))?.name}
-              />
+              renderContainerCard(entry.container)
             ),
           )}
         </div>
@@ -630,28 +653,11 @@ export function DockerPage() {
                   key={`folder-${entry.folder.id}`}
                   name={entry.folder.name}
                   count={entry.items.length}
-                  items={entry.items.map((container) => ({ id: container.id, name: container.name }))}
-                  onOpenItem={(id) => {
-                    const container = containers.find((item) => item.id === id);
-                    if (container) openContainer(container);
-                  }}
-                />
+                >
+                  {entry.items.map(renderContainerRow)}
+                </FolderRow>
               ) : (
-                <ContainerRow
-                  key={entry.container.id}
-                  container={entry.container}
-                  onOpen={() => openContainer(entry.container)}
-                  onEdit={() => setEditing(entry.container)}
-                  onUpdate={() => void runUpdates([entry.container])}
-                  onRemove={() => {
-                    setRemoveError("");
-                    setRemoving(entry.container);
-                  }}
-                  busy={action.isPending && action.variables?.target === entry.container.name}
-                  selectable={selecting}
-                  selected={selectedIds.has(entry.container.id)}
-                  onSelect={() => toggleSelected(entry.container.id)}
-                />
+                renderContainerRow(entry.container)
               ),
             )}
           </div>

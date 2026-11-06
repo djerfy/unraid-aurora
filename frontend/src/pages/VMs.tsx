@@ -169,6 +169,27 @@ export function VMsPage() {
   const runningMemory = running.reduce((sum, vm) => sum + vm.memory, 0);
   const runningMemoryUsed = running.reduce((sum, vm) => sum + vm.memory * (vm.memoryUsage / 100), 0);
 
+  const renderVMCard = (vm: VM) => (
+    <VMCard
+      key={vm.id}
+      vm={vm}
+      onOpen={() => setSelected(vm)}
+      onConsole={() => setConsoleVm(vm)}
+      folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(vm.name))?.name}
+      busy={action.isPending && action.variables?.target === vm.name}
+    />
+  );
+
+  const renderVMRow = (vm: VM) => (
+    <VMRow
+      key={vm.id}
+      vm={vm}
+      onOpen={() => setSelected(vm)}
+      onConsole={() => setConsoleVm(vm)}
+      busy={action.isPending && action.variables?.target === vm.name}
+    />
+  );
+
   return (
     <>
       <PageHeader
@@ -263,17 +284,11 @@ export function VMsPage() {
                     key={`folder-${entry.folder.id}`}
                     name={entry.folder.name}
                     count={entry.items.length}
-                    names={entry.items.map((vm) => vm.name)}
-                  />
+                  >
+                    {entry.items.map(renderVMCard)}
+                  </FolderCard>
                 ) : (
-                  <VMCard
-                    key={entry.vm.id}
-                    vm={entry.vm}
-                    onOpen={() => setSelected(entry.vm)}
-                    onConsole={() => setConsoleVm(entry.vm)}
-                    folderName={visualFolders.folders.find((folder) => folder.id === visualFolders.assignment(entry.vm.name))?.name}
-                    busy={action.isPending && action.variables?.target === entry.vm.name}
-                  />
+                  renderVMCard(entry.vm)
                 ),
               )}
             </div>
@@ -295,20 +310,11 @@ export function VMsPage() {
                       key={`folder-${entry.folder.id}`}
                       name={entry.folder.name}
                       count={entry.items.length}
-                      items={entry.items.map((vm) => ({ id: vm.id, name: vm.name }))}
-                      onOpenItem={(id) => {
-                        const vm = vms.find((item) => item.id === id);
-                        if (vm) setSelected(vm);
-                      }}
-                    />
+                    >
+                      {entry.items.map(renderVMRow)}
+                    </FolderRow>
                   ) : (
-                    <VMRow
-                      key={entry.vm.id}
-                      vm={entry.vm}
-                      onOpen={() => setSelected(entry.vm)}
-                      onConsole={() => setConsoleVm(entry.vm)}
-                      busy={action.isPending && action.variables?.target === entry.vm.name}
-                    />
+                    renderVMRow(entry.vm)
                   ),
                 )}
               </div>

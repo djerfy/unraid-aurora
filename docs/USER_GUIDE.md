@@ -289,9 +289,10 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
   and never move data on disk. **Unfiled** is the default; deleting a folder moves its containers
   back to Unfiled.
 - **Folder entries**: folders appear directly in the same grid or list as the containers, sorted by
-  name. Containers assigned to a folder are shown inside it rather than at the root. A grid card lists
-  its containers inline; a list row expands on its chevron to show the same sub-list, and each entry
-  opens the container. Picking a folder in the toolbar dropdown applies the same filter.
+  name. Containers assigned to a folder are shown inside it rather than at the root. The chevron on a
+  grid card or a list row expands the folder and renders its containers exactly like the default
+  cards/rows (icon, image, state, metrics and actions). Picking a folder in the toolbar dropdown
+  applies the same filter.
 
 ![Container list](screenshots/docker-list.png)
 
@@ -479,8 +480,8 @@ The **Applications** page browses the official Community Applications feed:
 - **Folder** (drawer) and the picker in **New VM** assign a visual folder. Folders are shared with the
   folder dropdown in the page toolbar, stored in Aurora's configuration and never change the domain or disks.
 - **Folder entries**: folders are mixed into the same grid or list as the virtual machines, sorted by
-  name; machines assigned to a folder live inside it. A grid card lists its machines inline; a list row
-  expands on its chevron to show the same sub-list, and each entry opens the machine.
+  name; machines assigned to a folder live inside it. The chevron expands the folder and renders its
+  machines exactly like the default cards/rows, with console access, state and actions.
 - **Autostart order** (page header) stores a deterministic start order, can start the VMs immediately,
   and can take over libvirt autostart: Aurora then disables the per-VM libvirt autostart flags and
   starts the ordered VMs once the array reaches `STARTED`. The takeover is reversible and visible in
