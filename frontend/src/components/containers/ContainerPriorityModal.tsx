@@ -26,9 +26,11 @@ export function ContainerPriorityModal({
 
   useEffect(() => {
     if (!open) return;
+    // Snapshot refreshes must not overwrite a draft the user is editing.
     setDraft(Object.fromEntries(containers.map((container) => [container.name, container.priority ?? 50])));
     setError("");
-  }, [open, containers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const rows = useMemo(
     () => [...containers].sort((a, b) => a.name.localeCompare(b.name)),
@@ -81,12 +83,9 @@ export function ContainerPriorityModal({
             <ListOrdered className="size-3.5 text-[var(--accent)]" />
             <span>{t("Bulk starts and the Unraid autostart file follow this order.")}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[9px] text-subtle">{t("0 first")} · {t("100 last")}</span>
-            <Button size="sm" variant="ghost" icon={<RotateCcw className="size-3" />} onClick={reset}>
-              {t("Reset to 50")}
-            </Button>
-          </div>
+          <Button size="sm" variant="ghost" icon={<RotateCcw className="size-3" />} onClick={reset}>
+            {t("Reset to 50")}
+          </Button>
         </div>
 
         {rows.length === 0 ? (
