@@ -365,7 +365,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
             aria-label={t("Container")}
             className="h-9 min-w-[180px] rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
           >
-            <option value="" hidden></option>
+            <option value="" hidden>{t("Select a container")}</option>
             <option value="all">{t("All containers")}</option>
             {containers.map((container) => (
               <option key={container.id} value={container.id}>{container.name}</option>
