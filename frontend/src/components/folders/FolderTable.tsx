@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ChevronRight, Folder as FolderIcon } from "lucide-react";
 import { useI18n } from "../../i18n";
 import { cn } from "../ui/primitives";
@@ -7,15 +7,18 @@ export function FolderTable({
   name,
   count,
   columns,
+  open,
+  onToggle,
   children,
 }: {
   name: string;
   count: number;
   columns: ReactNode;
+  open: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(true);
 
   return (
     <section className="card mb-4 overflow-hidden">
@@ -23,7 +26,7 @@ export function FolderTable({
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          onClick={onToggle}
           className="flex min-w-0 items-center gap-2 text-left"
         >
           <ChevronRight

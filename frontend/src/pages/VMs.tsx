@@ -9,6 +9,8 @@ import {
   Clock3,
   Copy,
   ChevronLeft,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Cpu,
   FileCode2,
   Folder as FolderIcon,
@@ -77,6 +79,8 @@ export function VMsPage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [folderFilter, setFolderFilter] = useState("all");
   const [folderManager, setFolderManager] = useState(false);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const visualFolders = useVisualFolders("vms");
   useEffect(() => {
     if (folderFilter === "all" || folderFilter === "none") return;
@@ -189,6 +193,36 @@ export function VMsPage() {
 
   const unfiledVms = visibleVms.filter((vm) => !visualFolders.assignment(vm.name));
   const tableItems = showFolders ? unfiledVms : visibleVms;
+  const allFoldersCollapsed =
+    folderEntries.length > 0 && folderEntries.every(({ folder }) => collapsedFolders.has(folder.id));
+  const allFoldersExpanded =
+    folderEntries.length > 0 && folderEntries.every(({ folder }) => expandedFolders.has(folder.id));
+  const foldersAllOpen = view === "list" ? !allFoldersCollapsed : allFoldersExpanded;
+  const toggleAllFolders = () => {
+    const ids = folderEntries.map(({ folder }) => folder.id);
+    if (view === "list") {
+      setCollapsedFolders(allFoldersCollapsed ? new Set() : new Set(ids));
+      return;
+    }
+    setExpandedFolders(allFoldersExpanded ? new Set() : new Set(ids));
+  };
+  const toggleFolder = (id: string) => {
+    if (view === "list") {
+      setCollapsedFolders((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      return;
+    }
+    setExpandedFolders((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const vmColumns = (
     <div className="hidden items-center gap-3 border-b border-line bg-[var(--surface-2)]/35 px-4 py-2 sm:flex">
@@ -259,6 +293,18 @@ export function VMsPage() {
               counts={folderCounts}
               onManage={() => setFolderManager(true)}
             />
+            {showFolders && folderEntries.length ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={foldersAllOpen ? <ChevronsDownUp className="size-3.5" /> : <ChevronsUpDown className="size-3.5" />}
+                onClick={toggleAllFolders}
+                title={foldersAllOpen ? t("Collapse all") : t("Expand all")}
+                aria-label={foldersAllOpen ? t("Collapse all") : t("Expand all")}
+              >
+                <span className="hidden xl:inline">{foldersAllOpen ? t("Collapse all") : t("Expand all")}</span>
+              </Button>
+            ) : null}
             <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
               <button
                 type="button"
@@ -296,6 +342,8 @@ export function VMsPage() {
                     key={`folder-${entry.folder.id}`}
                     name={entry.folder.name}
                     count={entry.items.length}
+                    open={expandedFolders.has(entry.folder.id)}
+                    onToggle={() => toggleFolder(entry.folder.id)}
                   >
                     {entry.items.map(renderVMCard)}
                   </FolderCard>
@@ -313,6 +361,8 @@ export function VMsPage() {
                       name={folder.name}
                       count={items.length}
                       columns={vmColumns}
+                      open={!collapsedFolders.has(folder.id)}
+                      onToggle={() => toggleFolder(folder.id)}
                     >
                       {items.length ? (
                         items.map(renderVMRow)

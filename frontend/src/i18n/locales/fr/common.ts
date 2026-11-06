@@ -81,6 +81,8 @@ const common: Record<string, string> = {
   "Folder name": "Nom du dossier",
   "Unfiled": "Non classés",
   "All folders": "Tous les dossiers",
+  "Expand all": "Tout déplier",
+  "Collapse all": "Tout replier",
   "Open folder": "Ouvrir le dossier",
   "Open folder {name}": "Ouvrir le dossier {name}",
   "Open a container…": "Ouvrir un conteneur…",

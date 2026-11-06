@@ -290,9 +290,10 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
   back to Unfiled.
 - **Folder entries**: in the list view every folder gets its own table, listed first in their
   configured order, followed by an **Unfiled** table for the remaining containers. The chevron in a
-  folder table header collapses it. Each table uses the standard columns and rows (icon, image, state,
-  metrics and actions). In the grid view, folders stay as cards and expand into the default container
-  cards. Picking a folder in the toolbar dropdown applies the same filter.
+  folder table header collapses it, and the toolbar button expands or collapses every folder at once.
+  Each table uses the standard columns and rows (icon, image, state, metrics and actions). In the grid
+  view, folders stay as cards and expand into the default container cards. Picking a folder in the
+  toolbar dropdown applies the same filter.
 
 ![Container list](screenshots/docker-list.png)
 
@@ -481,9 +482,9 @@ The **Applications** page browses the official Community Applications feed:
   folder dropdown in the page toolbar, stored in Aurora's configuration and never change the domain or disks.
 - **Folder entries**: in the list view every folder gets its own table, listed first in their
   configured order, followed by an **Unfiled** table for the remaining machines. The chevron in a
-  folder table header collapses it. Each table uses the standard columns and rows, with console
-  access, state and actions. In the grid view, folders stay as cards and expand into the default
-  machine cards.
+  folder table header collapses it, and the toolbar button expands or collapses every folder at once.
+  Each table uses the standard columns and rows, with console access, state and actions. In the grid
+  view, folders stay as cards and expand into the default machine cards.
 - **Autostart order** (page header) stores a deterministic start order, can start the VMs immediately,
   and can take over libvirt autostart: Aurora then disables the per-VM libvirt autostart flags and
   starts the ordered VMs once the array reaches `STARTED`. The takeover is reversible and visible in

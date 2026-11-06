@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ChevronRight, Folder as FolderIcon } from "lucide-react";
 import { useI18n } from "../../i18n";
 import { cn } from "../ui/primitives";
@@ -6,14 +6,17 @@ import { cn } from "../ui/primitives";
 export function FolderCard({
   name,
   count,
+  open,
+  onToggle,
   children,
 }: {
   name: string;
   count: number;
+  open: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
 
   return (
     <section
@@ -25,7 +28,7 @@ export function FolderCard({
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={onToggle}
         className="flex w-full items-center gap-2.5 text-left"
       >
         <ChevronRight
