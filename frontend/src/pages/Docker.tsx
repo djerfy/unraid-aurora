@@ -186,11 +186,7 @@ export function DockerPage() {
         ...filtered
           .filter((container) => !visualFolders.assignment(container.name))
           .map((container) => ({ kind: "container" as const, container })),
-      ].sort((a, b) =>
-        (a.kind === "folder" ? a.folder.name : a.container.name).localeCompare(
-          b.kind === "folder" ? b.folder.name : b.container.name,
-        ),
-      )
+      ]
     : filtered.map((container) => ({ kind: "container" as const, container }));
 
   const openContainer = (container: Container) => {
@@ -373,9 +369,10 @@ export function DockerPage() {
     />
   );
 
-  const renderContainerRow = (container: Container) => (
+  const renderContainerRow = (container: Container, indent = false) => (
     <ContainerRow
       key={container.id}
+      indent={indent}
       container={container}
       onOpen={() => openContainer(container)}
       onEdit={() => setEditing(container)}
@@ -654,7 +651,7 @@ export function DockerPage() {
                   name={entry.folder.name}
                   count={entry.items.length}
                 >
-                  {entry.items.map(renderContainerRow)}
+                  {entry.items.map((container) => renderContainerRow(container, true))}
                 </FolderRow>
               ) : (
                 renderContainerRow(entry.container)
@@ -1068,6 +1065,7 @@ function ContainerRow({
   selected,
   onSelect,
   folderName,
+  indent,
 }: {
   container: Container;
   onOpen: () => void;
@@ -1079,13 +1077,19 @@ function ContainerRow({
   selected?: boolean;
   onSelect?: () => void;
   folderName?: string;
+  indent?: boolean;
 }) {
   const action = useAction();
   const { t } = useI18n();
   const running = container.state === "running";
   const mounts = container.mounts ?? [];
   return (
-    <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+    <div
+      className={cn(
+        "flex items-center gap-3 py-3 pr-4 transition hover:bg-[var(--surface-2)]/50",
+        indent ? "pl-[38px]" : "pl-4",
+      )}
+    >
       {selectable ? (
         <input
           type="checkbox"

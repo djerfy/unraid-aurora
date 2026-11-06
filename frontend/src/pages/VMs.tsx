@@ -158,11 +158,7 @@ export function VMsPage() {
         ...vms
           .filter((vm) => !visualFolders.assignment(vm.name))
           .map((vm) => ({ kind: "vm" as const, vm })),
-      ].sort((a, b) =>
-        (a.kind === "folder" ? a.folder.name : a.vm.name).localeCompare(
-          b.kind === "folder" ? b.folder.name : b.vm.name,
-        ),
-      )
+      ]
     : visibleVms.map((vm) => ({ kind: "vm" as const, vm }));
 
   const runningVcpu = running.reduce((sum, vm) => sum + vm.vcpus, 0);
@@ -180,9 +176,10 @@ export function VMsPage() {
     />
   );
 
-  const renderVMRow = (vm: VM) => (
+  const renderVMRow = (vm: VM, indent = false) => (
     <VMRow
       key={vm.id}
+      indent={indent}
       vm={vm}
       onOpen={() => setSelected(vm)}
       onConsole={() => setConsoleVm(vm)}
@@ -311,7 +308,7 @@ export function VMsPage() {
                       name={entry.folder.name}
                       count={entry.items.length}
                     >
-                      {entry.items.map(renderVMRow)}
+                      {entry.items.map((vm) => renderVMRow(vm, true))}
                     </FolderRow>
                   ) : (
                     renderVMRow(entry.vm)
@@ -1081,13 +1078,18 @@ function VMCard({ vm, onOpen, onConsole, busy, folderName }: { vm: VM; onOpen: (
   );
 }
 
-function VMRow({ vm, onOpen, onConsole, busy }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean }) {
+function VMRow({ vm, onOpen, onConsole, busy, indent }: { vm: VM; onOpen: () => void; onConsole: () => void; busy?: boolean; indent?: boolean }) {
   const { t } = useI18n();
   const action = useAction();
   const running = vm.state === "running";
   const Icon = vm.os.toLowerCase().includes("windows") ? Monitor : vm.os.toLowerCase().includes("mac") ? Apple : SquareTerminal;
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-3 py-3 pr-4 transition hover:bg-[var(--surface-2)]/50",
+        indent ? "pl-[38px]" : "pl-4",
+      )}
+    >
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <EntityIcon src={vmIconURL(vm.id)} name={vm.name} size={32} fallback={<Icon className="size-4" />} />
         <span className="min-w-0">
