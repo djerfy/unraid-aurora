@@ -338,8 +338,10 @@ The **Network map** tab turns the live sockets of running containers into a grap
   to aggregate every running container.
 - Incoming peers are on the left, containers in the middle and outgoing peers on the right, so the
   direction of each conversation is visible at a glance.
-- Aurora compares each established socket with the container listening ports: traffic accepted on a
-  listening port is **Incoming**, traffic from an ephemeral port is **Outgoing**.
+- Aurora compares each established socket with the container listening and Docker-exposed ports:
+  traffic accepted on a service port is **Incoming**, traffic from an ephemeral port is **Outgoing**.
+  A low local port talking to a high remote port is also treated as incoming when `ss` did not report
+  the listener.
 - Peers are grouped by IP and classified as **Containers** (the IP belongs to another container),
   **LAN** (private address) or **Internet** (public address).
 - Line thickness and node counters reflect the number of sockets; use the scope selector to focus on

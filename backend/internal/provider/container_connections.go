@@ -57,6 +57,12 @@ func (l *Live) containerConnections(ctx context.Context, id string, enrichGeo bo
 		HostConfig struct {
 			NetworkMode string `json:"NetworkMode"`
 		} `json:"HostConfig"`
+		Config struct {
+			ExposedPorts map[string]json.RawMessage `json:"ExposedPorts"`
+		} `json:"Config"`
+		NetworkSettings struct {
+			Ports map[string]json.RawMessage `json:"Ports"`
+		} `json:"NetworkSettings"`
 	}
 	if err := json.Unmarshal(raw, &info); err != nil {
 		return model.ContainerConnections{Available: false, Reason: "the container could not be inspected"}, nil
@@ -80,7 +86,7 @@ func (l *Live) containerConnections(ctx context.Context, id string, enrichGeo bo
 	if err != nil {
 		return model.ContainerConnections{Available: true, Reason: "ss could not inspect the container network namespace", Connections: []model.ContainerConnection{}}, nil
 	}
-	connections := parseSSOutput(string(out), allowedPIDs)
+	connections := parseSSOutputWithPorts(string(out), allowedPIDs, acceptedContainerPorts(info.Config.ExposedPorts, info.NetworkSettings.Ports))
 	if enrichGeo {
 		l.enrichConnectionsGeo(ctx, connections)
 	}
@@ -111,7 +117,14 @@ func (l *Live) containerPIDs(ctx context.Context, id string) map[int]bool {
 }
 
 func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerConnection {
+	return parseSSOutputWithPorts(output, allowedPIDs, nil)
+}
+
+func parseSSOutputWithPorts(output string, allowedPIDs, acceptedPorts map[int]bool) []model.ContainerConnection {
 	listening := parseSSListeningPorts(output, allowedPIDs)
+	for port := range acceptedPorts {
+		listening[port] = true
+	}
 	seen := map[string]bool{}
 	out := []model.ContainerConnection{}
 	for _, line := range strings.Split(output, "\n") {
@@ -146,7 +159,13 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 		}
 		seen[key] = true
 		direction := "outbound"
-		if listening[localPort] {
+		switch {
+		case listening[localPort]:
+			direction = "inbound"
+		case localPort < 32768 && remotePort >= 32768:
+			// Clients use ephemeral source ports; a low local port talking to a
+			// high remote port is an accepted connection even when ss missed the
+			// listener (for example when a process started after the snapshot).
 			direction = "inbound"
 		}
 		out = append(out, model.ContainerConnection{
@@ -170,6 +189,21 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 
 // parseSSListeningPorts records the local ports the container accepts traffic
 // on, so established sockets can be split between inbound and outbound.
+func acceptedContainerPorts(groups ...map[string]json.RawMessage) map[int]bool {
+	ports := map[int]bool{}
+	for _, group := range groups {
+		for key := range group {
+			if index := strings.IndexByte(key, '/'); index > 0 {
+				key = key[:index]
+			}
+			if port, err := strconv.Atoi(key); err == nil && port > 0 {
+				ports[port] = true
+			}
+		}
+	}
+	return ports
+}
+
 func parseSSListeningPorts(output string, allowedPIDs map[int]bool) map[int]bool {
 	ports := map[int]bool{}
 	for _, line := range strings.Split(output, "\n") {

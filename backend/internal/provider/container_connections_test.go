@@ -136,3 +136,27 @@ tcp LISTEN 0 4096 0.0.0.0:9090 0.0.0.0:* users:(("other",pid=2,fd=2))`
 		t.Fatalf("unexpected listening ports: %+v", ports)
 	}
 }
+
+func TestParseSSOutputUsesAcceptedPorts(t *testing.T) {
+	raw := `tcp ESTAB 0 0 172.17.0.2:8080 198.51.100.20:51515 users:(("server",pid=1,fd=3))`
+	connections := parseSSOutputWithPorts(raw, nil, map[int]bool{8080: true})
+	if len(connections) != 1 || connections[0].Direction != "inbound" {
+		t.Fatalf("exposed port should mark the connection as inbound: %+v", connections)
+	}
+}
+
+func TestParseSSOutputDirectionFallback(t *testing.T) {
+	raw := `tcp ESTAB 0 0 172.17.0.2:32400 198.51.100.20:51515 users:(("server",pid=1,fd=3))
+tcp ESTAB 0 0 172.17.0.2:51515 1.1.1.1:443 users:(("app",pid=2,fd=3))`
+	connections := parseSSOutput(raw, nil)
+	byAddress := map[string]string{}
+	for _, connection := range connections {
+		byAddress[connection.RemoteAddress] = connection.Direction
+	}
+	if byAddress["198.51.100.20"] != "inbound" {
+		t.Fatalf("expected inbound fallback: %+v", connections)
+	}
+	if byAddress["1.1.1.1"] != "outbound" {
+		t.Fatalf("expected outbound: %+v", connections)
+	}
+}

@@ -19,7 +19,7 @@ import type { Container, NetworkMapEdge, NetworkMapPeer } from "../../lib/types"
 const NODE_HEIGHT = 52;
 const ROW = 62;
 const HEADER = 34;
-const MIN_GRAPH_WIDTH = 760;
+const MIN_GRAPH_WIDTH = 640;
 
 const SCOPE_COLOR: Record<string, string> = {
   container: "var(--success)",
@@ -307,8 +307,11 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     }
     return (
       <>
-        <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
-          <div className="relative mx-auto" style={{ width: viewportWidth, height }}>
+        <div
+          className="mx-auto overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20"
+          style={{ width: viewportWidth, maxWidth: "100%" }}
+        >
+          <div className="relative" style={{ width: viewportWidth, height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: inboundX + 4 }}>
               {t("Incoming")}
             </span>
