@@ -298,7 +298,7 @@ export function SettingsPage() {
           </nav>
           <div className="mt-3 hidden rounded-xl border border-line px-3 py-3 lg:block">
             <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Connected to")}</p>
-            <p className="mt-1.5 text-[12px] font-medium text-ink">{snapshot.system.name}</p>
+            <p className="mt-1.5 text-[12px] font-medium text-ink">{settings.serverName || snapshot.system.name}</p>
             <p className="font-mono text-[9.5px] text-subtle">{snapshot.system.hostname} · {snapshot.system.version}</p>
             <Button size="sm" variant="ghost" className="mt-2 h-7 px-2 text-[10px]" onClick={refresh}>
               {t("Re-sync now")}
@@ -489,9 +489,10 @@ export function SettingsPage() {
             <Card className="card-pad">
               <CardTitle title={t("General")} description={t("Server identity, refresh cadence and language.")} />
               <div className="mt-2 divide-y divide-line">
-                <SettingsRow label={t("Server display name")} description={t("Shown in the sidebar and page titles.")}>
+                <SettingsRow label={t("Server display name")} description={t("Defaults to the hostname. Shown in the sidebar and page titles.")}>
                   <input
                     value={settings.serverName}
+                    placeholder={snapshot.system.hostname}
                     onChange={(event) => update("serverName", event.target.value)}
                     className="h-9 w-52 rounded-[7px] border border-line bg-[var(--surface-2)] px-3 text-[12px] text-ink outline-none transition focus:border-[var(--accent-line)]"
                   />

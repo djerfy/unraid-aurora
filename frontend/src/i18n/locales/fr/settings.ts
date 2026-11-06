@@ -70,7 +70,8 @@ const settings: Record<string, string> = {
   "Server identity, refresh cadence and language.": "Identité du serveur, fréquence d'actualisation et langue.",
   "Choose which channels receive alerts from your server.":
     "Choisissez les canaux qui reçoivent les alertes de votre serveur.",
-  "Shown in the sidebar and page titles.": "Affiché dans la barre latérale et les titres de page.",
+  "Defaults to the hostname. Shown in the sidebar and page titles.":
+    "Utilise le hostname par défaut. Affiché dans la barre latérale et les titres de page.",
   "Refresh interval": "Intervalle d'actualisation",
   "How often widgets re-sync with the server.": "Fréquence à laquelle les widgets se resynchronisent avec le serveur.",
   "{count} seconds": "{count} secondes",

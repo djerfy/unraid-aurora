@@ -40,6 +40,7 @@ export function Topbar({
   const { resolvedTheme, setTheme } = useTheme();
   const { toast } = useToast();
   const { t } = useI18n();
+  const serverName = snapshot?.settings.serverName?.trim() || snapshot?.system.name || "Vault";
   const action = useAction();
   const queryClient = useQueryClient();
   const meta = PAGE_META[location.pathname] ?? { title: "Aurora", section: "Overview" };
@@ -86,7 +87,7 @@ export function Topbar({
       <div className="hidden min-w-0 items-center gap-2 text-[11.5px] text-subtle sm:flex">
         <span className="flex items-center gap-1.5 font-medium text-muted">
           <span className={cn("status-dot", live ? "live" : "muted")} />
-          {snapshot?.system.name ?? "Vault"}
+          {serverName}
         </span>
         <ChevronRight className="size-3 text-subtle/70" />
         <span className="truncate">{t(meta.section)}</span>

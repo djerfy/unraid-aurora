@@ -106,7 +106,7 @@ export function DashboardPage() {
       <PageHeader
         eyebrow={t("Overview")}
         title={`${t(greeting())}.`}
-        description={`${system.name} ${t("is online.")} ${
+        description={`${snapshot.settings.serverName || system.name} ${t("is online.")} ${
           issueCount > 0
             ? t(
                 issueCount > 1

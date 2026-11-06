@@ -204,6 +204,9 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 			},
 		},
 	}
+	if strings.TrimSpace(l.settings.ServerName) == "" {
+		l.settings.ServerName = l.defaultServerName()
+	}
 	l.webClient = &http.Client{Timeout: 20 * time.Second}
 	l.lastCPU = readCPU()
 	initialNet := readNetStats()
@@ -951,6 +954,9 @@ func (l *Live) SaveSettings(ctx context.Context, s model.Settings) error {
 	if s.TrivyDBUpdateHour < 0 || s.TrivyDBUpdateHour > 23 {
 		s.TrivyDBUpdateHour = 3
 	}
+	if strings.TrimSpace(s.ServerName) == "" {
+		s.ServerName = l.defaultServerName()
+	}
 	l.mu.Lock()
 	l.settings = s
 	l.mu.Unlock()
@@ -983,9 +989,22 @@ func (l *Live) loadSettings() {
 			s.TrivyDBUpdateHour = 3
 		}
 	}
+	if strings.TrimSpace(s.ServerName) == "" {
+		s.ServerName = l.defaultServerName()
+	}
 	if s.Theme != "" {
 		l.settings = s
 	}
+}
+
+func (l *Live) defaultServerName() string {
+	if ini, err := parseINI(filepath.Join(l.stateDir, "var.ini")); err == nil {
+		if name := strings.TrimSpace(ini.get("", "NAME")); name != "" {
+			return name
+		}
+	}
+	name, _ := os.Hostname()
+	return strings.TrimSpace(name)
 }
 
 func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {

@@ -32,6 +32,7 @@ export function Sidebar({
   const { snapshot, session, live } = useApp();
   const { toast } = useToast();
   const { t } = useI18n();
+  const serverName = snapshot?.settings.serverName?.trim() || snapshot?.system.name || "Aurora";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const unread = snapshot?.notifications.filter((n) => !n.read && !n.archived).length ?? 0;
@@ -84,11 +85,11 @@ export function Sidebar({
             type="button"
             onClick={() => navigate("/settings")}
             title={t("{name} · Unraid {version} · {uptime} uptime", {
-              name: snapshot.system.name,
+              name: serverName,
               version: snapshot.system.version,
               uptime: formatUptime(snapshot.system.uptime),
             })}
-            aria-label={t("{name}, online", { name: snapshot.system.name })}
+            aria-label={t("{name}, online", { name: serverName })}
             className="mx-auto mt-4 grid size-10 place-items-center rounded-xl border border-line bg-[var(--surface-2)] transition hover:border-line-strong hover:bg-[var(--surface-3)]"
           >
             <span className={cn("status-dot", live ? "live" : "muted")} />
@@ -102,7 +103,7 @@ export function Sidebar({
             <div className="flex items-center justify-between">
               <span className="flex min-w-0 items-center gap-2">
                 <span className={cn("status-dot", live ? "live" : "muted")} />
-                <span className="truncate text-[12.5px] font-semibold text-ink">{snapshot.system.name}</span>
+                <span className="truncate text-[12.5px] font-semibold text-ink">{serverName}</span>
               </span>
               <ChevronsUpDown className="size-3.5 shrink-0 text-subtle" />
             </div>
@@ -257,6 +258,7 @@ export function MobileSidebar({
 }) {
   const { snapshot } = useApp();
   const { t } = useI18n();
+  const serverName = snapshot?.settings.serverName?.trim() || snapshot?.system.name || "Aurora";
   const unread = snapshot?.notifications.filter((n) => !n.read && !n.archived).length ?? 0;
   if (!open) return null;
 
@@ -320,7 +322,7 @@ export function MobileSidebar({
         </div>
         <div className="border-t border-line p-4">
           <div className="flex items-center gap-2 text-[11px] text-subtle">
-            <HardDrive className="size-3.5" /> {snapshot?.system.name ?? "Aurora"} · Unraid{" "}
+            <HardDrive className="size-3.5" /> {serverName} · Unraid{" "}
             {snapshot?.system.version ?? "7.2"}
           </div>
           <a

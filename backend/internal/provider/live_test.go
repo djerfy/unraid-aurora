@@ -287,3 +287,14 @@ func TestNetInterfaceDelta(t *testing.T) {
 		t.Fatalf("new interfaces need a first sample: %+v", rates)
 	}
 }
+
+func TestDefaultServerName(t *testing.T) {
+	stateDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(stateDir, "var.ini"), []byte("NAME=\"Tower\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{stateDir: stateDir}
+	if got := live.defaultServerName(); got != "Tower" {
+		t.Fatalf("defaultServerName = %q, want Tower", got)
+	}
+}
