@@ -32,8 +32,8 @@ export function ContainerSettingsModal({
   const { t } = useI18n();
   const { toast } = useToast();
   const [draft, setDraft] = useState<ContainerConfig | null>(null);
+  const [initial, setInitial] = useState<ContainerConfig | null>(null);
   const [error, setError] = useState("");
-  const [folder, setFolder] = useState("");
   const folders = useVisualFolders("containers");
 
   const configQuery = useQuery({
@@ -45,13 +45,15 @@ export function ContainerSettingsModal({
 
   useEffect(() => {
     if (configQuery.data) {
-      setDraft({
+      const normalized = {
         ...configQuery.data,
         ports: configQuery.data.ports ?? [],
         volumes: configQuery.data.volumes ?? [],
         env: configQuery.data.env ?? [],
         advanced: normalizeContainerAdvanced(configQuery.data.advanced),
-      });
+      };
+      setDraft(normalized);
+      setInitial(normalized);
       setError("");
     }
   }, [configQuery.data]);
@@ -59,12 +61,10 @@ export function ContainerSettingsModal({
   useEffect(() => {
     if (!container) {
       setDraft(null);
+      setInitial(null);
       setError("");
-      setFolder("");
-      return;
     }
-    if (!folders.loading) setFolder(folders.assignment(container.name));
-  }, [container?.id, folders.loading]);
+  }, [container]);
 
   const save = useMutation({
     mutationFn: (cfg: ContainerConfig) => api.updateContainerConfig(container?.id ?? "", cfg),
@@ -76,7 +76,6 @@ export function ContainerSettingsModal({
       });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       void queryClient.invalidateQueries({ queryKey: ["container-config", container?.id] });
-      if (container) folders.setAssignment(container.name, folder);
       onClose();
     },
     onError: (err: Error) => {
@@ -101,6 +100,8 @@ export function ContainerSettingsModal({
     if (!draft) return;
     update({ env: draft.env.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)) });
   };
+
+  const dirty = Boolean(draft && initial && JSON.stringify(draft) !== JSON.stringify(initial));
 
   const submit = () => {
     if (!draft) return;
@@ -128,7 +129,7 @@ export function ContainerSettingsModal({
             variant="primary"
             icon={<Save className="size-3.5" />}
             loading={save.isPending}
-            disabled={!draft}
+            disabled={!draft || !dirty}
             onClick={submit}
           >
             {t("Apply & recreate")}
@@ -168,14 +169,19 @@ export function ContainerSettingsModal({
             </span>
           </div>
 
-          <FolderPicker
-            folders={folders.folders}
-            value={folder}
-            onChange={setFolder}
-            onCreate={folders.createFolder}
-            label={t("Folder")}
-            disabled={folders.loading}
-          />
+          <div>
+            <FolderPicker
+              folders={folders.folders}
+              value={folders.assignment(container.name)}
+              onChange={(folderID) => folders.setAssignment(container.name, folderID)}
+              onCreate={folders.createFolder}
+              label={t("Folder")}
+              disabled={folders.loading}
+            />
+            <p className="mt-1 text-[9.5px] text-subtle">
+              {t("Visual only. Saved immediately without recreating the container.")}
+            </p>
+          </div>
 
           {/* Paths ------------------------------------------------------- */}
           <section>

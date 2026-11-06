@@ -131,6 +131,8 @@ const docker: Record<string, string> = {
   "Recreate container": "Recréer le conteneur",
   "Remove previous container": "Retirer le conteneur précédent",
   "Network calls": "Appels réseau",
+  "Visual only. Saved immediately without recreating the container.":
+    "Purement visuel. Enregistré immédiatement sans recréer le conteneur.",
   "Priorities": "Priorités",
   "Startup priorities": "Priorités de démarrage",
   "Containers with a lower number start first. 0 is the highest priority, 100 the lowest.":
