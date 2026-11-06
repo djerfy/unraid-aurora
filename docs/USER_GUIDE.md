@@ -284,7 +284,7 @@ Use this page to empty a disk before replacing it, or to move selected folders/f
 - Filters: **All**, **Running**, **Stopped**, **Updates**.
 - Search covers name, image, network, IP and category.
 - Cards show a coloured halo, live CPU/RAM, uptime, and collapsible sections for published ports, network/IP and mounts.
-- **Visual folders**: create folders from the folder bar (**Folders**) and assign a container at
+- **Visual folders**: create folders from the folder dropdown (**Folders**) in the list/grid toolbar and assign a container at
   creation or in **Edit settings**. Folders are stored in Aurora's configuration, are purely visual
   and never move data on disk. **Unfiled** is the default; deleting a folder moves its containers
   back to Unfiled.
@@ -473,7 +473,7 @@ The **Applications** page browses the official Community Applications feed:
   Restoring moves existing disks to `*.aurora-pre-restore-*` files before replacing them, and rolls
   them back if the operation fails. Both operations appear in **Historique**.
 - **Folder** (drawer) and the picker in **New VM** assign a visual folder. Folders are shared with the
-  page filter bar, stored in Aurora's configuration and never change the domain or disks.
+  folder dropdown in the page toolbar, stored in Aurora's configuration and never change the domain or disks.
 - **Autostart order** (page header) stores a deterministic start order, can start the VMs immediately,
   and can take over libvirt autostart: Aurora then disables the per-VM libvirt autostart flags and
   starts the ordered VMs once the array reaches `STARTED`. The takeover is reversible and visible in

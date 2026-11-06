@@ -80,6 +80,7 @@ const common: Record<string, string> = {
   "New folder…": "Nouveau dossier…",
   "Folder name": "Nom du dossier",
   "Unfiled": "Non classés",
+  "All folders": "Tous les dossiers",
   "Delete folder": "Supprimer le dossier",
   "Save folders": "Enregistrer les dossiers",
   "No folders yet.": "Aucun dossier pour l'instant.",

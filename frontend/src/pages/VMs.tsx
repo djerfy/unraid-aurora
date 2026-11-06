@@ -36,7 +36,7 @@ import { VMConsoleModal } from "../components/vms/VMConsoleModal";
 import { VMLogsModal } from "../components/vms/VMLogsModal";
 import { VMBackupModal } from "../components/vms/VMBackupModal";
 import { VMAutostartModal } from "../components/vms/VMAutostartModal";
-import { FolderBar } from "../components/folders/FolderBar";
+import { FolderDropdown } from "../components/folders/FolderDropdown";
 import { FolderPicker } from "../components/folders/FolderPicker";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
@@ -196,17 +196,16 @@ export function VMsPage() {
         </Card>
       ) : (
         <>
-          <FolderBar
-            folders={visualFolders.folders}
-            selected={folderFilter}
-            onSelect={setFolderFilter}
-            total={vms.length}
-            ungrouped={folderCounts.none ?? 0}
-            counts={folderCounts}
-            onManage={() => setFolderManager(true)}
-          />
-
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <FolderDropdown
+              folders={visualFolders.folders}
+              selected={folderFilter}
+              onSelect={setFolderFilter}
+              total={vms.length}
+              ungrouped={folderCounts.none ?? 0}
+              counts={folderCounts}
+              onManage={() => setFolderManager(true)}
+            />
             <div className="flex items-center rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
               <button
                 type="button"

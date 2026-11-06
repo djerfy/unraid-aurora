@@ -41,7 +41,7 @@ import { ContainerSecurityOverview } from "../components/containers/ContainerSec
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { LogViewer } from "../components/ui/log-viewer";
-import { FolderBar } from "../components/folders/FolderBar";
+import { FolderDropdown } from "../components/folders/FolderDropdown";
 import { FolderManager } from "../components/folders/FolderManager";
 import { useVisualFolders } from "../components/folders/use-visual-folders";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
@@ -434,16 +434,6 @@ export function DockerPage() {
         <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
       ) : (
         <>
-      <FolderBar
-        folders={visualFolders.folders}
-        selected={folderFilter}
-        onSelect={setFolderFilter}
-        total={containers.length}
-        ungrouped={folderCounts.none ?? 0}
-        counts={folderCounts}
-        onManage={() => setFolderManager(true)}
-      />
-
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Tabs
           size="md"
@@ -456,7 +446,16 @@ export function DockerPage() {
           value={filter}
           onChange={(value) => setFilter(value as Filter)}
         />
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <FolderDropdown
+            folders={visualFolders.folders}
+            selected={folderFilter}
+            onSelect={setFolderFilter}
+            total={containers.length}
+            ungrouped={folderCounts.none ?? 0}
+            counts={folderCounts}
+            onManage={() => setFolderManager(true)}
+          />
           <InputBase
             value={query}
             onChange={setQuery}
