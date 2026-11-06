@@ -21,6 +21,7 @@ import {
   Server,
   ShieldCheck,
   SlidersHorizontal,
+  Upload,
   Sun,
   Trash2,
 } from "lucide-react";
@@ -68,6 +69,36 @@ const ACCENTS: { value: Accent; label: string; color: string; secondary: string 
   { value: "blue", label: "Blue", color: "#3b82f6", secondary: "#60a5fa" },
 ];
 
+function readAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function wallpaperDataURL(file: File): Promise<string> {
+  const source = await readAsDataURL(file);
+  if (!source) throw new Error("empty image");
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("decode failed"));
+    element.src = source;
+  });
+  const maxDimension = 2560;
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  if (scale === 1 && source.length <= 2_500_000) return source;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  if (!context) return source;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
 export function SettingsPage() {
   const { snapshot, session, refresh } = useApp();
   const theme = useTheme();
@@ -85,6 +116,7 @@ export function SettingsPage() {
   const [tokenExpiry, setTokenExpiry] = useState(90);
   const [tokenScopes, setTokenScopes] = useState<string[]>([]);
   const [newToken, setNewToken] = useState("");
+  const [wallpaperBusy, setWallpaperBusy] = useState(false);
 
   if (!snapshot) return null;
   const settings = draft ?? snapshot.settings;
@@ -103,6 +135,26 @@ export function SettingsPage() {
   const chooseAccent = (accent: Accent) => {
     update("accent", accent);
     theme.setAccent(accent);
+  };
+
+  const applyWallpaper = async (file: File) => {
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast({ kind: "error", title: t("Unsupported image"), description: t("Choose a PNG, JPEG or WebP image.") });
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ kind: "error", title: t("Image too large"), description: t("Choose a file under 8 MB.") });
+      return;
+    }
+    setWallpaperBusy(true);
+    try {
+      theme.setWallpaper(await wallpaperDataURL(file));
+      toast({ kind: "success", title: t("Wallpaper updated"), description: t("The image is stored on this device.") });
+    } catch {
+      toast({ kind: "error", title: t("Could not load the wallpaper"), description: t("Choose a valid image file.") });
+    } finally {
+      setWallpaperBusy(false);
+    }
   };
 
   const testNotification = async () => {
@@ -376,6 +428,45 @@ export function SettingsPage() {
                         {t(value ? "Glass" : "Standard")}
                       </button>
                     ))}
+                  </div>
+                </SettingsRow>
+
+                <SettingsRow
+                  label={t("Wallpaper")}
+                  description={t("Image displayed behind cards, darkened by 50%. Stored on this device.")}
+                >
+                  <div className="flex items-center gap-2">
+                    {theme.wallpaper ? (
+                      <img
+                        src={theme.wallpaper}
+                        alt=""
+                        className="h-10 w-16 rounded-md border border-line object-cover"
+                      />
+                    ) : null}
+                    <label
+                      className={cn(
+                        "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] font-medium text-soft transition hover:border-line-strong hover:text-ink",
+                        wallpaperBusy && "pointer-events-none opacity-60",
+                      )}
+                    >
+                      <Upload className="size-3.5" />
+                      {wallpaperBusy ? t("Processing…") : t("Choose image")}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) void applyWallpaper(file);
+                        }}
+                      />
+                    </label>
+                    {theme.wallpaper ? (
+                      <IconButton label={t("Remove wallpaper")} size="sm" onClick={() => theme.setWallpaper("")}>
+                        <Trash2 className="size-3.5" />
+                      </IconButton>
+                    ) : null}
                   </div>
                 </SettingsRow>
 

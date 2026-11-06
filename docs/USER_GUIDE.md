@@ -704,6 +704,9 @@ can itself be reverted.
 - **Density**: comfortable or compact.
 - **Surfaces**: Standard (default) or Glass, a frosted, translucent material applied to cards, panels and
   popovers. The preference is stored on the current device and respects reduced-transparency settings.
+- **Wallpaper**: choose a PNG, JPEG or WebP image displayed behind the cards. The image is darkened by
+  50 % for contrast and stored on the current device (resized to 2560 px and compressed when needed).
+  Use the trash button to remove it.
 - **Temperature unit**: Celsius or Fahrenheit.
 - **Server display name**.
 - **Refresh interval**.

@@ -17,6 +17,7 @@ type Preferences = {
   accent: Accent;
   density: Density;
   glass: boolean;
+  wallpaper: string;
 };
 
 type ThemeContextValue = Preferences & {
@@ -25,6 +26,7 @@ type ThemeContextValue = Preferences & {
   setAccent: (accent: Accent) => void;
   setDensity: (density: Density) => void;
   setGlass: (glass: boolean) => void;
+  setWallpaper: (wallpaper: string) => void;
   setPreferences: (prefs: Partial<Preferences>) => void;
 };
 
@@ -33,7 +35,7 @@ const STORAGE_KEY = "aurora.theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStored(): Preferences {
-  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false };
+  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false, wallpaper: "" };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
@@ -43,6 +45,7 @@ function readStored(): Preferences {
       accent: parsed.accent ?? fallback.accent,
       density: parsed.density ?? fallback.density,
       glass: parsed.glass === true,
+      wallpaper: typeof parsed.wallpaper === "string" ? parsed.wallpaper : "",
     };
   } catch {
     return fallback;
@@ -73,6 +76,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.accent = prefs.accent;
     root.dataset.density = prefs.density;
     root.dataset.glass = prefs.glass ? "on" : "off";
+    root.dataset.wallpaper = prefs.wallpaper ? "on" : "off";
     root.style.colorScheme = resolvedTheme;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
@@ -85,14 +89,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setAccent = useCallback((accent: Accent) => setPrefs((p) => ({ ...p, accent })), []);
   const setDensity = useCallback((density: Density) => setPrefs((p) => ({ ...p, density })), []);
   const setGlass = useCallback((glass: boolean) => setPrefs((p) => ({ ...p, glass })), []);
+  const setWallpaper = useCallback((wallpaper: string) => setPrefs((p) => ({ ...p, wallpaper })), []);
   const setPreferences = useCallback(
     (next: Partial<Preferences>) => setPrefs((p) => ({ ...p, ...next })),
     [],
   );
 
   const value = useMemo(
-    () => ({ ...prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setPreferences }),
-    [prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setPreferences],
+    () => ({ ...prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setWallpaper, setPreferences }),
+    [prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setWallpaper, setPreferences],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -256,6 +256,23 @@
 /* ---------------------------------------------------------------------------
    Atmosphere: aurora glow, fine grid, film grain
 --------------------------------------------------------------------------- */
+.app-wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.app-wallpaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .app-atmosphere {
   position: fixed;
   inset: 0;
@@ -413,6 +430,10 @@
 [data-glass="on"] .app-atmosphere::before {
   opacity: 1;
   filter: blur(16px);
+}
+
+[data-wallpaper="on"] .app-atmosphere::before {
+  opacity: 0.35;
 }
 
 @media (prefers-reduced-transparency: reduce) {

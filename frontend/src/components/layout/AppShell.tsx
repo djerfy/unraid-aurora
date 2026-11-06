@@ -70,7 +70,7 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
 
 export function AppShell() {
   const { snapshot, session, error, live, refresh } = useApp();
-  const { resolvedTheme, setTheme, setPreferences } = useTheme();
+  const { resolvedTheme, setTheme, setPreferences, wallpaper } = useTheme();
   const { t } = useI18n();
   const action = useAction();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -282,6 +282,13 @@ export function AppShell() {
   return (
     <div className="relative min-h-dvh">
       <a href="#main-content" className="skip-link">{t("Skip to content")}</a>
+      {wallpaper ? (
+        <div
+          className="app-wallpaper"
+          style={{ backgroundImage: `url("${wallpaper}")` }}
+          aria-hidden="true"
+        />
+      ) : null}
       <div className="app-atmosphere" />
       <div className="grain" />
 

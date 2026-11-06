@@ -93,6 +93,8 @@ activity 3.
 - **Glass surface mode** (opt-in, `data-glass="on"`) — 42 % surface (58 % light) with a 28 px blur at
   180 % saturation, a specular top-left sheen and brighter rims. Enabled from Settings → Appearance →
   Surfaces; stored per device. Falls back to opaque surfaces when `prefers-reduced-transparency` is set.
+- `.app-wallpaper` — optional full-bleed image set from Settings → Appearance, covered by a 50 %
+  black overlay and placed under the atmosphere and cards. Stored per device as a resized data URL.
 - `.app-atmosphere` — fixed radial aurora glow + 56 px grid mask.
 - `.grain` — 2–3.5% SVG noise for texture.
 
