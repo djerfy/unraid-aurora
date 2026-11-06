@@ -226,8 +226,15 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
           borderLeftColor: SCOPE_COLOR[peer.scope] ?? "var(--muted)",
         }}
       >
-        <span className="grid size-7 shrink-0 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-[13px] text-muted">
-          {peer.scope === "container" ? (
+        <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-[var(--surface-2)] text-[13px] text-muted">
+          {peer.scope === "container" && peer.containerId ? (
+            <EntityIcon
+              src={containerIconURL(peer.containerId)}
+              name={peer.containerName || peer.address}
+              size={24}
+              className="rounded-md"
+            />
+          ) : peer.scope === "container" ? (
             <Boxes className="size-3.5" />
           ) : flag ? (
             flag
