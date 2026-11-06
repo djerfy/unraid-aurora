@@ -376,54 +376,34 @@
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
-/* Apple-like glass material: opt-in from Settings > Appearance. */
+/* Glass material: opt-in from Settings > Appearance. Cards use the same
+   72% surface + 24px blur as the sidebar so the wallpaper reads identically. */
 [data-glass="on"] .card {
-  border-color: rgba(255, 255, 255, 0.16);
-  background:
-    radial-gradient(140% 100% at 0% 0%, rgba(255, 255, 255, 0.11), transparent 52%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015) 45%, transparent 75%),
-    color-mix(in srgb, var(--surface) 42%, transparent);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.12) inset,
-    0 -1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 26px 70px -32px rgba(0, 0, 0, 0.92);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-card);
 }
 
 [data-glass="on"] .card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.05));
-  pointer-events: none;
+  content: none;
 }
 
 [data-glass="on"] .card::after {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
-  opacity: 0.9;
+  content: none;
 }
 
 [data-glass="on"].light .card {
-  border-color: rgba(255, 255, 255, 0.85);
-  background:
-    radial-gradient(140% 100% at 0% 0%, rgba(255, 255, 255, 0.95), transparent 55%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.3)),
-    color-mix(in srgb, var(--surface) 58%, transparent);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 22px 50px -30px rgba(16, 17, 22, 0.28);
-}
-
-[data-glass="on"].light .card::after {
-  background: linear-gradient(90deg, transparent, #ffffff, transparent);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  box-shadow: var(--shadow-card);
 }
 
 [data-glass="on"] .glass {
-  background: color-mix(in srgb, var(--surface) 58%, transparent);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  backdrop-filter: blur(28px) saturate(180%);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
 /* A stronger atmosphere gives the glass something to refract. */
