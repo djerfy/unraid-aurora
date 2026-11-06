@@ -437,6 +437,30 @@ type VisualFolders struct {
 	Assignments map[string]string `json:"assignments"`
 }
 
+type ContainerImage struct {
+	ID          string    `json:"id"`
+	RepoTags    []string  `json:"repoTags"`
+	RepoDigests []string  `json:"repoDigests"`
+	Size        int64     `json:"size"`
+	SharedSize  int64     `json:"sharedSize"`
+	Created     time.Time `json:"created"`
+	Containers  int       `json:"containers"`
+	UsedBy      []string  `json:"usedBy"`
+	InUse       bool      `json:"inUse"`
+	Dangling    bool      `json:"dangling"`
+}
+
+type ContainerImageSkip struct {
+	ID     string `json:"id"`
+	Reason string `json:"reason"`
+}
+
+type ContainerImageCleanup struct {
+	Removed []string             `json:"removed"`
+	Skipped []ContainerImageSkip `json:"skipped"`
+	Failed  []ContainerImageSkip `json:"failed"`
+}
+
 type ContainerUpdateEvent struct {
 	Step     string  `json:"step"`
 	Message  string  `json:"message"`

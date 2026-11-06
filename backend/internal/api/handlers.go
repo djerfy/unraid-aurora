@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -1449,6 +1450,56 @@ func (s *Server) mover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, status)
+}
+
+func (s *Server) containerImages(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	images, err := s.provider.ContainerImages(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "container_images", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, images)
+}
+
+func (s *Server) removeContainerImage(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	id := r.PathValue("id")
+	if decoded, decodeErr := url.PathUnescape(id); decodeErr == nil {
+		id = decoded
+	}
+	err := s.provider.RemoveContainerImage(ctx, id)
+	var inUse *provider.ImageInUseError
+	if errors.As(err, &inUse) {
+		writeError(w, http.StatusConflict, "image_in_use", err.Error())
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "image_remove", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) pruneContainerImages(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	result, err := s.provider.RemoveUnusedContainerImages(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "image_prune", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *Server) saveContainerPriorities(w http.ResponseWriter, r *http.Request) {

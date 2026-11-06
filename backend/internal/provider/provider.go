@@ -26,6 +26,9 @@ type Provider interface {
 	ContainerNetworkMap(ctx context.Context, containerID string) (model.ContainerNetworkMap, error)
 	ContainerPriorities(ctx context.Context) (map[string]int, error)
 	SaveContainerPriorities(ctx context.Context, priorities map[string]int) (map[string]int, error)
+	ContainerImages(ctx context.Context) ([]model.ContainerImage, error)
+	RemoveContainerImage(ctx context.Context, id string) error
+	RemoveUnusedContainerImages(ctx context.Context) (model.ContainerImageCleanup, error)
 	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error

@@ -386,6 +386,17 @@ Applying stops and recreates the container with rollback on failure. The Unraid 
 synchronised (including `Memory`, `CPUset` and managed `ExtraParams`) and the previous template is
 stored in **Historique**.
 
+### Docker images
+
+The **Images** tab lists every Docker image on the host with its tags, short ID, size, creation date
+and the containers using it.
+
+- **Remove unused** deletes every image that is not referenced by a container. Images used by a
+  running or stopped container are skipped and reported separately.
+- The trash button is disabled for images still used by a container.
+- Image removal never uses Docker's `force` flag. After an image update, Aurora also removes the
+  previous image when no other container references it, and silently keeps it otherwise.
+
 ### Create a container
 
 ![Container create](screenshots/container-create.png)

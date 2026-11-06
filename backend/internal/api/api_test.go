@@ -79,6 +79,21 @@ func (f *fakeProvider) ContainerNetworkMap(ctx context.Context, containerID stri
 	}, nil
 }
 
+func (f *fakeProvider) ContainerImages(ctx context.Context) ([]model.ContainerImage, error) {
+	return []model.ContainerImage{{ID: "sha256:abc", RepoTags: []string{"plex:latest"}, InUse: true, UsedBy: []string{"plex"}}}, nil
+}
+
+func (f *fakeProvider) RemoveContainerImage(ctx context.Context, id string) error {
+	if id == "used" {
+		return &provider.ImageInUseError{Names: []string{"plex"}}
+	}
+	return nil
+}
+
+func (f *fakeProvider) RemoveUnusedContainerImages(ctx context.Context) (model.ContainerImageCleanup, error) {
+	return model.ContainerImageCleanup{Removed: []string{"sha256:old"}}, nil
+}
+
 func (f *fakeProvider) ContainerPriorities(ctx context.Context) (map[string]int, error) {
 	return map[string]int{"plex": 10}, nil
 }
@@ -713,6 +728,45 @@ func TestMCPEndpointDisabledByDefault(t *testing.T) {
 	if body.Error.Code != "mcp_disabled" {
 		t.Fatalf("unexpected error code: %+v", body)
 	}
+}
+
+func TestContainerImagesEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/docker/images", nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var images []model.ContainerImage
+	if err := json.NewDecoder(resp.Body).Decode(&images); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if len(images) != 1 || !images[0].InUse {
+		t.Fatalf("unexpected images: %+v", images)
+	}
+
+	resp = env.request(t, http.MethodDelete, "/api/v1/docker/images/used", nil, headers)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for an image in use, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodDelete, "/api/v1/docker/images/unused", nil, headers)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodPost, "/api/v1/docker/images/prune", nil, headers)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
 }
 
 func TestContainerPrioritiesEndpoint(t *testing.T) {

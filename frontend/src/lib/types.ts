@@ -304,6 +304,30 @@ export type ContainerNetworkMap = {
   edges: NetworkMapEdge[];
 };
 
+export type ContainerImage = {
+  id: string;
+  repoTags: string[];
+  repoDigests: string[];
+  size: number;
+  sharedSize: number;
+  created: string;
+  containers: number;
+  usedBy: string[];
+  inUse: boolean;
+  dangling: boolean;
+};
+
+export type ContainerImageSkip = {
+  id: string;
+  reason: string;
+};
+
+export type ContainerImageCleanup = {
+  removed: string[];
+  skipped: ContainerImageSkip[];
+  failed: ContainerImageSkip[];
+};
+
 export type ContainerMount = {
   type: string;
   source: string;

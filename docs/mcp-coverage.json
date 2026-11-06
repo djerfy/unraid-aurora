@@ -526,6 +526,15 @@
     },
     "PUT /api/v1/docker/priorities": {
       "excluded": "UI-specific startup preference; not exposed through MCP."
+    },
+    "GET /api/v1/docker/images": {
+      "excluded": "Docker maintenance inventory; not exposed through MCP."
+    },
+    "DELETE /api/v1/docker/images/{id}": {
+      "excluded": "Destructive image maintenance; UI-only for now."
+    },
+    "POST /api/v1/docker/images/prune": {
+      "excluded": "Destructive image maintenance; UI-only for now."
     }
   }
 }

@@ -159,6 +159,9 @@ are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 | DELETE | `/docker/containers/{id}` | operator | Remove a container |
 | POST | `/docker/containers/bulk` | operator | Start/stop/restart up to 100 containers (start order follows priority) |
 | PUT | `/docker/priorities` | operator | Save container startup priorities (0 first, 100 last) |
+| GET | `/docker/images` | viewer+ | Docker images with container usage |
+| DELETE | `/docker/images/{id}` | operator | Remove an unused image without force |
+| POST | `/docker/images/prune` | operator | Remove every image not used by a container |
 | PUT | `/docker/containers/{id}/autostart` | operator | Toggle Unraid autostart |
 | GET | `/docker/containers/{id}/logs?lines=` | viewer+ | Log tail |
 | GET | `/docker/containers/{id}/connections` | viewer+ | Observed network sockets |

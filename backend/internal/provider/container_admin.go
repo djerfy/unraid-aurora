@@ -222,6 +222,7 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	if err != nil {
 		return err
 	}
+	oldImageID := l.containerImageID(ctx, id)
 	emit(model.ContainerUpdateEvent{Step: "pull", Message: "Pulling " + cfg.Image})
 	if err := l.pullImageWithProgress(ctx, cfg.Image, func(message string, percent float64) {
 		emit(model.ContainerUpdateEvent{Step: "pull", Message: message, Progress: percent})
@@ -232,6 +233,11 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	defer cancel()
 	if err := l.updateContainerConfig(recreateCtx, id, cfg, report, false); err != nil {
 		return err
+	}
+	if oldImageID != "" {
+		cleanupCtx, cancelCleanup := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		l.removeImageIfUnused(cleanupCtx, oldImageID)
+		cancelCleanup()
 	}
 	l.setImageUpdate(cfg.Image, false)
 	l.saveImageUpdates()
