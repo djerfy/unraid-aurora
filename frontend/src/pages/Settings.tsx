@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Activity,
+  Bot,
   Check,
   Cpu,
   Download,
@@ -56,6 +57,7 @@ const SECTIONS = [
   { id: "os", label: "Unraid OS", icon: Download },
   { id: "unraid-api", label: "Unraid API", icon: Activity },
   { id: "api", label: "API tokens", icon: KeyRound },
+  { id: "mcp", label: "MCP", icon: Bot },
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "about", label: "About", icon: Info },
 ];
@@ -716,8 +718,7 @@ export function SettingsPage() {
 
           {section === "unraid-api" ? <UnraidAPIPanel /> : null}
 
-          {section === "api" ? (
-            <>
+          {section === "mcp" ? (
             <Card className="card-pad">
               <CardTitle title={t("MCP server")} description={t("Expose the Model Context Protocol endpoint for AI clients.")} />
               <div className="mt-2 divide-y divide-line">
@@ -736,7 +737,9 @@ export function SettingsPage() {
                 {t("The local stdio mode (aurora mcp) is not affected. Save changes to apply.")}
               </p>
             </Card>
+          ) : null}
 
+          {section === "api" ? (
             <Card className="card-pad">
               <CardTitle title={t("API tokens")} description={t("Create scoped bearer tokens for automation and Prometheus scraping.")} />
               {newToken ? (
@@ -840,7 +843,6 @@ export function SettingsPage() {
                 .
               </p>
             </Card>
-            </>
           ) : null}
 
           {section === "security" ? (

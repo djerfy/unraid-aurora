@@ -63,6 +63,7 @@ const settings: Record<string, string> = {
   "Choose a file under 8 MB.": "Choisissez un fichier de moins de 8 Mo.",
   "Could not load the wallpaper": "Impossible de charger le fond d'écran",
   "Choose a valid image file.": "Choisissez un fichier image valide.",
+  "MCP": "MCP",
   "MCP server": "Serveur MCP",
   "Expose the Model Context Protocol endpoint for AI clients.":
     "Expose le point d'accès Model Context Protocol aux clients IA.",
