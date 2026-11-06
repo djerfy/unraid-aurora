@@ -52,7 +52,8 @@ import { FolderDropdown } from "../components/folders/FolderDropdown";
 import { FolderCard } from "../components/folders/FolderCard";
 import { FolderTable } from "../components/folders/FolderTable";
 import { FolderManager } from "../components/folders/FolderManager";
-import { useVisualFolders } from "../components/folders/use-visual-folders";
+import { useVisualFolders, type VisualFolderState } from "../components/folders/use-visual-folders";
+import { FolderPicker } from "../components/folders/FolderPicker";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
 import {
   Badge,
@@ -763,6 +764,7 @@ export function DockerPage() {
             closeContainer();
           }}
           onUpdate={(container) => void runUpdates([container])}
+          visualFolders={visualFolders}
           busy={action.isPending && action.variables?.target === selected?.name}
         />
       ) : null}
@@ -1295,12 +1297,14 @@ function ContainerDrawer({
   onClose,
   onEdit,
   onUpdate,
+  visualFolders,
   busy,
 }: {
   container: Container | null;
   onClose: () => void;
   onEdit: (container: Container) => void;
   onUpdate: (container: Container) => void;
+  visualFolders: VisualFolderState;
   busy?: boolean;
 }) {
   const action = useAction();
@@ -1424,6 +1428,20 @@ function ContainerDrawer({
           <Info label={t("IP address")} value={container.ip || "—"} />
           <Info label={t("Uptime")} value={running ? formatUptime(container.uptime) : "—"} />
           <Info label={t("Memory")} value={formatMemory(container.memory)} />
+        </div>
+
+        <div className="rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">
+          <FolderPicker
+            folders={visualFolders.folders}
+            value={visualFolders.assignment(container.name)}
+            onChange={(folderID) => visualFolders.setAssignment(container.name, folderID)}
+            onCreate={visualFolders.createFolder}
+            label={t("Folder")}
+            disabled={visualFolders.loading}
+          />
+          <p className="mt-1 text-[9.5px] text-subtle">
+            {t("Visual only. Saved immediately without recreating the container.")}
+          </p>
         </div>
 
         <label className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[var(--surface-2)]/45 px-3 py-2.5">

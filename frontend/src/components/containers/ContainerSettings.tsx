@@ -14,8 +14,6 @@ import {
   validateContainerFields,
 } from "./container-form";
 import { ContainerAdvancedFields, normalizeContainerAdvanced } from "./ContainerAdvancedFields";
-import { FolderPicker } from "../folders/FolderPicker";
-import { useVisualFolders } from "../folders/use-visual-folders";
 import { useToast } from "../../app/ToastProvider";
 
 const RESTART_POLICIES = ["unless-stopped", "always", "no", "on-failure"];
@@ -34,7 +32,6 @@ export function ContainerSettingsModal({
   const [draft, setDraft] = useState<ContainerConfig | null>(null);
   const [initial, setInitial] = useState<ContainerConfig | null>(null);
   const [error, setError] = useState("");
-  const folders = useVisualFolders("containers");
 
   const configQuery = useQuery({
     queryKey: ["container-config", container?.id],
@@ -167,20 +164,6 @@ export function ContainerSettingsModal({
             <span>
               {t("Applying changes stops and recreates the container. Its current ID and uptime reset. Only the paths listed below are kept; other bind mounts are removed.")}
             </span>
-          </div>
-
-          <div>
-            <FolderPicker
-              folders={folders.folders}
-              value={folders.assignment(container.name)}
-              onChange={(folderID) => folders.setAssignment(container.name, folderID)}
-              onCreate={folders.createFolder}
-              label={t("Folder")}
-              disabled={folders.loading}
-            />
-            <p className="mt-1 text-[9.5px] text-subtle">
-              {t("Visual only. Saved immediately without recreating the container.")}
-            </p>
           </div>
 
           {/* Paths ------------------------------------------------------- */}
