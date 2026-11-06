@@ -20,6 +20,7 @@ import { Badge, Button, Card, IconButton, cn } from "../components/ui/primitives
 import { useApp } from "../app/AppDataProvider";
 import { useI18n } from "../i18n";
 import { formatBytes, formatSpeed, formatUptime, relativeTime } from "../lib/format";
+import { useNetworkInterface } from "../lib/use-network-interface";
 import { NetworkConfigModal } from "../components/system/NetworkConfigModal";
 
 export function NetworkPage() {
@@ -27,15 +28,24 @@ export function NetworkPage() {
   const { t } = useI18n();
   const [showConfig, setShowConfig] = useState(false);
   const [editingInterface, setEditingInterface] = useState<string | null>(null);
+  const networkInterface = useNetworkInterface(snapshot?.network.interfaces ?? []);
   if (!snapshot) return null;
 
   const { network, system } = snapshot;
   const points = history.slice(-180);
   const timestamps = points.map((point) => point.t);
-  const rx = points.map((point) => point.netRx);
-  const tx = points.map((point) => point.netTx);
-
-  const primary = network.interfaces.find((iface) => iface.name === "br0") ?? network.interfaces[0];
+  const primary = networkInterface.selected ?? network.interfaces[0];
+  const interfaceName = primary?.name ?? "";
+  const hasInterfaceHistory = points.some((point) => Boolean(point.interfaces));
+  const rx = points.map((point) =>
+    hasInterfaceHistory ? point.interfaces?.[interfaceName]?.rx ?? 0 : point.netRx,
+  );
+  const tx = points.map((point) =>
+    hasInterfaceHistory ? point.interfaces?.[interfaceName]?.tx ?? 0 : point.netTx,
+  );
+  const interfaceRate = primary ? metrics?.interfaces?.[primary.name] : undefined;
+  const downRate = interfaceRate?.rx ?? primary?.rxBps ?? 0;
+  const upRate = interfaceRate?.tx ?? primary?.txBps ?? 0;
   const vpnOnline = network.wireGuard.peers.filter((peer) => peer.online).length;
   const listening = network.services.filter((service) => service.status === "listening").length;
 
@@ -65,6 +75,19 @@ export function NetworkPage() {
         }
         actions={
           <>
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] text-subtle">{t("Interface")}</span>
+              <select
+                value={primary?.name ?? ""}
+                onChange={(event) => networkInterface.selectInterface(event.target.value)}
+                aria-label={t("Network interface")}
+                className="h-9 rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-soft outline-none focus:border-[var(--accent-line)]"
+              >
+                {network.interfaces.map((iface) => (
+                  <option key={iface.name} value={iface.name}>{iface.name}</option>
+                ))}
+              </select>
+            </label>
             <Button variant="secondary" icon={<SlidersHorizontal className="size-3.5" />} onClick={() => { setEditingInterface(null); setShowConfig(true); }}>
               {t("Edit configuration")}
             </Button>
@@ -76,8 +99,8 @@ export function NetworkPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <Stat icon={<ArrowDownToLine className="size-4" />} label={t("Download")} value={formatSpeed(metrics?.netRx ?? 0)} hint={t("{size} received", { size: formatBytes(primary?.rxTotal ?? 0) })} />
-        <Stat icon={<ArrowUpFromLine className="size-4" />} label={t("Upload")} value={formatSpeed(metrics?.netTx ?? 0)} hint={t("{size} sent", { size: formatBytes(primary?.txTotal ?? 0) })} />
+        <Stat icon={<ArrowDownToLine className="size-4" />} label={t("Download")} value={formatSpeed(downRate)} hint={t("{size} received", { size: formatBytes(primary?.rxTotal ?? 0) })} />
+        <Stat icon={<ArrowUpFromLine className="size-4" />} label={t("Upload")} value={formatSpeed(upRate)} hint={t("{size} sent", { size: formatBytes(primary?.txTotal ?? 0) })} />
         <Stat icon={<Signal className="size-4" />} label={t("Link speed")} value={primary ? `${(primary.speedMbps / 1000).toFixed(1)} GbE` : "—"} hint={primary?.description ?? ""} />
         <Stat icon={<Server className="size-4" />} label={t("Services")} value={String(listening)} hint={t(network.services.length === 1 ? "{count} exposed port" : "{count} exposed ports", { count: network.services.length })} />
       </div>
@@ -87,7 +110,11 @@ export function NetworkPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-[13px] font-semibold text-ink">{t("Traffic")}</h2>
-              <p className="mt-0.5 text-[10.5px] text-subtle">{t("Aggregated across all interfaces · last 6 minutes")}</p>
+              <p className="mt-0.5 text-[10.5px] text-subtle">
+                {hasInterfaceHistory
+                  ? t("{name} · last 6 minutes", { name: interfaceName })
+                  : t("Aggregated across all interfaces · last 6 minutes")}
+              </p>
             </div>
             <div className="flex items-center gap-3 text-[10px]">
               <span className="flex items-center gap-1.5 text-muted"><span className="size-1.5 rounded-full bg-[var(--info)]" /> {t("Download")}</span>
@@ -146,11 +173,12 @@ export function NetworkPage() {
         </Card>
 
         {network.interfaces.map((iface) => {
-          const isLive = iface.name === "br0";
-          const down = isLive ? (metrics?.netRx ?? iface.rxBps) : iface.rxBps;
-          const up = isLive ? (metrics?.netTx ?? iface.txBps) : iface.txBps;
+          const rate = metrics?.interfaces?.[iface.name];
+          const down = rate?.rx ?? iface.rxBps;
+          const up = rate?.tx ?? iface.txBps;
+          const selected = iface.name === primary?.name;
           return (
-            <Card key={iface.name} className="card-pad xl:col-span-6">
+            <Card key={iface.name} className={cn("card-pad xl:col-span-6", selected && "ring-1 ring-[var(--accent-line)]")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-line bg-[var(--surface-2)] text-muted">

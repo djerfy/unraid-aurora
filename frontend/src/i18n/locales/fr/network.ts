@@ -50,6 +50,8 @@ const network: Record<string, string> = {
   "{protocol} · port {port}": "{protocol} · port {port}",
   "Open {name}": "Ouvrir {name}",
   "Host uptime": "Durée de fonctionnement de l'hôte",
+  "Network interface": "Interface réseau",
+  "{name} · last 6 minutes": "{name} · 6 dernières minutes",
 };
 
 export default network;

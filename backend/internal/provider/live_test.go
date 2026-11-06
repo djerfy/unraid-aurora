@@ -265,3 +265,25 @@ func TestNewLiveRequiresUnraidState(t *testing.T) {
 		t.Fatal("expected an error when var.ini is absent")
 	}
 }
+
+func TestNetInterfaceDelta(t *testing.T) {
+	old := map[string]netStat{
+		"br0":  {rx: 100, tx: 200},
+		"eth0": {rx: 50, tx: 60},
+	}
+	cur := map[string]netStat{
+		"br0":  {rx: 300, tx: 400},
+		"eth0": {rx: 40, tx: 70},
+		"new":  {rx: 10, tx: 10},
+	}
+	rates := netInterfaceDelta(old, cur)
+	if rates["br0"].Rx != 100 || rates["br0"].Tx != 100 {
+		t.Fatalf("unexpected br0 rates: %+v", rates["br0"])
+	}
+	if _, ok := rates["eth0"]; ok {
+		t.Fatalf("counter resets must be skipped: %+v", rates)
+	}
+	if _, ok := rates["new"]; ok {
+		t.Fatalf("new interfaces need a first sample: %+v", rates)
+	}
+}

@@ -38,15 +38,16 @@ type Live struct {
 	dockerAutostartPath string
 	startedAt           time.Time
 
-	mu        sync.Mutex
-	lastCPU   cpuSample
-	lastNet   netSample
-	lastDisk  diskSample
-	history   []model.MetricPoint
-	settings  model.Settings
-	collected model.Metrics
-	client    *http.Client
-	webClient *http.Client
+	mu            sync.Mutex
+	lastCPU       cpuSample
+	lastNet       netSample
+	lastNetIfaces map[string]netStat
+	lastDisk      diskSample
+	history       []model.MetricPoint
+	settings      model.Settings
+	collected     model.Metrics
+	client        *http.Client
+	webClient     *http.Client
 
 	imageMu        sync.Mutex
 	imageUpdates   map[string]bool
@@ -205,7 +206,9 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 	}
 	l.webClient = &http.Client{Timeout: 20 * time.Second}
 	l.lastCPU = readCPU()
-	l.lastNet = readNet()
+	initialNet := readNetStats()
+	l.lastNet = sumNetStats(initialNet)
+	l.lastNetIfaces = initialNet
 	l.lastDisk = readDiskStats()
 	if m, err := l.Metrics(context.Background()); err == nil {
 		l.collected = m
@@ -988,7 +991,8 @@ func (l *Live) loadSettings() {
 func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 	now := time.Now()
 	curCPU := readCPU()
-	curNet := readNet()
+	netStats := readNetStats()
+	curNet := sumNetStats(netStats)
 	curDisk := readDiskStats()
 
 	l.mu.Lock()
@@ -996,8 +1000,9 @@ func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 
 	cpuPct := pctDelta(l.lastCPU.idle, l.lastCPU.total, curCPU.idle, curCPU.total)
 	netRx, netTx := netDelta(l.lastNet, curNet, now)
+	interfaceRates := netInterfaceDelta(l.lastNetIfaces, netStats)
 	diskRead, diskWrite := diskDelta(l.lastDisk, curDisk, now)
-	l.lastCPU, l.lastNet, l.lastDisk = curCPU, curNet, curDisk
+	l.lastCPU, l.lastNet, l.lastNetIfaces, l.lastDisk = curCPU, curNet, netStats, curDisk
 
 	mem := readMemory()
 	cores := readPerCore()
@@ -1005,6 +1010,7 @@ func (l *Live) Metrics(ctx context.Context) (model.Metrics, error) {
 		T: now.Unix(), CPU: cpuPct, Memory: mem.Usage,
 		NetRx: netRx, NetTx: netTx, DiskRead: diskRead, DiskWrite: diskWrite,
 		Temp: readCPUTemp(), Load: readLoad()[0], Power: l.cpuPower(now), Cores: cores,
+		Interfaces: interfaceRates,
 	}
 	l.history = append(l.history, model.MetricPoint{
 		T: metrics.T, CPU: metrics.CPU, Memory: metrics.Memory, NetRx: netRx,
@@ -1412,14 +1418,28 @@ func readBoardTemps() []model.Temperature {
 	return nil
 }
 
-func readNet() netSample {
-	stats := readNetStats()
+func sumNetStats(stats map[string]netStat) netSample {
 	var rx, tx uint64
 	for _, s := range stats {
 		rx += s.rx
 		tx += s.tx
 	}
 	return netSample{rx: rx, tx: tx}
+}
+
+func netInterfaceDelta(old, cur map[string]netStat) map[string]model.InterfaceRate {
+	out := make(map[string]model.InterfaceRate, len(cur))
+	for name, sample := range cur {
+		previous, ok := old[name]
+		if !ok || sample.rx < previous.rx || sample.tx < previous.tx {
+			continue
+		}
+		out[name] = model.InterfaceRate{
+			Rx: float64(sample.rx-previous.rx) / 2,
+			Tx: float64(sample.tx-previous.tx) / 2,
+		}
+	}
+	return out
 }
 
 type netStat struct{ rx, tx uint64 }

@@ -1093,6 +1093,11 @@ export type VMAutostartResult = {
   failed: { name: string; error: string }[];
 };
 
+export type InterfaceRate = {
+  rx: number;
+  tx: number;
+};
+
 export type Metrics = {
   t: number;
   cpu: number;
@@ -1105,6 +1110,7 @@ export type Metrics = {
   load: number;
   power: number;
   cores: number[];
+  interfaces?: Record<string, InterfaceRate>;
 };
 
 export type MetricPoint = {
@@ -1116,6 +1122,7 @@ export type MetricPoint = {
   diskRead: number;
   diskWrite: number;
   temp: number;
+  interfaces?: Record<string, InterfaceRate>;
 };
 
 export type Snapshot = {

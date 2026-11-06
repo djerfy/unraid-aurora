@@ -986,29 +986,36 @@ type LogLine struct {
 	Message string    `json:"message"`
 }
 
+type InterfaceRate struct {
+	Rx float64 `json:"rx"`
+	Tx float64 `json:"tx"`
+}
+
 type Metrics struct {
-	T         int64     `json:"t"`
-	CPU       float64   `json:"cpu"`
-	Memory    float64   `json:"memory"`
-	NetRx     float64   `json:"netRx"`
-	NetTx     float64   `json:"netTx"`
-	DiskRead  float64   `json:"diskRead"`
-	DiskWrite float64   `json:"diskWrite"`
-	Temp      float64   `json:"temp"`
-	Load      float64   `json:"load"`
-	Power     float64   `json:"power"`
-	Cores     []float64 `json:"cores"`
+	T          int64                    `json:"t"`
+	CPU        float64                  `json:"cpu"`
+	Memory     float64                  `json:"memory"`
+	NetRx      float64                  `json:"netRx"`
+	NetTx      float64                  `json:"netTx"`
+	DiskRead   float64                  `json:"diskRead"`
+	DiskWrite  float64                  `json:"diskWrite"`
+	Temp       float64                  `json:"temp"`
+	Load       float64                  `json:"load"`
+	Power      float64                  `json:"power"`
+	Cores      []float64                `json:"cores"`
+	Interfaces map[string]InterfaceRate `json:"interfaces,omitempty"`
 }
 
 type MetricPoint struct {
-	T         int64   `json:"t"`
-	CPU       float64 `json:"cpu"`
-	Memory    float64 `json:"memory"`
-	NetRx     float64 `json:"netRx"`
-	NetTx     float64 `json:"netTx"`
-	DiskRead  float64 `json:"diskRead"`
-	DiskWrite float64 `json:"diskWrite"`
-	Temp      float64 `json:"temp"`
+	T          int64                    `json:"t"`
+	CPU        float64                  `json:"cpu"`
+	Memory     float64                  `json:"memory"`
+	NetRx      float64                  `json:"netRx"`
+	NetTx      float64                  `json:"netTx"`
+	DiskRead   float64                  `json:"diskRead"`
+	DiskWrite  float64                  `json:"diskWrite"`
+	Temp       float64                  `json:"temp"`
+	Interfaces map[string]InterfaceRate `json:"interfaces,omitempty"`
 }
 
 type Snapshot struct {

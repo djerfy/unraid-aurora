@@ -37,6 +37,7 @@ import { useApp } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
+import { useNetworkInterface } from "../lib/use-network-interface";
 import {
   formatBytes,
   formatMemory,
@@ -53,6 +54,7 @@ export function DashboardPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [range, setRange] = useState<"1h" | "24h" | "7d" | "30d">("1h");
+  const networkInterface = useNetworkInterface(snapshot?.network.interfaces ?? []);
   const longHistory = useQuery({
     queryKey: ["metrics-history", range],
     queryFn: () => api.metricsHistory(range),
@@ -69,9 +71,20 @@ export function DashboardPage() {
   const points = history.slice(-240);
   const chartPoints = range === "1h" ? points : (longHistory.data?.length ? longHistory.data : points);
   const cpuHistory = chartPoints.map((point) => point.cpu);
-  const netRx = points.map((point) => point.netRx);
-  const netTx = points.map((point) => point.netTx);
+  const selectedInterface = networkInterface.selected;
+  const interfaceName = selectedInterface?.name ?? "";
+  const hasInterfaceHistory = points.some((point) => Boolean(point.interfaces));
+  const netRx = points.map((point) =>
+    hasInterfaceHistory ? point.interfaces?.[interfaceName]?.rx ?? 0 : point.netRx,
+  );
+  const netTx = points.map((point) =>
+    hasInterfaceHistory ? point.interfaces?.[interfaceName]?.tx ?? 0 : point.netTx,
+  );
+  const netTimestamps = points.map((point) => point.t);
   const timestamps = chartPoints.map((point) => point.t);
+  const interfaceRate = selectedInterface ? metrics?.interfaces?.[selectedInterface.name] : undefined;
+  const downRate = interfaceRate?.rx ?? selectedInterface?.rxBps ?? 0;
+  const upRate = interfaceRate?.tx ?? selectedInterface?.txBps ?? 0;
   const cpu = metrics?.cpu ?? system.cpu.usage;
   const memory = metrics?.memory ?? system.memory.usage;
   const packagePower = metrics?.power || system.cpu.power;
@@ -427,7 +440,20 @@ export function DashboardPage() {
           <CardHeader
             title={t("Network")}
             icon={<NetworkIcon className="size-4" />}
-            trailing={<span className="chip">br0 · 2.5 GbE</span>}
+            trailing={
+              <select
+                value={selectedInterface?.name ?? ""}
+                onChange={(event) => networkInterface.selectInterface(event.target.value)}
+                aria-label={t("Network interface")}
+                className="h-6 max-w-[140px] rounded-md border border-line bg-[var(--surface-2)] px-1.5 font-mono text-[9px] text-soft outline-none focus:border-[var(--accent-line)]"
+              >
+                {network.interfaces.map((iface) => (
+                  <option key={iface.name} value={iface.name}>
+                    {iface.name}{iface.speedMbps ? ` · ${(iface.speedMbps / 1000).toFixed(1)} GbE` : ""}
+                  </option>
+                ))}
+              </select>
+            }
             action={
               <button type="button" onClick={() => navigate("/network")} className="text-[10.5px] font-medium text-muted transition hover:text-ink">
                 {t("Details")}
@@ -439,13 +465,13 @@ export function DashboardPage() {
               <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
                 <ArrowDownToLine className="size-3 text-[var(--info)]" /> {t("Down")}
               </p>
-              <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(metrics?.netRx ?? 0)}</p>
+              <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(downRate)}</p>
             </div>
             <div>
               <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.1em] text-subtle">
                 <ArrowUpFromLine className="size-3 text-[var(--violet)]" /> {t("Up")}
               </p>
-              <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(metrics?.netTx ?? 0)}</p>
+              <p className="num mt-1 text-[18px] font-semibold text-ink">{formatSpeed(upRate)}</p>
             </div>
           </div>
           <AreaChart
@@ -453,14 +479,14 @@ export function DashboardPage() {
               { values: netRx, color: "var(--info)", label: t("Down") },
               { values: netTx, color: "var(--violet)", label: t("Up") },
             ]}
-            timestamps={timestamps}
+            timestamps={netTimestamps}
             height={76}
             formatValue={(value) => formatSpeed(value)}
             className="mt-1"
             domain={[0, Math.max(2_000_000, ...netRx, ...netTx) * 1.15]}
           />
           <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[10px] text-subtle">
-            <span className="font-mono">{network.interfaces[0]?.ip ?? "192.168.1.10"}</span>
+            <span className="font-mono">{selectedInterface?.ip ?? "—"}</span>
             <span className="flex items-center gap-1">
               <span className="status-dot" />{" "}
               {t(

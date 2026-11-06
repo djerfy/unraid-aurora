@@ -112,13 +112,18 @@ func (h *Hub) sample(ctx context.Context) {
 	point := model.MetricPoint{
 		T: m.T, CPU: m.CPU, Memory: m.Memory, NetRx: m.NetRx,
 		NetTx: m.NetTx, DiskRead: m.DiskRead, DiskWrite: m.DiskWrite, Temp: m.Temp,
+		Interfaces: m.Interfaces,
 	}
 	h.history = append(h.history, point)
 	if len(h.history) > 1800 {
 		h.history = h.history[len(h.history)-1800:]
 	}
 	if h.archivePath != "" && (h.lastArchive.IsZero() || time.Since(h.lastArchive) >= time.Minute) {
-		h.archive = append(h.archive, point)
+		// Long-term archives stay compact: per-interface rates are only
+		// meaningful for the live window.
+		archivePoint := point
+		archivePoint.Interfaces = nil
+		h.archive = append(h.archive, archivePoint)
 		if len(h.archive) > 44640 { // 31 days at one sample per minute.
 			h.archive = h.archive[len(h.archive)-44640:]
 		}

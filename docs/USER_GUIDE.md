@@ -548,6 +548,9 @@ utilisation, autostart and actions.
 ![Network](screenshots/network.png)
 
 - Interfaces, MAC, IPv4/IPv6, speed, state and live RX/TX.
+- **Interface selector** (top right): chooses which interface drives the Download/Upload cards,
+  totals, connection panel and traffic chart. The choice is stored on the device; the default is
+  `br0`, then the first active interface. The Dashboard Network card exposes the same selector.
 - Gateway, DNS and domain.
 - WireGuard status and peers.
 - Listening services with protocol, status and direct links.
