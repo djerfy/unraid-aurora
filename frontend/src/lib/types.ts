@@ -244,6 +244,7 @@ export type ContainerVolume = {
 export type ContainerConnection = {
   protocol: string;
   state: string;
+  direction: "inbound" | "outbound";
   localAddress: string;
   localPort: number;
   remoteAddress: string;
@@ -287,6 +288,7 @@ export type NetworkMapEdge = {
   peerAddress: string;
   peerContainerId?: string;
   protocol: string;
+  direction: "inbound" | "outbound";
   localPort: number;
   remotePort: number;
   state: string;

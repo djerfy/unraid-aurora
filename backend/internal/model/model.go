@@ -288,6 +288,7 @@ type Container struct {
 type ContainerConnection struct {
 	Protocol      string `json:"protocol"`
 	State         string `json:"state"`
+	Direction     string `json:"direction"`
 	LocalAddress  string `json:"localAddress"`
 	LocalPort     int    `json:"localPort"`
 	RemoteAddress string `json:"remoteAddress"`
@@ -340,6 +341,7 @@ type NetworkMapEdge struct {
 	PeerAddress     string `json:"peerAddress"`
 	PeerContainerID string `json:"peerContainerId,omitempty"`
 	Protocol        string `json:"protocol"`
+	Direction       string `json:"direction"`
 	LocalPort       int    `json:"localPort"`
 	RemotePort      int    `json:"remotePort"`
 	State           string `json:"state"`

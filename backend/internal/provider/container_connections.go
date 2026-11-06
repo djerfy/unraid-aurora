@@ -111,6 +111,7 @@ func (l *Live) containerPIDs(ctx context.Context, id string) map[int]bool {
 }
 
 func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerConnection {
+	listening := parseSSListeningPorts(output, allowedPIDs)
 	seen := map[string]bool{}
 	out := []model.ContainerConnection{}
 	for _, line := range strings.Split(output, "\n") {
@@ -144,8 +145,12 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 			continue
 		}
 		seen[key] = true
+		direction := "outbound"
+		if listening[localPort] {
+			direction = "inbound"
+		}
 		out = append(out, model.ContainerConnection{
-			Protocol: netid, State: state,
+			Protocol: netid, State: state, Direction: direction,
 			LocalAddress: localAddress, LocalPort: localPort,
 			RemoteAddress: remoteAddress, RemotePort: remotePort,
 			Process: process, PID: pid,
@@ -161,6 +166,38 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 		return out[i].Process < out[j].Process
 	})
 	return out
+}
+
+// parseSSListeningPorts records the local ports the container accepts traffic
+// on, so established sockets can be split between inbound and outbound.
+func parseSSListeningPorts(output string, allowedPIDs map[int]bool) map[int]bool {
+	ports := map[int]bool{}
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 6 {
+			continue
+		}
+		netid := fields[0]
+		if netid != "tcp" && netid != "udp" && netid != "tcp6" && netid != "udp6" {
+			continue
+		}
+		state := fields[1]
+		if state != "LISTEN" && state != "UNCONN" {
+			continue
+		}
+		_, port := parseSSAddress(fields[4])
+		if port == 0 {
+			continue
+		}
+		if len(allowedPIDs) > 0 {
+			_, pid := parseSSProcess(strings.Join(fields[6:], " "))
+			if pid == 0 || !allowedPIDs[pid] {
+				continue
+			}
+		}
+		ports[port] = true
+	}
+	return ports
 }
 
 func parseSSAddress(value string) (string, int) {

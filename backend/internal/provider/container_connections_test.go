@@ -107,3 +107,32 @@ func TestParseSSProcess(t *testing.T) {
 		t.Fatalf("parseSSProcess = %q/%d", name, pid)
 	}
 }
+
+func TestParseSSOutputDirection(t *testing.T) {
+	raw := `tcp   ESTAB  0 0 172.17.0.2:8080  203.0.113.4:55000 users:(("server",pid=1,fd=1))
+tcp   LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:* users:(("server",pid=1,fd=2))
+tcp   ESTAB  0 0 172.17.0.2:55001 1.1.1.1:443 users:(("app",pid=2,fd=3))`
+	connections := parseSSOutput(raw, nil)
+	if len(connections) != 2 {
+		t.Fatalf("connections = %+v, want 2", connections)
+	}
+	byAddress := map[string]string{}
+	for _, connection := range connections {
+		byAddress[connection.RemoteAddress] = connection.Direction
+	}
+	if byAddress["203.0.113.4"] != "inbound" {
+		t.Fatalf("expected inbound direction for the listening port: %+v", connections)
+	}
+	if byAddress["1.1.1.1"] != "outbound" {
+		t.Fatalf("expected outbound direction for the ephemeral port: %+v", connections)
+	}
+}
+
+func TestParseSSListeningPortsFiltersHostPIDs(t *testing.T) {
+	raw := `tcp LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:* users:(("mine",pid=1,fd=2))
+tcp LISTEN 0 4096 0.0.0.0:9090 0.0.0.0:* users:(("other",pid=2,fd=2))`
+	ports := parseSSListeningPorts(raw, map[int]bool{1: true})
+	if !ports[8080] || ports[9090] {
+		t.Fatalf("unexpected listening ports: %+v", ports)
+	}
+}

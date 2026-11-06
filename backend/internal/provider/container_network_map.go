@@ -138,7 +138,7 @@ func buildContainerNetworkMap(allContainers, inspected []model.Container, connec
 				continue
 			}
 			edgeKey := strings.Join([]string{
-				container.ID, remote, connection.Protocol,
+				container.ID, remote, connection.Protocol, connection.Direction,
 				strconv.Itoa(connection.LocalPort), strconv.Itoa(connection.RemotePort), connection.State,
 			}, "|")
 			if edgeSeen[edgeKey] {

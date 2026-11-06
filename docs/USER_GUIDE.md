@@ -336,14 +336,18 @@ The **Network map** tab turns the live sockets of running containers into a grap
 
 - Nothing is loaded until a container is selected. Choose a specific container, or **All containers**
   to aggregate every running container.
-- Containers are on the left, remote peers on the right, and each curve is a conversation.
+- Incoming peers are on the left, containers in the middle and outgoing peers on the right, so the
+  direction of each conversation is visible at a glance.
+- Aurora compares each established socket with the container listening ports: traffic accepted on a
+  listening port is **Incoming**, traffic from an ephemeral port is **Outgoing**.
 - Peers are grouped by IP and classified as **Containers** (the IP belongs to another container),
   **LAN** (private address) or **Internet** (public address).
 - Line thickness and node counters reflect the number of sockets; use the scope selector to focus on
   one category.
 - Click a node to pin its edges, or hover a row in the **Who talks to whom** table to isolate a
   container.
-- The table lists each container-to-peer pair with protocol, remote ports and socket count.
+- The table lists each container-to-peer pair with direction, scope, protocol, remote ports and
+  socket count.
 - Loopback sockets are hidden so the map only shows conversations with the outside or other
   containers.
 - The map refreshes every 15 seconds; inspecting many containers may take a few seconds.

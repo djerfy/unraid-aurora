@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Globe2, RefreshCw, Router, TriangleAlert, Waypoints } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Boxes,
+  Globe2,
+  RefreshCw,
+  Router,
+  TriangleAlert,
+  Waypoints,
+} from "lucide-react";
 import { api } from "../../lib/api";
 import { useI18n } from "../../i18n";
 import { Badge, Card, IconButton, cn } from "../ui/primitives";
@@ -19,6 +28,9 @@ const SCOPE_COLOR: Record<string, string> = {
   other: "var(--muted)",
 };
 
+const DIRECTIONS = ["inbound", "outbound"] as const;
+type Direction = (typeof DIRECTIONS)[number];
+
 function countryFlag(code?: string): string {
   if (!code || !/^[A-Z]{2}$/.test(code)) return "";
   return String.fromCodePoint(...[...code].map((char) => 127397 + char.charCodeAt(0)));
@@ -31,30 +43,62 @@ function scopeLabel(scope: string, t: (key: string) => string): string {
   return t("Other");
 }
 
+function scopeRank(scope: string): number {
+  if (scope === "container") return 0;
+  if (scope === "lan") return 1;
+  if (scope === "internet") return 2;
+  return 3;
+}
+
+type PeerNode = NetworkMapPeer & {
+  direction: Direction;
+  edgeCount: number;
+  ports: number[];
+  protocols: string[];
+};
+
 type MapLink = {
   key: string;
   containerId: string;
   containerName: string;
-  peer: NetworkMapPeer;
+  peerKey: string;
+  peer: PeerNode;
+  direction: Direction;
   count: number;
   ports: number[];
   protocols: string[];
 };
 
-function buildLinks(edges: NetworkMapEdge[], peers: NetworkMapPeer[]): MapLink[] {
+function buildGraph(edges: NetworkMapEdge[], peers: NetworkMapPeer[]) {
   const byAddress = new Map(peers.map((peer) => [peer.address, peer]));
+  const inbound = new Map<string, PeerNode>();
+  const outbound = new Map<string, PeerNode>();
   const links = new Map<string, MapLink>();
+
   for (const edge of edges) {
     const peer = byAddress.get(edge.peerAddress);
     if (!peer) continue;
-    const key = `${edge.containerId}|${edge.peerAddress}`;
+    const direction: Direction = edge.direction === "inbound" ? "inbound" : "outbound";
+    const bucket = direction === "inbound" ? inbound : outbound;
+    let node = bucket.get(peer.address);
+    if (!node) {
+      node = { ...peer, direction, edgeCount: 0, ports: [], protocols: [] };
+      bucket.set(peer.address, node);
+    }
+    node.edgeCount += 1;
+    if (edge.remotePort && !node.ports.includes(edge.remotePort)) node.ports.push(edge.remotePort);
+    if (edge.protocol && !node.protocols.includes(edge.protocol)) node.protocols.push(edge.protocol);
+
+    const key = `${direction}|${edge.containerId}|${peer.address}`;
     let link = links.get(key);
     if (!link) {
       link = {
         key,
         containerId: edge.containerId,
         containerName: edge.containerName,
-        peer,
+        peerKey: `${direction === "inbound" ? "i" : "o"}:${peer.address}`,
+        peer: node,
+        direction,
         count: 0,
         ports: [],
         protocols: [],
@@ -65,10 +109,22 @@ function buildLinks(edges: NetworkMapEdge[], peers: NetworkMapPeer[]): MapLink[]
     if (edge.remotePort && !link.ports.includes(edge.remotePort)) link.ports.push(edge.remotePort);
     if (edge.protocol && !link.protocols.includes(edge.protocol)) link.protocols.push(edge.protocol);
   }
-  return [...links.values()].sort((a, b) => {
-    if (a.containerName !== b.containerName) return a.containerName.localeCompare(b.containerName);
-    return a.peer.address.localeCompare(b.peer.address);
-  });
+
+  const sortPeers = (a: PeerNode, b: PeerNode) => {
+    if (scopeRank(a.scope) !== scopeRank(b.scope)) return scopeRank(a.scope) - scopeRank(b.scope);
+    if (a.edgeCount !== b.edgeCount) return b.edgeCount - a.edgeCount;
+    return a.address.localeCompare(b.address);
+  };
+
+  return {
+    inbound: [...inbound.values()].sort(sortPeers),
+    outbound: [...outbound.values()].sort(sortPeers),
+    links: [...links.values()].sort((a, b) => {
+      if (a.containerName !== b.containerName) return a.containerName.localeCompare(b.containerName);
+      if (a.direction !== b.direction) return a.direction === "inbound" ? -1 : 1;
+      return a.peer.address.localeCompare(b.peer.address);
+    }),
+  };
 }
 
 export function ContainerNetworkMap({ containers }: { containers: Container[] }) {
@@ -110,32 +166,95 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
   const mapContainers = (data?.containers ?? [])
     .filter((container) => scope === "all" || visibleContainerIDs.has(container.id))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const links = buildLinks(edges, peers);
+  const { inbound, outbound, links } = buildGraph(edges, peers);
+
   const activeCandidate = hovered ?? pinned;
   const active =
     activeCandidate &&
     (mapContainers.some((container) => `c:${container.id}` === activeCandidate) ||
-      peers.some((peer) => `p:${peer.address}` === activeCandidate))
+      inbound.some((peer) => `i:${peer.address}` === activeCandidate) ||
+      outbound.some((peer) => `o:${peer.address}` === activeCandidate))
       ? activeCandidate
       : null;
 
   const containerIndex = new Map(mapContainers.map((container, index) => [container.id, index]));
-  const peerIndex = new Map(peers.map((peer, index) => [peer.address, index]));
-  const containerCounts = new Map<string, number>();
+  const inboundIndex = new Map(inbound.map((peer, index) => [peer.address, index]));
+  const outboundIndex = new Map(outbound.map((peer, index) => [peer.address, index]));
+  const containerCounts = new Map<string, { inbound: number; outbound: number }>();
   for (const edge of edges) {
-    containerCounts.set(edge.containerId, (containerCounts.get(edge.containerId) ?? 0) + 1);
+    const counts = containerCounts.get(edge.containerId) ?? { inbound: 0, outbound: 0 };
+    if (edge.direction === "inbound") counts.inbound += 1;
+    else counts.outbound += 1;
+    containerCounts.set(edge.containerId, counts);
   }
-  const peerCounts = new Map<string, number>();
-  for (const edge of edges) {
-    peerCounts.set(edge.peerAddress, (peerCounts.get(edge.peerAddress) ?? 0) + 1);
-  }
-  const height = HEADER + Math.max(mapContainers.length, peers.length, 1) * ROW;
+
+  const height = HEADER + Math.max(inbound.length, mapContainers.length, outbound.length, 1) * ROW;
   const viewportWidth = Math.max(Math.floor(graphWidth * 0.9), MIN_GRAPH_WIDTH);
-  const columnWidth = Math.min(420, Math.max(280, Math.round(viewportWidth * 0.3)));
-  const peerX = viewportWidth - columnWidth;
+  const gutter = Math.min(80, Math.max(36, Math.round(viewportWidth * 0.05)));
+  const columnWidth = Math.min(420, Math.floor((viewportWidth - 2 * gutter) / 3));
+  const usedWidth = columnWidth * 3 + 2 * gutter;
+  const startX = Math.max(0, Math.floor((viewportWidth - usedWidth) / 2));
+  const inboundX = startX;
+  const containerX = startX + columnWidth + gutter;
+  const outboundX = startX + 2 * (columnWidth + gutter);
+
   const linkIsActive = (link: MapLink) =>
-    !active || active === `c:${link.containerId}` || active === `p:${link.peer.address}`;
+    !active || active === `c:${link.containerId}` || active === link.peerKey;
   const nodeIsDimmed = (key: string) => Boolean(active && active !== key);
+
+  const peerNode = (peer: PeerNode, index: number, left: number) => {
+    const key = `${peer.direction === "inbound" ? "i" : "o"}:${peer.address}`;
+    const flag = countryFlag(peer.country);
+    const Arrow = peer.direction === "inbound" ? ArrowDownLeft : ArrowUpRight;
+    return (
+      <button
+        key={key}
+        type="button"
+        onMouseEnter={() => setHovered(key)}
+        onMouseLeave={() => setHovered(null)}
+        onClick={() => setPinned((value) => (value === key ? null : key))}
+        className={cn(
+          "absolute z-10 flex items-center gap-2.5 rounded-lg border border-l-2 border-line bg-[var(--surface)] px-2.5 text-left shadow-sm transition hover:border-[var(--accent-line)]",
+          nodeIsDimmed(key) && "opacity-30",
+          pinned === key && "border-[var(--accent-line)]",
+        )}
+        style={{
+          left,
+          top: HEADER + index * ROW,
+          width: columnWidth,
+          height: NODE_HEIGHT,
+          borderLeftColor: SCOPE_COLOR[peer.scope] ?? "var(--muted)",
+        }}
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-[13px] text-muted">
+          {peer.scope === "container" ? (
+            <Boxes className="size-3.5" />
+          ) : flag ? (
+            flag
+          ) : peer.scope === "internet" ? (
+            <Globe2 className="size-3.5" />
+          ) : (
+            <Router className="size-3.5" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[11px] font-semibold text-ink">
+            {peer.containerName || peer.address}
+          </span>
+          <span className="block truncate font-mono text-[9px] text-subtle">
+            {peer.containerName ? `${peer.address} · ` : ""}
+            {peer.protocols.join("/")}
+            {peer.ports.length ? ` :${peer.ports.slice(0, 3).join(",")}` : ""}
+            {peer.ports.length > 3 ? "…" : ""}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-0.5 rounded border border-line bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] text-subtle">
+          <Arrow className="size-2.5" />
+          {peer.edgeCount}
+        </span>
+      </button>
+    );
+  };
 
   const body = (() => {
     if (!target) {
@@ -179,7 +298,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
         </div>
       );
     }
-    if (peers.length === 0 || mapContainers.length === 0) {
+    if (inbound.length === 0 && outbound.length === 0) {
       return (
         <div className="grid min-h-[180px] place-items-center rounded-xl border border-dashed border-line bg-[var(--surface-2)]/35 px-4 text-center">
           <p className="text-[11px] text-muted">{t("No peer matches this scope.")}</p>
@@ -190,25 +309,41 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
       <>
         <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
           <div className="relative mx-auto" style={{ width: viewportWidth, height }}>
-            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: 4 }}>
+            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: inboundX + 4 }}>
+              {t("Incoming")}
+            </span>
+            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: containerX + 4 }}>
               {t("Containers")}
             </span>
-            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: peerX + 4 }}>
-              {t("Peers")}
+            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: outboundX + 4 }}>
+              {t("Outgoing")}
             </span>
 
             <svg className="pointer-events-none absolute inset-0" width={viewportWidth} height={height} aria-hidden="true">
               {links.map((link) => {
-                const from = containerIndex.get(link.containerId);
-                const to = peerIndex.get(link.peer.address);
-                if (from === undefined || to === undefined) return null;
-                const y1 = HEADER + from * ROW + NODE_HEIGHT / 2;
-                const y2 = HEADER + to * ROW + NODE_HEIGHT / 2;
-                const mid = (columnWidth + peerX) / 2;
+                const containerPosition = containerIndex.get(link.containerId);
+                if (containerPosition === undefined) return null;
+                const yContainer = HEADER + containerPosition * ROW + NODE_HEIGHT / 2;
+                const inboundPosition = inboundIndex.get(link.peer.address);
+                const outboundPosition = outboundIndex.get(link.peer.address);
+                const yPeer =
+                  link.direction === "inbound"
+                    ? inboundPosition !== undefined
+                      ? HEADER + inboundPosition * ROW + NODE_HEIGHT / 2
+                      : undefined
+                    : outboundPosition !== undefined
+                      ? HEADER + outboundPosition * ROW + NODE_HEIGHT / 2
+                      : undefined;
+                if (yPeer === undefined) return null;
+                const fromX = link.direction === "inbound" ? inboundX + columnWidth + 4 : containerX + columnWidth + 4;
+                const toX = link.direction === "inbound" ? containerX - 4 : outboundX - 4;
+                const fromY = link.direction === "inbound" ? yPeer : yContainer;
+                const toY = link.direction === "inbound" ? yContainer : yPeer;
+                const mid = (fromX + toX) / 2;
                 return (
                   <path
                     key={link.key}
-                    d={`M ${columnWidth + 4} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${peerX - 4} ${y2}`}
+                    d={`M ${fromX} ${fromY} C ${mid} ${fromY}, ${mid} ${toY}, ${toX} ${toY}`}
                     fill="none"
                     stroke={SCOPE_COLOR[link.peer.scope] ?? "var(--muted)"}
                     strokeWidth={1 + Math.min(3, link.count * 0.5)}
@@ -219,9 +354,11 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
               })}
             </svg>
 
+            {inbound.map((peer, index) => peerNode(peer, index, inboundX))}
+
             {mapContainers.map((container, index) => {
               const key = `c:${container.id}`;
-              const count = containerCounts.get(container.id) ?? 0;
+              const counts = containerCounts.get(container.id) ?? { inbound: 0, outbound: 0 };
               return (
                 <button
                   key={key}
@@ -234,7 +371,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
                     nodeIsDimmed(key) && "opacity-30",
                     pinned === key && "border-[var(--accent-line)]",
                   )}
-                  style={{ left: 0, top: HEADER + index * ROW, width: columnWidth, height: NODE_HEIGHT }}
+                  style={{ left: containerX, top: HEADER + index * ROW, width: columnWidth, height: NODE_HEIGHT }}
                 >
                   <EntityIcon src={containerIconURL(container.id)} name={container.name} size={28} className="rounded-md" />
                   <span className="min-w-0 flex-1">
@@ -243,64 +380,17 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
                       {container.ip || t("host network")} · {container.network || "—"}
                     </span>
                   </span>
-                  <span className="shrink-0 rounded border border-line bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] text-subtle">
-                    {count}
+                  <span className="flex shrink-0 items-center gap-1 rounded border border-line bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] text-subtle">
+                    <ArrowDownLeft className="size-2.5" />
+                    {counts.inbound}
+                    <ArrowUpRight className="ml-0.5 size-2.5" />
+                    {counts.outbound}
                   </span>
                 </button>
               );
             })}
 
-            {peers.map((peer, index) => {
-              const key = `p:${peer.address}`;
-              const flag = countryFlag(peer.country);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onMouseEnter={() => setHovered(key)}
-                  onMouseLeave={() => setHovered(null)}
-                  onClick={() => setPinned((value) => (value === key ? null : key))}
-                  className={cn(
-                    "absolute z-10 flex items-center gap-2.5 rounded-lg border border-l-2 border-line bg-[var(--surface)] px-2.5 text-left shadow-sm transition hover:border-[var(--accent-line)]",
-                    nodeIsDimmed(key) && "opacity-30",
-                    pinned === key && "border-[var(--accent-line)]",
-                  )}
-                  style={{
-                    left: peerX,
-                    top: HEADER + index * ROW,
-                    width: columnWidth,
-                    height: NODE_HEIGHT,
-                    borderLeftColor: SCOPE_COLOR[peer.scope] ?? "var(--muted)",
-                  }}
-                >
-                  <span className="grid size-7 shrink-0 place-items-center rounded-md border border-line bg-[var(--surface-2)] text-[13px] text-muted">
-                    {peer.scope === "container" ? (
-                      <Boxes className="size-3.5" />
-                    ) : flag ? (
-                      flag
-                    ) : peer.scope === "internet" ? (
-                      <Globe2 className="size-3.5" />
-                    ) : (
-                      <Router className="size-3.5" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[11px] font-semibold text-ink">
-                      {peer.containerName || peer.address}
-                    </span>
-                    <span className="block truncate font-mono text-[9px] text-subtle">
-                      {peer.containerName ? `${peer.address} · ` : ""}
-                      {peer.protocols.join("/")}
-                      {peer.ports.length ? ` :${peer.ports.slice(0, 3).join(",")}` : ""}
-                      {peer.ports.length > 3 ? "…" : ""}
-                    </span>
-                  </span>
-                  <span className="shrink-0 rounded border border-line bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] text-subtle">
-                    {peerCounts.get(peer.address) ?? 0}
-                  </span>
-                </button>
-              );
-            })}
+            {outbound.map((peer, index) => peerNode(peer, index, outboundX))}
           </div>
         </div>
 
@@ -312,10 +402,11 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
             </span>
           </div>
           <div className="mt-2 overflow-x-auto rounded-xl border border-line">
-            <div className="min-w-[760px]">
-              <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_96px_88px_100px_70px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
+            <div className="min-w-[860px]">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_74px_78px_84px_58px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
                 <span>{t("Container")}</span>
                 <span>{t("Peer")}</span>
+                <span>{t("Direction")}</span>
                 <span>{t("Scope")}</span>
                 <span>{t("Protocol")}</span>
                 <span>{t("Ports")}</span>
@@ -327,11 +418,16 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
                     key={link.key}
                     onMouseEnter={() => setHovered(`c:${link.containerId}`)}
                     onMouseLeave={() => setHovered(null)}
-                    className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)_96px_88px_100px_70px] items-center gap-3 px-3 py-2 text-[10px] transition hover:bg-[var(--surface-2)]/50"
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_74px_78px_84px_58px] items-center gap-3 px-3 py-2 text-[10px] transition hover:bg-[var(--surface-2)]/50"
                   >
                     <span className="min-w-0 truncate text-[10.5px] font-medium text-ink">{link.containerName}</span>
                     <span className="min-w-0 truncate font-mono text-[9.5px] text-muted" title={link.peer.containerName || link.peer.address}>
                       {link.peer.containerName ? `${link.peer.containerName} (${link.peer.address})` : link.peer.address}
+                    </span>
+                    <span>
+                      <Badge tone={link.direction === "inbound" ? "success" : "neutral"}>
+                        {link.direction === "inbound" ? t("Incoming") : t("Outgoing")}
+                      </Badge>
                     </span>
                     <span><Badge tone="neutral">{scopeLabel(link.peer.scope, t)}</Badge></span>
                     <span className="font-mono text-[9.5px] uppercase text-muted">{link.protocols.join("/") || "—"}</span>
@@ -355,7 +451,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
             <Waypoints className="size-4 text-[var(--accent)]" /> {t("Network map")}
           </h2>
           <p className="mt-1 max-w-2xl text-[10.5px] leading-relaxed text-muted">
-            {t("Live view of which container talks to which remote IP. Peers include other containers, LAN hosts and internet addresses.")}
+            {t("Incoming peers are on the left, containers in the middle and outgoing peers on the right.")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
