@@ -330,6 +330,22 @@ The **Network calls** tab lists the network sockets of a selected running contai
 Country and city are optional: install `geoiplookup` and a GeoIP database on the host. Aurora never
 sends addresses to an external geolocation API.
 
+### Network map
+
+The **Network map** tab aggregates the live sockets of every running container into a graph:
+
+- Containers are on the left, remote peers on the right, and each curve is a conversation.
+- Peers are grouped by IP and classified as **Containers** (the IP belongs to another container),
+  **LAN** (private address) or **Internet** (public address).
+- Line thickness and node counters reflect the number of sockets; use the scope selector to focus on
+  one category.
+- Click a node to pin its edges, or hover a row in the **Who talks to whom** table to isolate a
+  container.
+- The table lists each container-to-peer pair with protocol, remote ports and socket count.
+- Loopback sockets are hidden so the map only shows conversations with the outside or other
+  containers.
+- The map refreshes every 15 seconds; inspecting many containers may take a few seconds.
+
 ### Details
 
 ![Container details](screenshots/docker-drawer.png)

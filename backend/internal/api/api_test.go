@@ -66,6 +66,19 @@ func (f *fakeProvider) ContainerConnections(ctx context.Context, id string) (mod
 	}, nil
 }
 
+func (f *fakeProvider) ContainerNetworkMap(ctx context.Context) (model.ContainerNetworkMap, error) {
+	return model.ContainerNetworkMap{
+		Available:  true,
+		CapturedAt: time.Now(),
+		Containers: []model.NetworkMapContainer{{ID: "abc", Name: "plex", IP: "172.18.0.2"}},
+		Peers:      []model.NetworkMapPeer{{Address: "1.1.1.1", Scope: "internet", Connections: 1, Ports: []int{443}, Protocols: []string{"tcp"}}},
+		Edges: []model.NetworkMapEdge{{
+			ContainerID: "abc", ContainerName: "plex", PeerAddress: "1.1.1.1",
+			Protocol: "tcp", LocalPort: 40000, RemotePort: 443, State: "ESTAB",
+		}},
+	}, nil
+}
+
 func (f *fakeProvider) Metrics(ctx context.Context) (model.Metrics, error) {
 	return model.Metrics{CPU: 10, Cores: []float64{10}}, nil
 }
@@ -665,6 +678,30 @@ func TestVisualFolderEndpoints(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestContainerNetworkMapEndpoint(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/docker/network-map", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var out model.ContainerNetworkMap
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.Available || len(out.Containers) != 1 || len(out.Peers) != 1 || len(out.Edges) != 1 {
+		t.Fatalf("unexpected network map: %+v", out)
+	}
+	if out.Edges[0].PeerAddress != "1.1.1.1" {
+		t.Fatalf("unexpected edge: %+v", out.Edges[0])
 	}
 }
 

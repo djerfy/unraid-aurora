@@ -260,6 +260,48 @@ export type ContainerConnections = {
   connections: ContainerConnection[];
 };
 
+export type NetworkMapContainer = {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  network: string;
+  ip: string;
+};
+
+export type NetworkMapPeer = {
+  address: string;
+  scope: "container" | "lan" | "internet" | "other";
+  country?: string;
+  city?: string;
+  containerId?: string;
+  containerName?: string;
+  connections: number;
+  ports: number[];
+  protocols: string[];
+};
+
+export type NetworkMapEdge = {
+  containerId: string;
+  containerName: string;
+  peerAddress: string;
+  peerContainerId?: string;
+  protocol: string;
+  localPort: number;
+  remotePort: number;
+  state: string;
+  process: string;
+};
+
+export type ContainerNetworkMap = {
+  available: boolean;
+  reason?: string;
+  capturedAt: string;
+  containers: NetworkMapContainer[];
+  peers: NetworkMapPeer[];
+  edges: NetworkMapEdge[];
+};
+
 export type ContainerMount = {
   type: string;
   source: string;

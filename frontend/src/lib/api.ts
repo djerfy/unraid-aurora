@@ -174,6 +174,7 @@ export const api = {
     request<LogLine[]>(`/api/v1/docker/containers/${encodeURIComponent(id)}/logs?lines=${lines}`),
   containerConnections: (id: string) =>
     request<ContainerConnections>(`/api/v1/docker/containers/${encodeURIComponent(id)}/connections`),
+  containerNetworkMap: () => request<import("./types").ContainerNetworkMap>("/api/v1/docker/network-map"),
   createUser: (options: import("./types").UserCreateOptions) =>
     request<{ ok: boolean }>("/api/v1/users", { method: "POST", body: JSON.stringify(options) }),
   updateUser: (name: string, description: string) =>

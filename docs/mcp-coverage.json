@@ -520,6 +520,9 @@
     },
     "PUT /api/v1/vms/folders": {
       "excluded": "Visual organization only; not exposed through MCP."
+    },
+    "GET /api/v1/docker/network-map": {
+      "excluded": "Aggregated visualization of live sockets; per-container connections remain available through the API."
     }
   }
 }

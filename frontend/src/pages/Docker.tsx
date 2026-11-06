@@ -33,6 +33,7 @@ import {
   Terminal,
   Trash2,
   TriangleAlert,
+  Waypoints,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { ContainerCreateModal } from "../components/containers/ContainerCreate";
@@ -40,6 +41,7 @@ import { ContainerUpdateModal, type ContainerUpdateRun } from "../components/con
 import { ContainerSettingsModal } from "../components/containers/ContainerSettings";
 import { ContainerMap } from "../components/containers/ContainerMap";
 import { ContainerConnections } from "../components/containers/ContainerConnections";
+import { ContainerNetworkMap } from "../components/containers/ContainerNetworkMap";
 import { ContainerSecurityOverview } from "../components/containers/ContainerSecurityOverview";
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
@@ -125,12 +127,14 @@ export function DockerPage() {
       ? "map"
       : tabParam === "connections"
         ? "connections"
-        : tabParam === "security"
-          ? "security"
-          : "containers";
+        : tabParam === "network"
+          ? "network"
+          : tabParam === "security"
+            ? "security"
+            : "containers";
   const setTab = (value: string) => {
     const next = new URLSearchParams(params);
-    if (value === "map" || value === "connections" || value === "security") next.set("tab", value);
+    if (value === "map" || value === "connections" || value === "network" || value === "security") next.set("tab", value);
     else next.delete("tab");
     setParams(next, { replace: true });
   };
@@ -521,6 +525,7 @@ export function DockerPage() {
             { value: "containers", label: t("Containers"), count: containers.length },
             { value: "map", label: t("Resource map"), icon: <Network className="size-3.5" />, count: running.length },
             { value: "connections", label: t("Network calls"), icon: <Globe2 className="size-3.5" /> },
+            { value: "network", label: t("Network map"), icon: <Waypoints className="size-3.5" />, count: running.length },
             { value: "security", label: t("Security"), icon: <ShieldCheck className="size-3.5" /> },
           ]}
           value={tab}
@@ -550,6 +555,8 @@ export function DockerPage() {
         <ContainerMap containers={running} onOpen={openContainer} />
       ) : tab === "connections" ? (
         <ContainerConnections containers={running} />
+      ) : tab === "network" ? (
+        <ContainerNetworkMap />
       ) : tab === "security" ? (
         <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
       ) : (
@@ -736,7 +743,7 @@ export function DockerPage() {
         </>
       )}
 
-      {tab !== "connections" ? (
+      {tab !== "connections" && tab !== "network" ? (
         <ContainerDrawer
           container={selected}
           onClose={closeContainer}

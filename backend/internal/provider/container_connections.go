@@ -31,6 +31,10 @@ type geoEntry struct {
 // Sockets in a private network namespace already belong to the container;
 // host-network containers are filtered by their Docker process IDs.
 func (l *Live) ContainerConnections(ctx context.Context, id string) (model.ContainerConnections, error) {
+	return l.containerConnections(ctx, id, true)
+}
+
+func (l *Live) containerConnections(ctx context.Context, id string, enrichGeo bool) (model.ContainerConnections, error) {
 	id = strings.TrimSpace(id)
 	if id == "" || strings.ContainsAny(id, "/ \t\n\r\x00") {
 		return model.ContainerConnections{}, errors.New("invalid container id")
@@ -77,7 +81,9 @@ func (l *Live) ContainerConnections(ctx context.Context, id string) (model.Conta
 		return model.ContainerConnections{Available: true, Reason: "ss could not inspect the container network namespace", Connections: []model.ContainerConnection{}}, nil
 	}
 	connections := parseSSOutput(string(out), allowedPIDs)
-	l.enrichConnectionsGeo(ctx, connections)
+	if enrichGeo {
+		l.enrichConnectionsGeo(ctx, connections)
+	}
 	return model.ContainerConnections{Available: true, Connections: connections}, nil
 }
 

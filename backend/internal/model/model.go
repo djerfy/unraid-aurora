@@ -304,6 +304,48 @@ type ContainerConnections struct {
 	Connections []ContainerConnection `json:"connections"`
 }
 
+type ContainerNetworkMap struct {
+	Available  bool                  `json:"available"`
+	Reason     string                `json:"reason,omitempty"`
+	CapturedAt time.Time             `json:"capturedAt"`
+	Containers []NetworkMapContainer `json:"containers"`
+	Peers      []NetworkMapPeer      `json:"peers"`
+	Edges      []NetworkMapEdge      `json:"edges"`
+}
+
+type NetworkMapContainer struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Image   string `json:"image"`
+	State   string `json:"state"`
+	Network string `json:"network"`
+	IP      string `json:"ip"`
+}
+
+type NetworkMapPeer struct {
+	Address       string   `json:"address"`
+	Scope         string   `json:"scope"`
+	Country       string   `json:"country,omitempty"`
+	City          string   `json:"city,omitempty"`
+	ContainerID   string   `json:"containerId,omitempty"`
+	ContainerName string   `json:"containerName,omitempty"`
+	Connections   int      `json:"connections"`
+	Ports         []int    `json:"ports"`
+	Protocols     []string `json:"protocols"`
+}
+
+type NetworkMapEdge struct {
+	ContainerID     string `json:"containerId"`
+	ContainerName   string `json:"containerName"`
+	PeerAddress     string `json:"peerAddress"`
+	PeerContainerID string `json:"peerContainerId,omitempty"`
+	Protocol        string `json:"protocol"`
+	LocalPort       int    `json:"localPort"`
+	RemotePort      int    `json:"remotePort"`
+	State           string `json:"state"`
+	Process         string `json:"process"`
+}
+
 type ContainerMount struct {
 	Type        string `json:"type"`
 	Source      string `json:"source"`
