@@ -157,7 +157,8 @@ are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 | GET | `/docker/containers/{id}/config` | operator+ | Editable container configuration |
 | PUT | `/docker/containers/{id}/config` | operator | Recreate with new paths/ports/env |
 | DELETE | `/docker/containers/{id}` | operator | Remove a container |
-| POST | `/docker/containers/bulk` | operator | Start/stop/restart up to 100 containers |
+| POST | `/docker/containers/bulk` | operator | Start/stop/restart up to 100 containers (start order follows priority) |
+| PUT | `/docker/priorities` | operator | Save container startup priorities (0 first, 100 last) |
 | PUT | `/docker/containers/{id}/autostart` | operator | Toggle Unraid autostart |
 | GET | `/docker/containers/{id}/logs?lines=` | viewer+ | Log tail |
 | GET | `/docker/containers/{id}/connections` | viewer+ | Observed network sockets |

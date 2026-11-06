@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1450,6 +1451,27 @@ func (s *Server) mover(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, status)
 }
 
+func (s *Server) saveContainerPriorities(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Priorities map[string]int `json:"priorities"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	saved, err := s.provider.SaveContainerPriorities(ctx, body.Priorities)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "container_priorities", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "priorities": saved})
+}
+
 func (s *Server) bulkContainerAction(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.ReadOnly {
 		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
@@ -1475,6 +1497,13 @@ func (s *Server) bulkContainerAction(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
+	if kind == provider.ActionContainerStart || kind == provider.ActionContainerRestart {
+		if priorities, err := s.provider.ContainerPriorities(ctx); err != nil {
+			s.log.Warn("read container priorities", "error", err)
+		} else {
+			sortContainerTargets(body.Targets, priorities)
+		}
+	}
 	succeeded := []string{}
 	failed := []map[string]string{}
 	for _, target := range body.Targets {
@@ -1492,6 +1521,19 @@ func (s *Server) bulkContainerAction(w http.ResponseWriter, r *http.Request) {
 	}
 	s.log.Info("bulk container action", "kind", kind, "succeeded", len(succeeded), "failed", len(failed))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": len(failed) == 0, "succeeded": succeeded, "failed": failed})
+}
+
+func sortContainerTargets(targets []string, priorities map[string]int) {
+	sort.SliceStable(targets, func(i, j int) bool {
+		return containerTargetPriority(targets[i], priorities) < containerTargetPriority(targets[j], priorities)
+	})
+}
+
+func containerTargetPriority(name string, priorities map[string]int) int {
+	if value, ok := priorities[name]; ok {
+		return value
+	}
+	return 50
 }
 
 func (s *Server) startMover(w http.ResponseWriter, r *http.Request) {

@@ -469,9 +469,13 @@ The **Applications** page browses the official Community Applications feed:
 
 ![Applications](screenshots/apps.png)
 
-### Autostart and removal
+### Autostart, priorities and removal
 
 - **Start with the array** toggles Unraid's `/var/lib/docker/unraid-autostart` entry.
+- **Priorities** (page header) assigns a startup priority from **0** (starts first) to **100**
+  (starts last); the default is **50**. Bulk starts and restarts are sorted by priority.
+- Saving priorities also reorders `/var/lib/docker/unraid-autostart`, so the Unraid array start uses
+  the same order. Put databases, caches and registries first, then frontends and web services.
 - **Remove container** asks for confirmation; bind mounts and appdata stay on disk.
 
 ---

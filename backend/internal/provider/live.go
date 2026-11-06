@@ -30,12 +30,13 @@ import (
 // sysfs, the Docker socket and libvirt. Every field is best-effort: a missing
 // source yields zero values instead of failing the whole snapshot.
 type Live struct {
-	stateDir     string
-	bootDir      string
-	dockerSocket string
-	dataDir      string
-	configRoot   string
-	startedAt    time.Time
+	stateDir            string
+	bootDir             string
+	dockerSocket        string
+	dataDir             string
+	configRoot          string
+	dockerAutostartPath string
+	startedAt           time.Time
 
 	mu        sync.Mutex
 	lastCPU   cpuSample
@@ -715,6 +716,7 @@ func (l *Live) listContainers(ctx context.Context) ([]model.Container, error) {
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	applyContainerPriorities(out, l.containerPriorityMap())
 	return out, nil
 }
 

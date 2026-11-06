@@ -178,6 +178,11 @@ export const api = {
     request<import("./types").ContainerNetworkMap>(
       `/api/v1/docker/network-map${containerId ? `?container=${encodeURIComponent(containerId)}` : ""}`,
     ),
+  saveContainerPriorities: (priorities: Record<string, number>) =>
+    request<{ ok: boolean; priorities: Record<string, number> }>("/api/v1/docker/priorities", {
+      method: "PUT",
+      body: JSON.stringify({ priorities }),
+    }),
   createUser: (options: import("./types").UserCreateOptions) =>
     request<{ ok: boolean }>("/api/v1/users", { method: "POST", body: JSON.stringify(options) }),
   updateUser: (name: string, description: string) =>

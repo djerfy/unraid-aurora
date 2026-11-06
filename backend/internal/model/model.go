@@ -282,6 +282,7 @@ type Container struct {
 	Icon            string            `json:"icon"`
 	WebUI           string            `json:"webUi"`
 	RestartPolicy   string            `json:"restartPolicy"`
+	Priority        int               `json:"priority"`
 	Security        ContainerSecurity `json:"security"`
 }
 

@@ -18,6 +18,7 @@ import {
   HardDrive,
   Info as InfoIcon,
   List,
+  ListOrdered,
   MemoryStick,
   Network,
   Play,
@@ -42,6 +43,7 @@ import { ContainerSettingsModal } from "../components/containers/ContainerSettin
 import { ContainerMap } from "../components/containers/ContainerMap";
 import { ContainerConnections } from "../components/containers/ContainerConnections";
 import { ContainerNetworkMap } from "../components/containers/ContainerNetworkMap";
+import { ContainerPriorityModal } from "../components/containers/ContainerPriorityModal";
 import { ContainerSecurityOverview } from "../components/containers/ContainerSecurityOverview";
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
@@ -90,6 +92,7 @@ export function DockerPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [folderFilter, setFolderFilter] = useState("all");
   const [folderManager, setFolderManager] = useState(false);
+  const [priorityOpen, setPriorityOpen] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const visualFolders = useVisualFolders("containers");
@@ -480,6 +483,14 @@ export function DockerPage() {
         }
         actions={
           <>
+            <Button
+              variant="secondary"
+              icon={<ListOrdered className="size-3.5" />}
+              disabled={containers.length === 0}
+              onClick={() => setPriorityOpen(true)}
+            >
+              {t("Priorities")}
+            </Button>
             <Button variant="secondary" icon={<RefreshCw className="size-3.5" />} onClick={refresh}>
               {t("Refresh")}
             </Button>
@@ -646,7 +657,7 @@ export function DockerPage() {
             {t("Clear selection")}
           </Button>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" icon={<Play className="size-3" />} disabled={!selectedIds.size || bulk.isPending} onClick={() => runBulk("start")}>
+            <Button size="sm" variant="secondary" icon={<Play className="size-3" />} disabled={!selectedIds.size || bulk.isPending} title={t("Starts containers by priority, lowest number first")} onClick={() => runBulk("start")}>
               {t("Start")}
             </Button>
             <Button size="sm" variant="secondary" icon={<RotateCw className="size-3" />} disabled={!selectedIds.size || bulk.isPending} onClick={() => runBulk("restart")}>
@@ -759,6 +770,7 @@ export function DockerPage() {
       <ContainerSettingsModal container={editing} onClose={() => setEditing(null)} />
 
       <ContainerCreateModal open={creating} onClose={() => setCreating(false)} />
+      <ContainerPriorityModal open={priorityOpen} onClose={() => setPriorityOpen(false)} containers={containers} />
       <FolderManager
         open={folderManager}
         onClose={() => setFolderManager(false)}

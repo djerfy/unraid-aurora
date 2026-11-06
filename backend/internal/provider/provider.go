@@ -24,6 +24,8 @@ type Provider interface {
 	ContainerLogs(ctx context.Context, id string, lines int) ([]model.LogLine, error)
 	ContainerConnections(ctx context.Context, id string) (model.ContainerConnections, error)
 	ContainerNetworkMap(ctx context.Context, containerID string) (model.ContainerNetworkMap, error)
+	ContainerPriorities(ctx context.Context) (map[string]int, error)
+	SaveContainerPriorities(ctx context.Context, priorities map[string]int) (map[string]int, error)
 	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error

@@ -402,8 +402,15 @@ func shortLayerID(id string) string {
 	return id
 }
 
+func (l *Live) autostartPath() string {
+	if l.dockerAutostartPath != "" {
+		return l.dockerAutostartPath
+	}
+	return dockerAutostartFile
+}
+
 func (l *Live) containerAutostart() map[string]bool {
-	entries, err := readAutostartFile(dockerAutostartFile)
+	entries, err := readAutostartFile(l.autostartPath())
 	if err != nil {
 		return map[string]bool{}
 	}
@@ -473,17 +480,18 @@ func writeAutostartFile(path, name string, enabled bool) error {
 }
 
 func (l *Live) setContainerAutostart(name string, enabled bool) error {
-	kept, err := updatedAutostartEntries(dockerAutostartFile, name, enabled)
+	kept, err := updatedAutostartEntries(l.autostartPath(), name, enabled)
 	if err != nil {
 		return err
 	}
+	kept = sortAutostartEntries(kept, l.containerPriorityMap())
 	if len(kept) == 0 {
-		return l.deleteConfigFile("container.autostart", "Remove autostart entry · "+name, dockerAutostartFile)
+		return l.deleteConfigFile("container.autostart", "Remove autostart entry · "+name, l.autostartPath())
 	}
 	return l.writeConfigFile(
 		"container.autostart",
 		fmt.Sprintf("Set autostart %s · %s", map[bool]string{true: "on", false: "off"}[enabled], name),
-		dockerAutostartFile,
+		l.autostartPath(),
 		[]byte(strings.Join(kept, "\n")+"\n"),
 	)
 }

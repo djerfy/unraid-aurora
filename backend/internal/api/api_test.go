@@ -79,6 +79,14 @@ func (f *fakeProvider) ContainerNetworkMap(ctx context.Context, containerID stri
 	}, nil
 }
 
+func (f *fakeProvider) ContainerPriorities(ctx context.Context) (map[string]int, error) {
+	return map[string]int{"plex": 10}, nil
+}
+
+func (f *fakeProvider) SaveContainerPriorities(ctx context.Context, priorities map[string]int) (map[string]int, error) {
+	return priorities, nil
+}
+
 func (f *fakeProvider) Metrics(ctx context.Context) (model.Metrics, error) {
 	return model.Metrics{CPU: 10, Cores: []float64{10}}, nil
 }
@@ -678,6 +686,42 @@ func TestVisualFolderEndpoints(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestContainerPrioritiesEndpoint(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodPut, "/api/v1/docker/priorities",
+		map[string]any{"priorities": map[string]int{"plex": 10}}, headers)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var out struct {
+		OK         bool           `json:"ok"`
+		Priorities map[string]int `json:"priorities"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.OK || out.Priorities["plex"] != 10 {
+		t.Fatalf("unexpected response: %+v", out)
+	}
+}
+
+func TestSortContainerTargets(t *testing.T) {
+	targets := []string{"web", "db", "cache", "other"}
+	sortContainerTargets(targets, map[string]int{"db": 10, "cache": 20})
+	want := []string{"db", "cache", "web", "other"}
+	for index := range want {
+		if targets[index] != want[index] {
+			t.Fatalf("sorted = %v, want %v", targets, want)
+		}
 	}
 }
 

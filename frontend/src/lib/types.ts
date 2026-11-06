@@ -532,6 +532,7 @@ export type Container = {
   icon: string;
   webUi: string;
   restartPolicy: string;
+  priority: number;
   security: ContainerSecurity;
 };
 

@@ -7080,7 +7080,7 @@
           "Docker"
         ],
         "summary": "Bulk container action",
-        "description": "Start/stop/restart up to 100 containers",
+        "description": "Start/stop/restart up to 100 containers (start order follows priority)",
         "operationId": "post_docker_containers_bulk",
         "security": [
           {
@@ -9432,6 +9432,68 @@
                     "type": "boolean"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/docker/priorities": {
+      "put": {
+        "tags": [
+          "Docker"
+        ],
+        "summary": "Save container startup priorities (0 first, 100 last)",
+        "description": "Save container startup priorities (0 first, 100 last)",
+        "operationId": "put_docker_priorities",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "operator",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
               }
             }
           }

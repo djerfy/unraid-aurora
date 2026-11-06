@@ -131,6 +131,21 @@ const docker: Record<string, string> = {
   "Recreate container": "Recréer le conteneur",
   "Remove previous container": "Retirer le conteneur précédent",
   "Network calls": "Appels réseau",
+  "Priorities": "Priorités",
+  "Startup priorities": "Priorités de démarrage",
+  "Containers with a lower number start first. 0 is the highest priority, 100 the lowest.":
+    "Les conteneurs avec un numéro plus bas démarrent en premier. 0 est la priorité la plus haute, 100 la plus basse.",
+  "Save priorities": "Enregistrer les priorités",
+  "Startup priorities saved": "Priorités de démarrage enregistrées",
+  "Reset to 50": "Réinitialiser à 50",
+  "Priority for {name}": "Priorité de {name}",
+  "0 first": "0 en premier",
+  "100 last": "100 en dernier",
+  "Bulk starts and the Unraid autostart file follow this order.":
+    "Les démarrages en masse et le fichier d'autostart Unraid suivent cet ordre.",
+  "Starts containers by priority, lowest number first":
+    "Démarre les conteneurs par priorité, numéro le plus bas en premier",
+  "No containers.": "Aucun conteneur.",
   "Choose a container or All containers to build the network map.": "Choisissez un conteneur ou Tous les conteneurs pour construire la carte réseau.",
   "Incoming": "Entrantes",
   "Outgoing": "Sortantes",
