@@ -1,18 +1,16 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Boxes, Globe2, RefreshCw, Router, TriangleAlert, Waypoints } from "lucide-react";
 import { api } from "../../lib/api";
 import { useI18n } from "../../i18n";
 import { Badge, Card, IconButton, cn } from "../ui/primitives";
 import { EntityIcon, containerIconURL } from "../ui/entity-icon";
-import type { NetworkMapEdge, NetworkMapPeer } from "../../lib/types";
+import type { Container, NetworkMapEdge, NetworkMapPeer } from "../../lib/types";
 
 const NODE_HEIGHT = 52;
 const ROW = 62;
 const HEADER = 34;
-const WIDTH = 980;
-const COLUMN = 320;
-const PEER_X = WIDTH - COLUMN;
+const MIN_GRAPH_WIDTH = 760;
 
 const SCOPE_COLOR: Record<string, string> = {
   container: "var(--success)",
@@ -73,15 +71,29 @@ function buildLinks(edges: NetworkMapEdge[], peers: NetworkMapPeer[]): MapLink[]
   });
 }
 
-export function ContainerNetworkMap() {
+export function ContainerNetworkMap({ containers }: { containers: Container[] }) {
   const { t } = useI18n();
+  const [target, setTarget] = useState("");
   const [scope, setScope] = useState("all");
   const [hovered, setHovered] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
+  const [graphWidth, setGraphWidth] = useState(0);
+
+  useEffect(() => {
+    const element = graphRef.current;
+    if (!element) return;
+    const measure = () => setGraphWidth(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const query = useQuery({
-    queryKey: ["container-network-map"],
-    queryFn: api.containerNetworkMap,
+    queryKey: ["container-network-map", target],
+    queryFn: () => api.containerNetworkMap(target === "all" ? undefined : target),
+    enabled: target !== "",
     refetchInterval: (result) => (result.state.data?.available === false ? false : 15000),
   });
   const data = query.data;
@@ -118,11 +130,25 @@ export function ContainerNetworkMap() {
     peerCounts.set(edge.peerAddress, (peerCounts.get(edge.peerAddress) ?? 0) + 1);
   }
   const height = HEADER + Math.max(mapContainers.length, peers.length, 1) * ROW;
+  const viewportWidth = Math.max(graphWidth, MIN_GRAPH_WIDTH);
+  const columnWidth = Math.min(420, Math.max(280, Math.round(viewportWidth * 0.3)));
+  const peerX = viewportWidth - columnWidth;
   const linkIsActive = (link: MapLink) =>
     !active || active === `c:${link.containerId}` || active === `p:${link.peer.address}`;
   const nodeIsDimmed = (key: string) => Boolean(active && active !== key);
 
   const body = (() => {
+    if (!target) {
+      return (
+        <div className="grid min-h-[220px] place-items-center rounded-xl border border-dashed border-line bg-[var(--surface-2)]/35 px-4 text-center">
+          <div>
+            <Waypoints className="mx-auto size-6 text-subtle" />
+            <p className="mt-2 text-[11.5px] font-medium text-soft">{t("Select a container")}</p>
+            <p className="mt-1 text-[10px] text-subtle">{t("Choose a container or All containers to build the network map.")}</p>
+          </div>
+        </div>
+      );
+    }
     if (query.isLoading) {
       return <p className="py-12 text-center text-[10.5px] text-muted">{t("Scanning container sockets…")}</p>;
     }
@@ -163,26 +189,26 @@ export function ContainerNetworkMap() {
     return (
       <>
         <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
-          <div className="relative" style={{ width: WIDTH, height }}>
+          <div className="relative" style={{ width: viewportWidth, height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: 4 }}>
               {t("Containers")}
             </span>
-            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: PEER_X + 4 }}>
+            <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: peerX + 4 }}>
               {t("Peers")}
             </span>
 
-            <svg className="pointer-events-none absolute inset-0" width={WIDTH} height={height} aria-hidden="true">
+            <svg className="pointer-events-none absolute inset-0" width={viewportWidth} height={height} aria-hidden="true">
               {links.map((link) => {
                 const from = containerIndex.get(link.containerId);
                 const to = peerIndex.get(link.peer.address);
                 if (from === undefined || to === undefined) return null;
                 const y1 = HEADER + from * ROW + NODE_HEIGHT / 2;
                 const y2 = HEADER + to * ROW + NODE_HEIGHT / 2;
-                const mid = (COLUMN + PEER_X) / 2;
+                const mid = (columnWidth + peerX) / 2;
                 return (
                   <path
                     key={link.key}
-                    d={`M ${COLUMN + 4} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${PEER_X - 4} ${y2}`}
+                    d={`M ${columnWidth + 4} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${peerX - 4} ${y2}`}
                     fill="none"
                     stroke={SCOPE_COLOR[link.peer.scope] ?? "var(--muted)"}
                     strokeWidth={1 + Math.min(3, link.count * 0.5)}
@@ -208,7 +234,7 @@ export function ContainerNetworkMap() {
                     nodeIsDimmed(key) && "opacity-30",
                     pinned === key && "border-[var(--accent-line)]",
                   )}
-                  style={{ left: 0, top: HEADER + index * ROW, width: COLUMN, height: NODE_HEIGHT }}
+                  style={{ left: 0, top: HEADER + index * ROW, width: columnWidth, height: NODE_HEIGHT }}
                 >
                   <EntityIcon src={containerIconURL(container.id)} name={container.name} size={28} className="rounded-md" />
                   <span className="min-w-0 flex-1">
@@ -240,9 +266,9 @@ export function ContainerNetworkMap() {
                     pinned === key && "border-[var(--accent-line)]",
                   )}
                   style={{
-                    left: PEER_X,
+                    left: peerX,
                     top: HEADER + index * ROW,
-                    width: COLUMN,
+                    width: columnWidth,
                     height: NODE_HEIGHT,
                     borderLeftColor: SCOPE_COLOR[peer.scope] ?? "var(--muted)",
                   }}
@@ -334,6 +360,18 @@ export function ContainerNetworkMap() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+            aria-label={t("Container")}
+            className="h-9 min-w-[180px] rounded-lg border border-line bg-[var(--surface-2)] px-2.5 text-[11px] text-soft outline-none focus:border-[var(--accent-line)]"
+          >
+            <option value="" hidden></option>
+            <option value="all">{t("All containers")}</option>
+            {containers.map((container) => (
+              <option key={container.id} value={container.id}>{container.name}</option>
+            ))}
+          </select>
+          <select
             value={scope}
             onChange={(event) => setScope(event.target.value)}
             aria-label={t("Scope")}
@@ -344,7 +382,7 @@ export function ContainerNetworkMap() {
             <option value="lan">{t("LAN")} ({scopeCounts.lan})</option>
             <option value="internet">{t("Internet")} ({scopeCounts.internet})</option>
           </select>
-          <IconButton label={t("Refresh")} size="md" onClick={() => void query.refetch()} disabled={query.isFetching}>
+          <IconButton label={t("Refresh")} size="md" onClick={() => void query.refetch()} disabled={!target || query.isFetching}>
             <RefreshCw className={cn("size-4", query.isFetching && "animate-spin")} />
           </IconButton>
         </div>
@@ -359,7 +397,7 @@ export function ContainerNetworkMap() {
         </div>
       ) : null}
 
-      <div className="mt-4">{body}</div>
+      <div ref={graphRef} className="mt-4">{body}</div>
 
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2.5 text-[9px] text-subtle">
         <span className="flex items-center gap-1.5"><span className="size-2 rounded-full" style={{ background: SCOPE_COLOR.container }} /> {t("Containers")}</span>

@@ -2479,8 +2479,8 @@
         "tags": [
           "Docker"
         ],
-        "summary": "Aggregated container-to-peer network graph",
-        "description": "Aggregated container-to-peer network graph",
+        "summary": "Container-to-peer network graph; omit `container` for all running containers",
+        "description": "Container-to-peer network graph; omit `container` for all running containers",
         "operationId": "get_docker_network_map",
         "security": [
           {

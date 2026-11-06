@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sort"
 	"strconv"
@@ -26,7 +27,7 @@ const (
 // ContainerNetworkMap aggregates live sockets across running containers into a
 // node/edge graph. Loopback peers are dropped because they describe in-container
 // wiring rather than a conversation with the outside.
-func (l *Live) ContainerNetworkMap(ctx context.Context) (model.ContainerNetworkMap, error) {
+func (l *Live) ContainerNetworkMap(ctx context.Context, containerID string) (model.ContainerNetworkMap, error) {
 	containers, err := l.listContainers(ctx)
 	if err != nil {
 		return model.ContainerNetworkMap{}, err
@@ -37,8 +38,22 @@ func (l *Live) ContainerNetworkMap(ctx context.Context) (model.ContainerNetworkM
 			running = append(running, container)
 		}
 	}
-	connections := l.gatherContainerConnections(ctx, running)
-	result := buildContainerNetworkMap(running, connections)
+	inspected := running
+	if containerID = strings.TrimSpace(containerID); containerID != "" {
+		selected := -1
+		for index := range running {
+			if running[index].ID == containerID {
+				selected = index
+				break
+			}
+		}
+		if selected < 0 {
+			return model.ContainerNetworkMap{}, fmt.Errorf("container %q is not running", containerID)
+		}
+		inspected = []model.Container{running[selected]}
+	}
+	connections := l.gatherContainerConnections(ctx, inspected)
+	result := buildContainerNetworkMap(running, inspected, connections)
 
 	available := 0
 	reason := ""
@@ -90,28 +105,30 @@ func (l *Live) gatherContainerConnections(ctx context.Context, containers []mode
 	return results
 }
 
-func buildContainerNetworkMap(containers []model.Container, connections map[string]model.ContainerConnections) model.ContainerNetworkMap {
+func buildContainerNetworkMap(allContainers, inspected []model.Container, connections map[string]model.ContainerConnections) model.ContainerNetworkMap {
 	out := model.ContainerNetworkMap{
 		Available:  true,
 		CapturedAt: time.Now().UTC(),
-		Containers: make([]model.NetworkMapContainer, 0, len(containers)),
+		Containers: make([]model.NetworkMapContainer, 0, len(inspected)),
 		Peers:      []model.NetworkMapPeer{},
 		Edges:      []model.NetworkMapEdge{},
 	}
-	byIP := make(map[string]model.Container, len(containers))
-	for _, container := range containers {
-		out.Containers = append(out.Containers, model.NetworkMapContainer{
-			ID: container.ID, Name: container.Name, Image: container.Image,
-			State: container.State, Network: container.Network, IP: container.IP,
-		})
+	byIP := make(map[string]model.Container, len(allContainers))
+	for _, container := range allContainers {
 		if container.IP != "" {
 			byIP[container.IP] = container
 		}
 	}
+	for _, container := range inspected {
+		out.Containers = append(out.Containers, model.NetworkMapContainer{
+			ID: container.ID, Name: container.Name, Image: container.Image,
+			State: container.State, Network: container.Network, IP: container.IP,
+		})
+	}
 
 	peerIndex := map[string]int{}
 	edgeSeen := map[string]bool{}
-	for _, container := range containers {
+	for _, container := range inspected {
 		for _, connection := range connections[container.ID].Connections {
 			remote := strings.TrimSpace(connection.RemoteAddress)
 			if remote == "" {

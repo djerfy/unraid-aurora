@@ -556,7 +556,7 @@ export function DockerPage() {
       ) : tab === "connections" ? (
         <ContainerConnections containers={running} />
       ) : tab === "network" ? (
-        <ContainerNetworkMap />
+        <ContainerNetworkMap containers={running} />
       ) : tab === "security" ? (
         <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
       ) : (

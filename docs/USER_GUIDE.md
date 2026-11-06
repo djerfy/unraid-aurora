@@ -332,8 +332,10 @@ sends addresses to an external geolocation API.
 
 ### Network map
 
-The **Network map** tab aggregates the live sockets of every running container into a graph:
+The **Network map** tab turns the live sockets of running containers into a graph:
 
+- Nothing is loaded until a container is selected. Choose a specific container, or **All containers**
+  to aggregate every running container.
 - Containers are on the left, remote peers on the right, and each curve is a conversation.
 - Peers are grouped by IP and classified as **Containers** (the IP belongs to another container),
   **LAN** (private address) or **Internet** (public address).

@@ -475,7 +475,7 @@ func (s *Server) containerConnections(w http.ResponseWriter, r *http.Request) {
 func (s *Server) containerNetworkMap(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()
-	v, err := s.provider.ContainerNetworkMap(ctx)
+	v, err := s.provider.ContainerNetworkMap(ctx, r.URL.Query().Get("container"))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "container_network_map", err.Error())
 		return

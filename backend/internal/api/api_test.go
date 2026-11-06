@@ -66,7 +66,7 @@ func (f *fakeProvider) ContainerConnections(ctx context.Context, id string) (mod
 	}, nil
 }
 
-func (f *fakeProvider) ContainerNetworkMap(ctx context.Context) (model.ContainerNetworkMap, error) {
+func (f *fakeProvider) ContainerNetworkMap(ctx context.Context, containerID string) (model.ContainerNetworkMap, error) {
 	return model.ContainerNetworkMap{
 		Available:  true,
 		CapturedAt: time.Now(),

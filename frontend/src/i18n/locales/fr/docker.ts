@@ -131,6 +131,7 @@ const docker: Record<string, string> = {
   "Recreate container": "Recréer le conteneur",
   "Remove previous container": "Retirer le conteneur précédent",
   "Network calls": "Appels réseau",
+  "Choose a container or All containers to build the network map.": "Choisissez un conteneur ou Tous les conteneurs pour construire la carte réseau.",
   "Network map": "Carte réseau",
   "All scopes": "Toutes les portées",
   "LAN": "LAN",

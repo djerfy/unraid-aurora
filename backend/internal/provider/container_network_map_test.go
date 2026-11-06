@@ -23,7 +23,7 @@ func TestBuildContainerNetworkMap(t *testing.T) {
 		}},
 	}
 
-	out := buildContainerNetworkMap(containers, connections)
+	out := buildContainerNetworkMap(containers, containers, connections)
 	if !out.Available || len(out.Containers) != 2 {
 		t.Fatalf("unexpected containers: %+v", out)
 	}
@@ -59,5 +59,30 @@ func TestClassifyNetworkMapPeer(t *testing.T) {
 	}
 	if scope, _, _ := classifyNetworkMapPeer("not-an-ip", byIP); scope != "other" {
 		t.Fatalf("expected other, got %s", scope)
+	}
+}
+
+func TestBuildContainerNetworkMapContainerFilter(t *testing.T) {
+	all := []model.Container{
+		{ID: "web", Name: "web", IP: "172.18.0.2", State: "running"},
+		{ID: "db", Name: "db", IP: "172.18.0.3", State: "running"},
+	}
+	inspected := []model.Container{all[0]}
+	connections := map[string]model.ContainerConnections{
+		"web": {Available: true, Connections: []model.ContainerConnection{
+			{Protocol: "tcp", State: "ESTAB", RemoteAddress: "172.18.0.3", RemotePort: 5432},
+			{Protocol: "tcp", State: "ESTAB", RemoteAddress: "1.1.1.1", RemotePort: 443},
+		}},
+	}
+
+	out := buildContainerNetworkMap(all, inspected, connections)
+	if len(out.Containers) != 1 || out.Containers[0].Name != "web" {
+		t.Fatalf("only the inspected container must be a node: %+v", out.Containers)
+	}
+	if len(out.Edges) != 2 || len(out.Peers) != 2 {
+		t.Fatalf("unexpected edges/peers: %+v %+v", out.Edges, out.Peers)
+	}
+	if out.Peers[0].Scope != "container" || out.Peers[0].ContainerName != "db" {
+		t.Fatalf("peers must still resolve against every running container: %+v", out.Peers)
 	}
 }
