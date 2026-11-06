@@ -161,13 +161,17 @@ func buildContainerNetworkMap(allContainers, inspected []model.Container, connec
 			}
 			peer := &out.Peers[index]
 			peer.Connections++
-			peer.Ports = appendUniqueInt(peer.Ports, connection.RemotePort)
+			port := connection.RemotePort
+			if connection.Direction == "inbound" {
+				port = connection.LocalPort
+			}
+			peer.Ports = appendUniqueInt(peer.Ports, port)
 			peer.Protocols = appendUniqueString(peer.Protocols, connection.Protocol)
 
 			out.Edges = append(out.Edges, model.NetworkMapEdge{
 				ContainerID: container.ID, ContainerName: container.Name,
 				PeerAddress: remote, PeerContainerID: peerID,
-				Protocol:  connection.Protocol,
+				Protocol: connection.Protocol, Direction: connection.Direction,
 				LocalPort: connection.LocalPort, RemotePort: connection.RemotePort,
 				State: connection.State, Process: connection.Process,
 			})

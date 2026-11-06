@@ -86,3 +86,20 @@ func TestBuildContainerNetworkMapContainerFilter(t *testing.T) {
 		t.Fatalf("peers must still resolve against every running container: %+v", out.Peers)
 	}
 }
+
+func TestBuildContainerNetworkMapKeepsDirection(t *testing.T) {
+	containers := []model.Container{{ID: "web", Name: "web", IP: "172.18.0.2", State: "running"}}
+	connections := map[string]model.ContainerConnections{
+		"web": {Available: true, Connections: []model.ContainerConnection{{
+			Protocol: "tcp", State: "ESTAB", Direction: "inbound",
+			LocalPort: 8080, RemotePort: 52144, RemoteAddress: "203.0.113.4",
+		}}},
+	}
+	out := buildContainerNetworkMap(containers, containers, connections)
+	if len(out.Edges) != 1 || out.Edges[0].Direction != "inbound" {
+		t.Fatalf("edge direction was lost: %+v", out.Edges)
+	}
+	if len(out.Peers) != 1 || len(out.Peers[0].Ports) != 1 || out.Peers[0].Ports[0] != 8080 {
+		t.Fatalf("inbound peers must expose the service port: %+v", out.Peers)
+	}
+}

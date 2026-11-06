@@ -121,7 +121,9 @@ func parseSSOutput(output string, allowedPIDs map[int]bool) []model.ContainerCon
 }
 
 func parseSSOutputWithPorts(output string, allowedPIDs, acceptedPorts map[int]bool) []model.ContainerConnection {
-	listening := parseSSListeningPorts(output, allowedPIDs)
+	// Every listening port is useful for direction detection; the sockets
+	// themselves are already filtered by PID for host-network containers.
+	listening := parseSSListeningPorts(output, nil)
 	for port := range acceptedPorts {
 		listening[port] = true
 	}

@@ -19,7 +19,6 @@ import type { Container, NetworkMapEdge, NetworkMapPeer } from "../../lib/types"
 const NODE_HEIGHT = 52;
 const ROW = 62;
 const HEADER = 34;
-const MIN_GRAPH_WIDTH = 640;
 
 const SCOPE_COLOR: Record<string, string> = {
   container: "var(--success)",
@@ -86,7 +85,8 @@ function buildGraph(edges: NetworkMapEdge[], peers: NetworkMapPeer[]) {
       bucket.set(peer.address, node);
     }
     node.edgeCount += 1;
-    if (edge.remotePort && !node.ports.includes(edge.remotePort)) node.ports.push(edge.remotePort);
+    const port = direction === "inbound" ? edge.localPort : edge.remotePort;
+    if (port && !node.ports.includes(port)) node.ports.push(port);
     if (edge.protocol && !node.protocols.includes(edge.protocol)) node.protocols.push(edge.protocol);
 
     const key = `${direction}|${edge.containerId}|${peer.address}`;
@@ -106,7 +106,7 @@ function buildGraph(edges: NetworkMapEdge[], peers: NetworkMapPeer[]) {
       links.set(key, link);
     }
     link.count += 1;
-    if (edge.remotePort && !link.ports.includes(edge.remotePort)) link.ports.push(edge.remotePort);
+    if (port && !link.ports.includes(port)) link.ports.push(port);
     if (edge.protocol && !link.protocols.includes(edge.protocol)) link.protocols.push(edge.protocol);
   }
 
@@ -189,9 +189,9 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
   }
 
   const height = HEADER + Math.max(inbound.length, mapContainers.length, outbound.length, 1) * ROW;
-  const viewportWidth = Math.max(Math.floor(graphWidth * 0.9), MIN_GRAPH_WIDTH);
-  const gutter = Math.min(80, Math.max(36, Math.round(viewportWidth * 0.05)));
-  const columnWidth = Math.min(420, Math.floor((viewportWidth - 2 * gutter) / 3));
+  const viewportWidth = graphWidth > 0 ? Math.max(320, Math.floor(graphWidth * 0.9) - 4) : 900;
+  const gutter = Math.min(80, Math.max(24, Math.round(viewportWidth * 0.05)));
+  const columnWidth = Math.min(420, Math.max(0, Math.floor((viewportWidth - 2 * gutter) / 3)));
   const usedWidth = columnWidth * 3 + 2 * gutter;
   const startX = Math.max(0, Math.floor((viewportWidth - usedWidth) / 2));
   const inboundX = startX;
@@ -307,11 +307,8 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     }
     return (
       <>
-        <div
-          className="mx-auto overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20"
-          style={{ width: viewportWidth, maxWidth: "100%" }}
-        >
-          <div className="relative" style={{ width: viewportWidth, height }}>
+        <div className="mx-auto overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20" style={{ width: "90%" }}>
+          <div className="relative" style={{ width: "100%", height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: inboundX + 4 }}>
               {t("Incoming")}
             </span>
@@ -322,7 +319,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
               {t("Outgoing")}
             </span>
 
-            <svg className="pointer-events-none absolute inset-0" width={viewportWidth} height={height} aria-hidden="true">
+            <svg className="pointer-events-none absolute inset-0" width="100%" height={height} aria-hidden="true">
               {links.map((link) => {
                 const containerPosition = containerIndex.get(link.containerId);
                 if (containerPosition === undefined) return null;
@@ -405,7 +402,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
             </span>
           </div>
           <div className="mt-2 overflow-x-auto rounded-xl border border-line">
-            <div className="min-w-[860px]">
+            <div className="min-w-0">
               <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_74px_78px_84px_58px] gap-3 border-b border-line bg-[var(--surface-2)]/50 px-3 py-2 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-subtle">
                 <span>{t("Container")}</span>
                 <span>{t("Peer")}</span>
