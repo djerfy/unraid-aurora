@@ -264,7 +264,6 @@ export function VMsPage() {
                     name={entry.folder.name}
                     count={entry.items.length}
                     names={entry.items.map((vm) => vm.name)}
-                    onClick={() => setFolderFilter(entry.folder.id)}
                   />
                 ) : (
                   <VMCard
@@ -297,12 +296,10 @@ export function VMsPage() {
                       name={entry.folder.name}
                       count={entry.items.length}
                       items={entry.items.map((vm) => ({ id: vm.id, name: vm.name }))}
-                      onOpen={() => setFolderFilter(entry.folder.id)}
                       onOpenItem={(id) => {
                         const vm = vms.find((item) => item.id === id);
                         if (vm) setSelected(vm);
                       }}
-                      openLabel={t("Open a virtual machine…")}
                     />
                   ) : (
                     <VMRow

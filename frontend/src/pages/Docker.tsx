@@ -582,7 +582,6 @@ export function DockerPage() {
                 name={entry.folder.name}
                 count={entry.items.length}
                 names={entry.items.map((container) => container.name)}
-                onClick={() => setFolderFilter(entry.folder.id)}
               />
             ) : (
               <ContainerCard
@@ -632,12 +631,10 @@ export function DockerPage() {
                   name={entry.folder.name}
                   count={entry.items.length}
                   items={entry.items.map((container) => ({ id: container.id, name: container.name }))}
-                  onOpen={() => setFolderFilter(entry.folder.id)}
                   onOpenItem={(id) => {
                     const container = containers.find((item) => item.id === id);
                     if (container) openContainer(container);
                   }}
-                  openLabel={t("Open a container…")}
                 />
               ) : (
                 <ContainerRow
