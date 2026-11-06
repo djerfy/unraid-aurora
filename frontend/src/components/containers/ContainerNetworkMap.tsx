@@ -130,7 +130,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     peerCounts.set(edge.peerAddress, (peerCounts.get(edge.peerAddress) ?? 0) + 1);
   }
   const height = HEADER + Math.max(mapContainers.length, peers.length, 1) * ROW;
-  const viewportWidth = Math.max(graphWidth, MIN_GRAPH_WIDTH);
+  const viewportWidth = Math.max(Math.floor(graphWidth * 0.9), MIN_GRAPH_WIDTH);
   const columnWidth = Math.min(420, Math.max(280, Math.round(viewportWidth * 0.3)));
   const peerX = viewportWidth - columnWidth;
   const linkIsActive = (link: MapLink) =>
@@ -189,7 +189,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
     return (
       <>
         <div className="overflow-x-auto rounded-xl border border-line bg-[var(--surface-2)]/20">
-          <div className="relative" style={{ width: viewportWidth, height }}>
+          <div className="relative mx-auto" style={{ width: viewportWidth, height }}>
             <span className="absolute top-2 text-[8.5px] font-semibold uppercase tracking-[0.12em] text-subtle" style={{ left: 4 }}>
               {t("Containers")}
             </span>
