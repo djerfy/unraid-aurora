@@ -132,6 +132,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
   const [target, setTarget] = useState("");
   const [scope, setScope] = useState("all");
   const [hovered, setHovered] = useState<string | null>(null);
+  const [hoveredLinkKey, setHoveredLinkKey] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const graphRef = useRef<HTMLDivElement>(null);
   const [graphWidth, setGraphWidth] = useState(0);
@@ -176,6 +177,7 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
       outbound.some((peer) => `o:${peer.address}` === activeCandidate))
       ? activeCandidate
       : null;
+  const emphasizedLink = hoveredLinkKey ? links.find((link) => link.key === hoveredLinkKey) ?? null : null;
 
   const containerIndex = new Map(mapContainers.map((container, index) => [container.id, index]));
   const inboundIndex = new Map(inbound.map((peer, index) => [peer.address, index]));
@@ -199,8 +201,15 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
   const outboundX = startX + 2 * (columnWidth + gutter);
 
   const linkIsActive = (link: MapLink) =>
-    !active || active === `c:${link.containerId}` || active === link.peerKey;
-  const nodeIsDimmed = (key: string) => Boolean(active && active !== key);
+    emphasizedLink
+      ? link.key === emphasizedLink.key
+      : !active || active === `c:${link.containerId}` || active === link.peerKey;
+  const nodeIsDimmed = (key: string) => {
+    if (emphasizedLink) {
+      return key !== `c:${emphasizedLink.containerId}` && key !== emphasizedLink.peerKey;
+    }
+    return Boolean(active && active !== key);
+  };
 
   const peerNode = (peer: PeerNode, index: number, left: number) => {
     const key = `${peer.direction === "inbound" ? "i" : "o"}:${peer.address}`;
@@ -347,16 +356,27 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
                 const fromY = link.direction === "inbound" ? yPeer : yContainer;
                 const toY = link.direction === "inbound" ? yContainer : yPeer;
                 const mid = (fromX + toX) / 2;
+                const path = `M ${fromX} ${fromY} C ${mid} ${fromY}, ${mid} ${toY}, ${toX} ${toY}`;
                 return (
-                  <path
-                    key={link.key}
-                    d={`M ${fromX} ${fromY} C ${mid} ${fromY}, ${mid} ${toY}, ${toX} ${toY}`}
-                    fill="none"
-                    stroke={SCOPE_COLOR[link.peer.scope] ?? "var(--muted)"}
-                    strokeWidth={1 + Math.min(3, link.count * 0.5)}
-                    strokeOpacity={linkIsActive(link) ? 0.72 : 0.1}
-                    className="transition-opacity"
-                  />
+                  <g key={link.key}>
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke={SCOPE_COLOR[link.peer.scope] ?? "var(--muted)"}
+                      strokeWidth={1 + Math.min(3, link.count * 0.5)}
+                      strokeOpacity={linkIsActive(link) ? 0.72 : 0.1}
+                      className="transition-opacity"
+                    />
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={14}
+                      style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                      onMouseEnter={() => setHoveredLinkKey(link.key)}
+                      onMouseLeave={() => setHoveredLinkKey(null)}
+                    />
+                  </g>
                 );
               })}
             </svg>
@@ -423,8 +443,8 @@ export function ContainerNetworkMap({ containers }: { containers: Container[] })
                 {links.map((link) => (
                   <div
                     key={link.key}
-                    onMouseEnter={() => setHovered(`c:${link.containerId}`)}
-                    onMouseLeave={() => setHovered(null)}
+                    onMouseEnter={() => setHoveredLinkKey(link.key)}
+                    onMouseLeave={() => setHoveredLinkKey(null)}
                     className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_88px_74px_78px_84px_58px] items-center gap-3 px-3 py-2 text-[10px] transition hover:bg-[var(--surface-2)]/50"
                   >
                     <span className="min-w-0 truncate text-[10.5px] font-medium text-ink">{link.containerName}</span>
