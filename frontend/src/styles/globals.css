@@ -406,6 +406,17 @@
   backdrop-filter: blur(24px);
 }
 
+/* Neutral buttons use the same material as the sidebar and glass cards. */
+[data-glass="on"] button[data-variant="secondary"] {
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+[data-glass="on"] button[data-variant="secondary"]:hover {
+  background: color-mix(in srgb, var(--surface-3) 82%, transparent);
+}
+
 /* A stronger atmosphere gives the glass something to refract. */
 [data-glass="on"] .app-atmosphere::before {
   opacity: 1;
@@ -426,6 +437,12 @@
 
   [data-glass="on"] .glass {
     background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  [data-glass="on"] button[data-variant="secondary"] {
+    background: var(--surface-2);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
