@@ -220,7 +220,7 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 
-	root.Handle("/api/v1/mcp", mcpserver.HTTPHandler(func(r *http.Request) mcpserver.Options {
+	mcpHandler := mcpserver.HTTPHandler(func(r *http.Request) mcpserver.Options {
 		principal, _ := r.Context().Value(tokenContextKey{}).(tokenPrincipal)
 		role := principal.Role
 		if role == "" {
@@ -248,7 +248,19 @@ func (s *Server) Handler() http.Handler {
 				})
 			},
 		}
-	}))
+	})
+	root.HandleFunc("/api/v1/mcp", func(w http.ResponseWriter, r *http.Request) {
+		settings, err := s.provider.Settings(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "settings", err.Error())
+			return
+		}
+		if !settings.MCPEnabled {
+			writeError(w, http.StatusForbidden, "mcp_disabled", "the MCP server is disabled in Settings")
+			return
+		}
+		mcpHandler.ServeHTTP(w, r)
+	})
 
 	if ui, err := webui.Handler(); err == nil {
 		root.Handle("/", ui)

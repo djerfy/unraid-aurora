@@ -958,6 +958,7 @@ type Settings struct {
 	TrivyEnabled        bool              `json:"trivyEnabled"`
 	TrivyVersion        string            `json:"trivyVersion"`
 	TrivyDBUpdateHour   int               `json:"trivyDbUpdateHour"`
+	MCPEnabled          bool              `json:"mcpEnabled"`
 }
 
 type Task struct {

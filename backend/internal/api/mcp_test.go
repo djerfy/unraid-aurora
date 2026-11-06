@@ -48,6 +48,7 @@ func TestMCPTokenScopes(t *testing.T) {
 
 func TestMCPHTTPScopedViewer(t *testing.T) {
 	env := newTestEnv(t, false)
+	env.provider.settings.MCPEnabled = true
 	headers := map[string]string{"X-Aurora-Request": "aurora"}
 	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
 		map[string]string{"username": "root", "password": "secret"}, headers)
@@ -93,6 +94,7 @@ func TestMCPHTTPScopedViewer(t *testing.T) {
 
 func TestMCPHTTPReadOnlySession(t *testing.T) {
 	env := newTestEnv(t, false)
+	env.provider.settings.MCPEnabled = true
 	headers := map[string]string{"X-Aurora-Request": "aurora"}
 	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
 		map[string]string{"username": "root", "password": "secret"}, headers)

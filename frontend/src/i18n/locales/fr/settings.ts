@@ -63,6 +63,14 @@ const settings: Record<string, string> = {
   "Choose a file under 8 MB.": "Choisissez un fichier de moins de 8 Mo.",
   "Could not load the wallpaper": "Impossible de charger le fond d'écran",
   "Choose a valid image file.": "Choisissez un fichier image valide.",
+  "MCP server": "Serveur MCP",
+  "Expose the Model Context Protocol endpoint for AI clients.":
+    "Expose le point d'accès Model Context Protocol aux clients IA.",
+  "Enable MCP server": "Activer le serveur MCP",
+  "Serves /api/v1/mcp for bearer-token clients. Disabled by default.":
+    "Sert /api/v1/mcp aux clients utilisant un jeton Bearer. Désactivé par défaut.",
+  "The local stdio mode (aurora mcp) is not affected. Save changes to apply.":
+    "Le mode stdio local (aurora mcp) n'est pas affecté. Enregistrez pour appliquer.",
   "Temperature unit": "Unité de température",
   "Used for disks, CPU and sensors.": "Utilisée pour les disques, le CPU et les capteurs.",
 

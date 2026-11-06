@@ -717,6 +717,26 @@ export function SettingsPage() {
           {section === "unraid-api" ? <UnraidAPIPanel /> : null}
 
           {section === "api" ? (
+            <>
+            <Card className="card-pad">
+              <CardTitle title={t("MCP server")} description={t("Expose the Model Context Protocol endpoint for AI clients.")} />
+              <div className="mt-2 divide-y divide-line">
+                <SettingsRow
+                  label={t("Enable MCP server")}
+                  description={t("Serves /api/v1/mcp for bearer-token clients. Disabled by default.")}
+                >
+                  <Switch
+                    checked={settings.mcpEnabled ?? false}
+                    onChange={(value) => update("mcpEnabled", value)}
+                    label={t("Enable MCP server")}
+                  />
+                </SettingsRow>
+              </div>
+              <p className="mt-2 text-[9.5px] leading-relaxed text-subtle">
+                {t("The local stdio mode (aurora mcp) is not affected. Save changes to apply.")}
+              </p>
+            </Card>
+
             <Card className="card-pad">
               <CardTitle title={t("API tokens")} description={t("Create scoped bearer tokens for automation and Prometheus scraping.")} />
               {newToken ? (
@@ -820,6 +840,7 @@ export function SettingsPage() {
                 .
               </p>
             </Card>
+            </>
           ) : null}
 
           {section === "security" ? (

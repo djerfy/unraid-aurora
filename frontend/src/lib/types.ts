@@ -952,6 +952,7 @@ export type Settings = {
   trivyEnabled: boolean;
   trivyVersion: string;
   trivyDbUpdateHour: number;
+  mcpEnabled: boolean;
 };
 
 export type UPSSettings = {

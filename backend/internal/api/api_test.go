@@ -309,8 +309,9 @@ func fakeAuth() *auth.Manager {
 }
 
 type testEnv struct {
-	server *httptest.Server
-	client *http.Client
+	server   *httptest.Server
+	client   *http.Client
+	provider *fakeProvider
 }
 
 func newTestEnv(t *testing.T, readOnly bool) *testEnv {
@@ -330,7 +331,7 @@ func newTestEnv(t *testing.T, readOnly bool) *testEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &testEnv{server: server, client: &http.Client{Jar: jar}}
+	return &testEnv{server: server, client: &http.Client{Jar: jar}, provider: p}
 }
 
 func (e *testEnv) request(t *testing.T, method, path string, body any, headers map[string]string) *http.Response {
@@ -686,6 +687,31 @@ func TestVisualFolderEndpoints(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestMCPEndpointDisabledByDefault(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/mcp", nil, nil)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 while MCP is disabled, got %d", resp.StatusCode)
+	}
+	var body struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Error.Code != "mcp_disabled" {
+		t.Fatalf("unexpected error code: %+v", body)
 	}
 }
 

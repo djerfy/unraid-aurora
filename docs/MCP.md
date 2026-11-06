@@ -4,6 +4,9 @@ Aurora embeds a [Model Context Protocol](https://modelcontextprotocol.io) server
 the host and run a controlled set of lifecycle actions. The same tool catalog is served over two
 transports: **stdio** for local clients and **Streamable HTTP** for remote clients.
 
+The HTTP endpoint is **disabled by default**. Enable it under **Settings → API → MCP server**; the
+local `aurora mcp` stdio mode is independent.
+
 ## Transports
 
 ### stdio (local)
@@ -32,7 +35,8 @@ Claude Desktop / Cursor configuration:
 
 ### Streamable HTTP (remote)
 
-The daemon exposes `https://<server>:8484/api/v1/mcp` once authentication succeeds.
+Enable **Settings → API → MCP server**, then the daemon exposes
+`https://<server>:8484/api/v1/mcp` once authentication succeeds.
 
 - Use an API token created in **Settings → API tokens**. An unscoped token exposes the full catalog;
   a scoped token only allows calls in its scopes.

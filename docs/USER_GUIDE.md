@@ -723,6 +723,8 @@ can itself be reverted.
   custom headers and body template with `{title}`, `{subject}`, `{description}`, `{importance}`,
   `{source}` and `{timestamp}` placeholders), with a test button. New Unraid notifications are
   forwarded after Aurora starts.
+- **MCP server**: enables the integrated HTTP endpoint at `/api/v1/mcp`. Disabled by default; the
+  local `aurora mcp` stdio mode is unaffected.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Unscoped tokens
   can also authenticate the MCP endpoint (`/api/v1/mcp`); scoped tokens only reach the matching MCP
   tools. See [`MCP.md`](MCP.md). Viewers can only
