@@ -54,8 +54,8 @@ operational model and rebuilds the experience around it:
 | **Applications** — Community Applications with a review step | **Scheduler** — parity, mover, TRIM and display formats |
 | ![Settings](docs/screenshots/settings.png) | ![Login](docs/screenshots/login-native.png) |
 | **Settings** — themes, accents and native auth | **Login** — root credentials checked against the host |
-| ![Historique](docs/screenshots/history.png) | ![Équilibrage](docs/screenshots/balance.png) |
-| **Historique** — configuration snapshots, unified diffs and rollback | **Équilibrage** — empty a disk with live per-file progress |
+| ![History](docs/screenshots/history.png) | ![Balance](docs/screenshots/balance.png) |
+| **History** — configuration snapshots, unified diffs and rollback | **Balance** — empty a disk with live per-file progress |
 | ![Tools](docs/screenshots/tools.png) | ![Mover](docs/screenshots/storage-mover.png) |
 | **Tools** — diagnostics archive and host summary | **Mover** — live progress, throughput and per-file history |
 
@@ -68,11 +68,11 @@ command palette, light theme, users, plugins, logs and mobile layouts.
 
 Every configuration file written by Aurora is snapshotted in
 `$AURORA_CONFIG_DIR/config-history/<id>/` before being modified: container templates, the Docker
-autostart list and future file-backed settings. The **Historique** page lists each change with:
+autostart list and future file-backed settings. The **History** page lists each change with:
 
 - the action and a human-readable description;
 - the affected files and their previous size;
-- a line-by-line **Différence** view (context included);
+- a line-by-line **Difference** view (context included);
 - a **Rollback** button that restores the previous contents. The current state is snapshotted first,
   so a rollback can itself be reverted.
 
@@ -80,7 +80,7 @@ History is capped at 200 entries and survives restarts.
 
 ### Disk rebalancing
 
-The **Équilibrage** page empties a disk or moves selected folders/files to other disks:
+The **Balance** page empties a disk or moves selected folders/files to other disks:
 
 - source and destination disks are detected from the mounted `/mnt` entries;
 - a folder/file browser lets you choose a subset, or empty the whole disk;
@@ -318,8 +318,8 @@ Deep dives:
 | Terminal | Full-page root shell over an authenticated WebSocket, openable in its own window |
 | Storage operations | Start/stop array with passphrase or keyfile, SMART health/attributes and short self-test, background mover with live phases and per-file history |
 | Shares | Create, rename and edit shares: comment, free-space floor, cache mode, primary/secondary storage, allocator, split level, include/exclude disks, SMB and NFS export/security |
-| Équilibrage | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
-| Historique | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
+| Balance | Empty a disk or move folders/files to other disks with dry-run, live progress, per-file status and history |
+| History | Automatic snapshots of every configuration file written by Aurora, unified diffs, one-click rollback |
 | Settings | Dark/light/system, six accents, density, units, refresh cadence, session info, notification channels, UPS policy, API tokens, Unraid OS updates/downgrade, Unraid API process management and Trivy installation/database scheduling |
 | Global | ⌘K command palette with full-text search over pages, containers and VMs, keyboard navigation, toasts, responsive layout, light theme |
 

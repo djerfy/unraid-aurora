@@ -306,7 +306,7 @@ const system: Record<string, string> = {
   "All categories": "Toutes les catégories",
   "Apply schedules": "Appliquer les planifications",
   "Aurora never installs an application without an explicit review.": "Aurora n'installe jamais une application sans une revue explicite.",
-  "Aurora writes only the files below. Every write is backed up in Historique.": "Aurora n'écrit que les fichiers ci-dessous. Chaque écriture est sauvegardée dans l'Historique.",
+  "Aurora writes only the files below. Every write is backed up in History.": "Aurora n'écrit que les fichiers ci-dessous. Chaque écriture est sauvegardée dans l'Historique.",
   "Bridge": "Pont",
   "Bridge, model and MAC address. Leave the MAC empty to let libvirt generate one. NAT and user interfaces are preserved.": "Pont, modèle et adresse MAC. Laissez la MAC vide pour que libvirt en génère une. Les interfaces NAT et utilisateur sont conservées.",
   "Browse Community Applications for Docker containers and plugins, then review every setting before installing.": "Parcourez Community Applications pour les conteneurs Docker et les plugins, puis vérifiez chaque réglage avant l'installation.",

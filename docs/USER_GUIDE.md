@@ -31,7 +31,7 @@ files and commands as the official webGUI.
 12. [Logs](#12-logs)
 13. [Terminal](#13-terminal)
 14. [Tools](#14-tools)
-15. [Historique (configuration history)](#15-historique-configuration-history)
+15. [History (configuration history)](#15-history-configuration-history)
 16. [Settings](#16-settings)
    - [Scheduler](#scheduler)
 17. [Keyboard shortcuts](#17-keyboard-shortcuts)
@@ -210,7 +210,7 @@ Share settings:
 | NFS | Export (`No`, `Yes`), security (`Public`, `Secure`, `Private`), host rules when private |
 
 Every change is sent through the same emhttpd commands as the official webGUI. The share
-configuration file is snapshotted before the command and recorded in **Historique**, so it can be
+configuration file is snapshotted before the command and recorded in **History**, so it can be
 reviewed or rolled back.
 
 ### 5.5 Pools
@@ -250,18 +250,18 @@ reviewed or rolled back.
 
 ### 5.8 Rebalancing
 
-![Équilibrage](screenshots/balance.png)
+![Balance](screenshots/balance.png)
 
 Use this page to empty a disk before replacing it, or to move selected folders/files.
 
 - **Source** and **Destination(s)** are detected from mounted `/mnt` entries.
 - Two modes:
-  - **Vider le disque**: moves everything except `lost+found` and hidden folders;
-  - **Dossiers / fichiers**: browse the source disk, select folders or files.
+  - **Empty disk**: moves everything except `lost+found` and hidden folders;
+  - **Folders / files**: browse the source disk, select folders or files.
 - Options:
   - **Dry run** (default): scans and plans without writing or deleting;
-  - **Supprimer la source**: deletes each source file only after a verified copy;
-  - **Écraser**: overwrite existing destination files (off by default).
+  - **Delete source**: deletes each source file only after a verified copy;
+  - **Overwrite**: overwrite existing destination files (off by default).
 - Pipeline: **copy → size verification → source deletion**. Symlinks, hardlinks, permissions,
   ownership and timestamps are preserved.
 - Live details: phase, bytes, files, speed, ETA, current path, per-file status
@@ -384,7 +384,7 @@ The **Advanced** section adds structured Docker options without handing Aurora a
 
 Applying stops and recreates the container with rollback on failure. The Unraid XML template is
 synchronised (including `Memory`, `CPUset` and managed `ExtraParams`) and the previous template is
-stored in **Historique**.
+stored in **History**.
 
 ### Docker images
 
@@ -516,7 +516,7 @@ The **Applications** page browses the official Community Applications feed:
   NVRAM and a qcow2 copy of each disk into a new folder under `/mnt`; it reports progress, supports
   cancellation and verifies checksums on restore. Backups and restores require a stopped VM.
   Restoring moves existing disks to `*.aurora-pre-restore-*` files before replacing them, and rolls
-  them back if the operation fails. Both operations appear in **Historique**.
+  them back if the operation fails. Both operations appear in **History**.
 - **Folder** (drawer) and the picker in **New VM** assign a visual folder. Folders are shared with the
   folder dropdown in the page toolbar, stored in Aurora's configuration and never change the domain or disks.
 - **Folder entries**: in the list view every folder gets its own table, listed first in their
@@ -691,9 +691,9 @@ Missing logs show an explicit message with a retry button instead of a generic e
 
 ---
 
-## 15. Historique (configuration history)
+## 15. History (configuration history)
 
-![Historique](screenshots/history.png)
+![History](screenshots/history.png)
 
 Every file-backed configuration change made by Aurora is snapshotted before writing:
 
@@ -702,7 +702,7 @@ Every file-backed configuration change made by Aurora is snapshotted before writ
 - share configuration files (create/rename/edit),
 - any future file-backed setting using the same helper.
 
-Each entry shows the action, description, affected files, previous size and a **Différence** view.
+Each entry shows the action, description, affected files, previous size and a **Difference** view.
 **Rollback** restores the previous contents; the current state is snapshotted first, so a rollback
 can itself be reverted.
 
@@ -813,7 +813,7 @@ canvas so they never steal keystrokes from a console.
 - Container image updates pull first, then recreate with the current configuration.
 - Share/user operations run through **emhttpd** (`/usr/local/sbin/emcmd`), never by editing live
   system databases directly.
-- File-backed changes are snapshotted in **Historique** with unified diffs and reversible rollback.
+- File-backed changes are snapshotted in **History** with unified diffs and reversible rollback.
 - Rebalancing never deletes a source file before a size-verified copy; **dry run is enabled by
   default**.
 - Credentials are read from the host only (shadow, `~/.docker/config.json`) and never written by

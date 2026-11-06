@@ -420,7 +420,7 @@ rather than serve fake data.
 
 Writes are explicit and validated: fixed binaries with allow-listed targets,
 timestamped backups for configuration files, lockout guards for networking, and
-rollback through **Historique** where applicable.
+rollback through **History** where applicable.
 
 ## Versioning
 

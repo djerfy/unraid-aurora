@@ -223,7 +223,7 @@ export function SchedulerPage() {
         open={Boolean(preview)}
         onClose={() => setPreview(null)}
         title={t("Review schedule changes")}
-        description={t("Aurora writes only the files below. Every write is backed up in Historique.")}
+        description={t("Aurora writes only the files below. Every write is backed up in History.")}
         size="xl"
         footer={
           <>
