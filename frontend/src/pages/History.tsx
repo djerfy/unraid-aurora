@@ -16,7 +16,6 @@ export function HistoryPage() {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showDiff, setShowDiff] = useState(false);
   const [rollbackTarget, setRollbackTarget] = useState<ConfigHistory | null>(null);
 
   const history = useQuery({
@@ -62,7 +61,6 @@ export function HistoryPage() {
 
   const open = (entry: ConfigHistory) => {
     setSelectedId(entry.id);
-    setShowDiff(false);
   };
 
   return (
@@ -144,22 +142,13 @@ export function HistoryPage() {
           detail.data ? (
             <div className="flex flex-wrap gap-2">
               {detail.data.files.length > 0 ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    icon={<FileDiff className="size-3.5" />}
-                    onClick={() => setShowDiff((value) => !value)}
-                  >
-                    {showDiff ? t("Hide diff") : t("Diff")}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    icon={<RotateCcw className="size-3.5" />}
-                    onClick={() => setRollbackTarget(detail.data ?? null)}
-                  >
-                    {t("Rollback")}
-                  </Button>
-                </>
+                <Button
+                  variant="danger"
+                  icon={<RotateCcw className="size-3.5" />}
+                  onClick={() => setRollbackTarget(detail.data ?? null)}
+                >
+                  {t("Rollback")}
+                </Button>
               ) : null}
             </div>
           ) : null
@@ -186,14 +175,9 @@ export function HistoryPage() {
                     <span className="text-[9.5px] text-subtle">{formatBytes(file.size)}</span>
                   </span>
                 </div>
-                {showDiff ? <DiffBlock diff={file.diff} file={file} /> : null}
+                <DiffBlock diff={file.diff} file={file} />
               </div>
             ))}
-            {!showDiff ? (
-              <p className="text-[10.5px] text-subtle">
-                {t("Click “Diff” to show line-by-line changes.")}
-              </p>
-            ) : null}
           </div>
         ) : null}
       </Drawer>
