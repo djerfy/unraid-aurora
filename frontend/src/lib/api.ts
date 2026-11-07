@@ -184,6 +184,14 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(settings),
     }),
+  nvidiaStatus: () => request<import("./types").NvidiaStatus>("/api/v1/nvidia/driver"),
+  nvidiaVersions: (refresh = false) =>
+    request<import("./types").NvidiaVersions>(`/api/v1/nvidia/driver/versions${refresh ? "?refresh=1" : ""}`),
+  downloadNvidiaDriver: (version: string) =>
+    request<import("./types").NvidiaStatus>("/api/v1/nvidia/driver/download", {
+      method: "POST",
+      body: JSON.stringify({ version }),
+    }),
   vmSettings: () => request<import("./types").VMSettings>("/api/v1/vms/settings"),
   saveVMSettings: (settings: import("./types").VMSettings) =>
     request<import("./types").VMSettings>("/api/v1/vms/settings", {

@@ -106,6 +106,29 @@ func (f *fakeProvider) SaveVMSettings(ctx context.Context, settings model.VMSett
 	return nil
 }
 
+func (f *fakeProvider) NvidiaStatus(ctx context.Context) (model.NvidiaStatus, error) {
+	return model.NvidiaStatus{
+		PluginInstalled: true, DriverInstalled: true, InstalledVersion: "580.76.05",
+		License: "proprietary", Kernel: "6.12.90-Unraid", SelectedVersion: "latest", UpdateCheck: true,
+		GPUs:              []model.NvidiaGPU{{Index: 0, Name: "NVIDIA GeForce RTX 4070", UUID: "GPU-1234"}},
+		DownloadedPackage: "nvidia-580.76.05-6.12.90-Unraid-1.txz", DownloadedVersion: "580.76.05",
+	}, nil
+}
+
+func (f *fakeProvider) NvidiaVersions(ctx context.Context, refresh bool) (model.NvidiaVersions, error) {
+	return model.NvidiaVersions{
+		Kernel: "6.12.90-Unraid", Latest: "580.76.05", Production: "580.76.05",
+		OpenSource: "575.57.08", Versions: []string{"580.76.05", "575.64.05", "470.256.02"},
+	}, nil
+}
+
+func (f *fakeProvider) DownloadNvidiaDriver(ctx context.Context, selection string) (model.NvidiaStatus, error) {
+	if selection == "bad" {
+		return model.NvidiaStatus{}, errors.New("driver version bad is not available for this kernel")
+	}
+	return f.NvidiaStatus(ctx)
+}
+
 func (f *fakeProvider) ContainerImages(ctx context.Context) ([]model.ContainerImage, error) {
 	return []model.ContainerImage{{ID: "sha256:abc", RepoTags: []string{"plex:latest"}, InUse: true, UsedBy: []string{"plex"}}}, nil
 }
@@ -809,6 +832,54 @@ func TestVMSettingsEndpoints(t *testing.T) {
 	resp = env.request(t, http.MethodPut, "/api/v1/vms/settings", settings, headers)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestNvidiaDriverEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/nvidia/driver", nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var status model.NvidiaStatus
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if !status.PluginInstalled || status.InstalledVersion != "580.76.05" {
+		t.Fatalf("unexpected status: %+v", status)
+	}
+
+	resp = env.request(t, http.MethodGet, "/api/v1/nvidia/driver/versions?refresh=1", nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var versions model.NvidiaVersions
+	if err := json.NewDecoder(resp.Body).Decode(&versions); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if versions.Latest != "580.76.05" || len(versions.Versions) != 3 {
+		t.Fatalf("unexpected versions: %+v", versions)
+	}
+
+	resp = env.request(t, http.MethodPost, "/api/v1/nvidia/driver/download",
+		map[string]string{"version": "latest"}, headers)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodPost, "/api/v1/nvidia/driver/download",
+		map[string]string{"version": "bad"}, headers)
+	if resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
 }

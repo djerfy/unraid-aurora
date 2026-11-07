@@ -750,6 +750,12 @@ can itself be reverted.
 - **VM Manager**: enable VMs, hide the autostart/start options for every VM, and set the optional
   default Windows VirtIO driver ISO. Values are written to `/boot/config/domain.cfg`; restart the
   array to apply service changes. The libvirt running state is read-only.
+- **NVIDIA driver**: drives the official **Nvidia Driver** plugin. Shows the running module version,
+  license, kernel and detected GPUs, then lets you pick the **Latest**, **Production Branch**,
+  **New Feature Branch** or **Open Source** driver, or a specific version available for the running
+  kernel. Aurora stages the chosen package in `/boot/config/plugins/nvidia-driver/packages` and
+  updates the plugin settings; the plugin installs it at boot, so a reboot is required. Docker image
+  pulls and the running module are never touched while the server stays online.
 - **Outbound proxy**: enable a global proxy and store up to four named configurations (URL plus
   optional username/password). Only one configuration is active at a time. The proxy applies to
   Aurora's internet traffic: Docker registry digest checks, the Community Applications catalog,

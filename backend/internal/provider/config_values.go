@@ -45,12 +45,23 @@ func updateConfigValues(path string, updates map[string]string) ([]byte, error) 
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
+	return rewriteConfigValues(string(raw), updates, true), nil
+}
+
+// rewriteConfigValues preserves unknown keys and rewrites the requested ones.
+// Unraid managers mix quoted (docker.cfg) and plain (nvidia-driver/settings.cfg)
+// values, so callers pick the formatting.
+func rewriteConfigValues(raw string, updates map[string]string, quote bool) []byte {
 	remaining := make(map[string]string, len(updates))
 	for key, value := range updates {
 		remaining[key] = value
 	}
+	format := func(key, value string) string { return key + "=" + value }
+	if quote {
+		format = quoteConfigValue
+	}
 	lines := []string{}
-	for _, line := range strings.Split(strings.TrimRight(string(raw), "\n"), "\n") {
+	for _, line := range strings.Split(strings.TrimRight(raw, "\n"), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
 			lines = append(lines, line)
@@ -67,7 +78,7 @@ func updateConfigValues(path string, updates map[string]string) ([]byte, error) 
 			lines = append(lines, line)
 			continue
 		}
-		lines = append(lines, quoteConfigValue(key, value))
+		lines = append(lines, format(key, value))
 		delete(remaining, key)
 	}
 	if len(remaining) > 0 {
@@ -77,13 +88,13 @@ func updateConfigValues(path string, updates map[string]string) ([]byte, error) 
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
-			lines = append(lines, quoteConfigValue(key, remaining[key]))
+			lines = append(lines, format(key, remaining[key]))
 		}
 	}
 	if len(lines) == 0 {
 		lines = []string{""}
 	}
-	return []byte(strings.Join(lines, "\n") + "\n"), nil
+	return []byte(strings.Join(lines, "\n") + "\n")
 }
 
 func intOrEmpty(value int) string {

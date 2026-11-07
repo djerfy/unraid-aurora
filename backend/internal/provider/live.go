@@ -70,6 +70,12 @@ type Live struct {
 	trivyScans       func() []model.TrivyScan
 	trivyScanHistory func() []model.TrivyScan
 
+	nvidiaMu             sync.Mutex
+	nvidiaDownload       model.NvidiaDownload
+	nvidiaVersions       model.NvidiaVersions
+	nvidiaVersionsAt     time.Time
+	nvidiaVersionsKernel string
+
 	apiMu        sync.Mutex
 	apiVersion   string
 	apiVersionAt time.Time

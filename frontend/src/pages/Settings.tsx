@@ -49,6 +49,7 @@ import { TrivyPanel } from "../components/system/TrivyPanel";
 import { DockerSettingsPanel } from "../components/system/DockerSettingsPanel";
 import { VMSettingsPanel } from "../components/system/VMSettingsPanel";
 import { ProxySettingsPanel } from "../components/system/ProxySettingsPanel";
+import { NvidiaDriverPanel } from "../components/system/NvidiaDriverPanel";
 import { api } from "../lib/api";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -64,6 +65,7 @@ const SECTIONS = [
   { id: "docker", label: "Docker", icon: Container },
   { id: "vm", label: "VM Manager", icon: Monitor },
   { id: "proxy", label: "Outbound proxy", icon: Globe },
+  { id: "nvidia", label: "NVIDIA driver", icon: Cpu },
   { id: "api", label: "API tokens", icon: KeyRound },
   { id: "mcp", label: "MCP", icon: Bot },
   { id: "security", label: "Security", icon: ShieldCheck },
@@ -729,6 +731,8 @@ export function SettingsPage() {
           {section === "docker" ? <DockerSettingsPanel /> : null}
 
           {section === "vm" ? <VMSettingsPanel /> : null}
+
+          {section === "nvidia" ? <NvidiaDriverPanel /> : null}
 
           {section === "proxy" ? (
             <ProxySettingsPanel

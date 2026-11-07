@@ -557,6 +557,15 @@
     },
     "PUT /api/v1/vms/settings": {
       "excluded": "Unraid VM manager daemon configuration; UI-specific."
+    },
+    "GET /api/v1/nvidia/driver": {
+      "excluded": "Nvidia Driver plugin host state; UI-specific."
+    },
+    "GET /api/v1/nvidia/driver/versions": {
+      "excluded": "Nvidia Driver package catalog; UI-specific."
+    },
+    "POST /api/v1/nvidia/driver/download": {
+      "excluded": "Stages a host kernel package for the next boot; UI-specific."
     }
   }
 }

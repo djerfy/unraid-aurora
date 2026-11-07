@@ -3458,6 +3458,106 @@
         }
       }
     },
+    "/api/v1/nvidia/driver": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Nvidia Driver plugin status, GPUs and staged package",
+        "description": "Nvidia Driver plugin status, GPUs and staged package",
+        "operationId": "get_nvidia_driver",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/nvidia/driver/versions": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Packages available for the running kernel and branch versions",
+        "description": "Packages available for the running kernel and branch versions",
+        "operationId": "get_nvidia_driver_versions",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/parity/history": {
       "get": {
         "tags": [
@@ -8096,6 +8196,68 @@
         "summary": "Test outbound channels",
         "description": "Test outbound channels",
         "operationId": "post_notifications_test",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "admin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/nvidia/driver/download": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Stage a driver package for the next boot",
+        "description": "Stage a driver package for the next boot",
+        "operationId": "post_nvidia_driver_download",
         "security": [
           {
             "sessionCookie": []

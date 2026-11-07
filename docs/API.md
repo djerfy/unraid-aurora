@@ -356,6 +356,9 @@ rows as CSV client-side.
 | GET | `/unraid-api` | viewer+ | Official API service state |
 | POST | `/unraid-api/{action}` | admin | `start`, `stop`, `restart` |
 | GET | `/unraid-api/logs` | admin | API/PM2 log tail |
+| GET | `/nvidia/driver` | viewer+ | Nvidia Driver plugin status, GPUs and staged package |
+| GET | `/nvidia/driver/versions` | viewer+ | Packages available for the running kernel and branch versions |
+| POST | `/nvidia/driver/download` | admin | Stage a driver package for the next boot |
 | GET | `/trivy` | viewer+ | Trivy binary/database status |
 | GET | `/trivy/versions` | viewer+ | Stable Trivy releases |
 | POST | `/trivy/install` | admin | Install a Trivy version and DB |

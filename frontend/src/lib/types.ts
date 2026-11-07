@@ -1104,6 +1104,45 @@ export type ProxyConfig = {
   password: string;
 };
 
+export type NvidiaGPU = {
+  index: number;
+  name: string;
+  uuid: string;
+};
+
+export type NvidiaDownload = {
+  active: boolean;
+  done: boolean;
+  version: string;
+  package: string;
+  progress: number;
+  error?: string;
+};
+
+export type NvidiaStatus = {
+  pluginInstalled: boolean;
+  driverInstalled: boolean;
+  installedVersion: string;
+  license: string;
+  kernel: string;
+  selectedVersion: string;
+  updateCheck: boolean;
+  gpus: NvidiaGPU[];
+  downloadedPackage: string;
+  downloadedVersion: string;
+  download?: NvidiaDownload;
+};
+
+export type NvidiaVersions = {
+  kernel: string;
+  latest: string;
+  production: string;
+  newFeature: string;
+  openSource: string;
+  versions: string[];
+  branchError?: string;
+};
+
 export type VMSettings = {
   enabled: boolean;
   running: boolean;

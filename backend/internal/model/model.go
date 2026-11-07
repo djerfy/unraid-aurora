@@ -1031,6 +1031,45 @@ type VMSettings struct {
 	VirtioISO        string `json:"virtioIso"`
 }
 
+type NvidiaGPU struct {
+	Index int    `json:"index"`
+	Name  string `json:"name"`
+	UUID  string `json:"uuid"`
+}
+
+type NvidiaDownload struct {
+	Active   bool   `json:"active"`
+	Done     bool   `json:"done"`
+	Version  string `json:"version"`
+	Package  string `json:"package"`
+	Progress int    `json:"progress"`
+	Error    string `json:"error,omitempty"`
+}
+
+type NvidiaStatus struct {
+	PluginInstalled   bool            `json:"pluginInstalled"`
+	DriverInstalled   bool            `json:"driverInstalled"`
+	InstalledVersion  string          `json:"installedVersion"`
+	License           string          `json:"license"`
+	Kernel            string          `json:"kernel"`
+	SelectedVersion   string          `json:"selectedVersion"`
+	UpdateCheck       bool            `json:"updateCheck"`
+	GPUs              []NvidiaGPU     `json:"gpus"`
+	DownloadedPackage string          `json:"downloadedPackage"`
+	DownloadedVersion string          `json:"downloadedVersion"`
+	Download          *NvidiaDownload `json:"download,omitempty"`
+}
+
+type NvidiaVersions struct {
+	Kernel      string   `json:"kernel"`
+	Latest      string   `json:"latest"`
+	Production  string   `json:"production"`
+	NewFeature  string   `json:"newFeature"`
+	OpenSource  string   `json:"openSource"`
+	Versions    []string `json:"versions"`
+	BranchError string   `json:"branchError,omitempty"`
+}
+
 type Task struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`

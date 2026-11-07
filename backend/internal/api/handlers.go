@@ -1486,6 +1486,49 @@ func (s *Server) saveDockerSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, settings)
 }
 
+func (s *Server) nvidiaDriverStatus(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	status, err := s.provider.NvidiaStatus(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "nvidia_driver", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, status)
+}
+
+func (s *Server) nvidiaDriverVersions(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	versions, err := s.provider.NvidiaVersions(ctx, r.URL.Query().Get("refresh") == "1")
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "nvidia_driver", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, versions)
+}
+
+func (s *Server) downloadNvidiaDriver(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body struct {
+		Version string `json:"version"`
+	}
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	status, err := s.provider.DownloadNvidiaDriver(ctx, body.Version)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "nvidia_driver", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, status)
+}
+
 func (s *Server) vmSettings(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

@@ -53,6 +53,9 @@ type Provider interface {
 	SetVMAutostartOrder(ctx context.Context, order []string, managed bool) (model.VMAutostartOrder, error)
 	ApplyVMAutostartOrder(ctx context.Context) (model.VMAutostartResult, error)
 	SetVMAutostart(ctx context.Context, id string, enabled bool) error
+	NvidiaStatus(ctx context.Context) (model.NvidiaStatus, error)
+	NvidiaVersions(ctx context.Context, refresh bool) (model.NvidiaVersions, error)
+	DownloadNvidiaDriver(ctx context.Context, selection string) (model.NvidiaStatus, error)
 	VMSettings(ctx context.Context) (model.VMSettings, error)
 	SaveVMSettings(ctx context.Context, settings model.VMSettings) error
 	VMXML(ctx context.Context, id string) (string, error)
