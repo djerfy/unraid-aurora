@@ -81,6 +81,7 @@ const docker: Record<string, string> = {
   "Details & logs": "Détails et journaux",
   "Edit settings": "Modifier les paramètres",
   "Update image & restart": "Mettre à jour l'image et redémarrer",
+  "Force update": "Forcer la mise à jour",
   "Open web UI": "Ouvrir l'interface web",
   "Already stopped": "Déjà arrêté",
   "{name} restarted": "Redémarrage de {name}",

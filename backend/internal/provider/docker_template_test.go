@@ -301,7 +301,7 @@ func TestSyncTemplateAfterUpdateKeepsExtraParams(t *testing.T) {
 			MacAddress: "7e:0c:eb:09:3c:68",
 			PidsLimit:  2048,
 		},
-	})
+	}, false)
 
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -313,5 +313,109 @@ func TestSyncTemplateAfterUpdateKeepsExtraParams(t *testing.T) {
 	}
 	if got := root.text("ExtraParams"); got != "--device=/dev/dri --restart=unless-stopped" {
 		t.Fatalf("template sync leaked Docker defaults: %q", got)
+	}
+}
+
+func TestContainerConfigLoadsRawTemplateFields(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	template := strings.Replace(sampleTemplate, `<PostArgs></PostArgs>`, `<PostArgs>--old value</PostArgs>`, 1)
+	template = strings.Replace(template, `<ExtraParams>--device=/dev/dri</ExtraParams>`, `<ExtraParams>--unknown=keep</ExtraParams>`, 1)
+	if err := os.WriteFile(filepath.Join(dir, "my-plex.xml"), []byte(template), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	live, _ := newFakeLive()
+	live.bootDir = boot
+	cfg, err := live.ContainerConfig(context.Background(), "old-container")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Advanced.ExtraParams != "--unknown=keep" || cfg.Advanced.PostArgs != "--old value" {
+		t.Fatalf("raw template fields were not loaded: %+v", cfg.Advanced)
+	}
+	if !cfg.Privileged {
+		t.Fatal("privileged flag was not read from Docker inspect")
+	}
+}
+
+func TestSyncContainerTemplateWritesExtraParamsAndPostArgs(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "my-plex.xml")
+	if err := os.WriteFile(path, []byte(sampleTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{bootDir: boot}
+	err := live.syncContainerTemplate(context.Background(), containerTemplateData{
+		Name:          "plex",
+		Image:         "linuxserver/plex:latest",
+		Network:       "bridge",
+		RestartPolicy: "unless-stopped",
+		PreserveMeta:  true,
+		AdvancedSet:   true,
+		Advanced: model.ContainerAdvanced{
+			ExtraParams: "--unknown=keep --pids-limit=512",
+			PostArgs:    "--new value",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := parseXMLTree(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := root.text("ExtraParams"); !strings.Contains(got, "--unknown=keep") || !strings.Contains(got, "--pids-limit=512") {
+		t.Fatalf("extra params = %q", got)
+	}
+	if got := root.text("PostArgs"); got != "--new value" {
+		t.Fatalf("post args = %q", got)
+	}
+}
+
+func TestSyncTemplateAfterUpdateWritesPrivileged(t *testing.T) {
+	boot := t.TempDir()
+	dir := filepath.Join(boot, userTemplateDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "my-plex.xml")
+	if err := os.WriteFile(path, []byte(sampleTemplate), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	live := &Live{bootDir: boot}
+	live.syncTemplateAfterUpdate(context.Background(), model.ContainerConfig{
+		Name:          "plex",
+		Image:         "linuxserver/plex:latest",
+		NetworkMode:   "bridge",
+		RestartPolicy: "unless-stopped",
+		Privileged:    true,
+		Advanced:      model.ContainerAdvanced{ExtraParams: "--unknown=keep", PostArgs: "--new"},
+	}, true)
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := parseXMLTree(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root.text("Privileged") != "true" {
+		t.Fatalf("privileged = %q", root.text("Privileged"))
+	}
+	if root.text("PostArgs") != "--new" || !strings.Contains(root.text("ExtraParams"), "--unknown=keep") {
+		t.Fatalf("raw fields not written: %q / %q", root.text("ExtraParams"), root.text("PostArgs"))
 	}
 }

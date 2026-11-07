@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -118,5 +119,67 @@ func TestContainerAdvancedExtraParamsRoundTrip(t *testing.T) {
 	}
 	if parsed.MemoryLimit != 0 { // memory is stored in the template field, not ExtraParams
 		t.Fatalf("unexpected memory in extra params: %d", parsed.MemoryLimit)
+	}
+}
+
+func TestParseShellArgs(t *testing.T) {
+	got := parseShellArgs(`--log-level debug "two words" 'single quoted' escaped\ value`)
+	want := []string{"--log-level", "debug", "two words", "single quoted", "escaped value"}
+	if len(got) != len(want) {
+		t.Fatalf("args = %#v, want %#v", got, want)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("args = %#v, want %#v", got, want)
+		}
+	}
+}
+
+func TestContainerCreateBodyExtraParamsAndPostArgs(t *testing.T) {
+	body := buildContainerCreateBody(model.ContainerCreateOptions{
+		Name:          "plex",
+		Image:         "linuxserver/plex:latest",
+		NetworkMode:   "bridge",
+		RestartPolicy: "unless-stopped",
+		Privileged:    true,
+		Advanced: model.ContainerAdvanced{
+			ExtraParams: "--pids-limit=512 --device=/dev/dri:/dev/dri:rwm --unknown-flag=keep",
+			PostArgs:    `--log-level debug "two words"`,
+		},
+	})
+	host := body["HostConfig"].(map[string]any)
+	if host["PidsLimit"] != int64(512) || host["Privileged"] != true {
+		t.Fatalf("extra parameters were not applied: %+v", host)
+	}
+	devices := host["Devices"].([]any)
+	if len(devices) != 1 {
+		t.Fatalf("device from extra parameters missing: %+v", devices)
+	}
+	cmd, _ := body["Cmd"].([]string)
+	if len(cmd) != 3 || cmd[2] != "two words" {
+		t.Fatalf("post arguments missing: %+v", body["Cmd"])
+	}
+}
+
+func TestUpdateContainerConfigPostArgsAndPrivileged(t *testing.T) {
+	live, fake := newFakeLive()
+	cfg := model.ContainerConfig{
+		RestartPolicy: "unless-stopped",
+		Ports:         []model.Port{},
+		Volumes:       []model.ContainerVolume{},
+		Env:           []model.ContainerEnv{},
+		Privileged:    true,
+		Advanced:      model.ContainerAdvanced{PostArgs: "--new flag"},
+	}
+	if err := live.UpdateContainerConfig(context.Background(), "old-container", cfg); err != nil {
+		t.Fatal(err)
+	}
+	host := fake.createBody["HostConfig"].(map[string]any)
+	if host["Privileged"] != true {
+		t.Fatalf("privileged flag was lost: %+v", host)
+	}
+	cmd, _ := fake.createBody["Cmd"].([]any)
+	if len(cmd) != 3 || cmd[1] != "--new" || cmd[2] != "flag" {
+		t.Fatalf("post arguments were not appended: %+v", fake.createBody["Cmd"])
 	}
 }

@@ -47,6 +47,7 @@ export function ContainerSettingsModal({
         ports: configQuery.data.ports ?? [],
         volumes: configQuery.data.volumes ?? [],
         env: configQuery.data.env ?? [],
+        privileged: configQuery.data.privileged ?? false,
         advanced: normalizeContainerAdvanced(configQuery.data.advanced),
       };
       setDraft(normalized);
@@ -325,6 +326,8 @@ export function ContainerSettingsModal({
 
           <ContainerAdvancedFields
             value={draft.advanced}
+            privileged={draft.privileged}
+            onPrivilegedChange={(privileged) => update({ privileged })}
             onChange={(advanced) => update({ advanced })}
           />
 

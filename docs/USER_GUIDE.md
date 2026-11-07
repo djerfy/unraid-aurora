@@ -380,7 +380,10 @@ The **Advanced** section adds structured Docker options without handing Aurora a
 - host devices under `/dev`, with container path and `rwm` permissions;
 - capabilities to add or drop, sysctls, labels, extra hosts, tmpfs mounts and DNS servers;
 - fixed MAC address, hostname and CPU pinning (click the logical cores to pin);
-- memory, CPU and PID limits, plus a read-only root filesystem.
+- memory, CPU and PID limits, plus a read-only root filesystem and a **Privileged** toggle;
+- **Extra parameters** for additional Docker CLI flags. Supported flags are applied on recreate and
+  all values are kept in the Unraid template;
+- **Post arguments** appended to the image command (shell-style quoting is supported).
 
 Applying stops and recreates the container with rollback on failure. The Unraid XML template is
 synchronised (including `Memory`, `CPUset` and managed `ExtraParams`) and the previous template is
@@ -423,7 +426,10 @@ and the containers using it.
   keeps running server-side if the browser tab is closed.
 - An image update never rewrites the Unraid template: Docker inspect exposes image labels, generated
   MAC addresses, hostnames and runtime limits that do not belong in `<ExtraParams>`. Settings edits
-  keep the existing `ExtraParams` and only update the structured fields.
+  update the raw `ExtraParams` and `PostArgs` fields.
+- A white **Force update** button on cards, rows and the container drawer repulls the image and
+  recreates the container even when no newer digest is flagged. The yellow **Update** badge remains
+  the update indicator.
 - **Update all** processes every outdated container sequentially.
 
 ### Image security

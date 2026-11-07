@@ -144,6 +144,12 @@ func validateContainerAdvanced(advanced model.ContainerAdvanced) error {
 	if advanced.PidsLimit < 0 || advanced.PidsLimit > 1_000_000 {
 		return errors.New("PID limit must be between 0 and 1000000")
 	}
+	if len(advanced.ExtraParams) > 8192 || len(advanced.PostArgs) > 8192 {
+		return errors.New("extra parameters and post arguments must be 8192 characters or fewer")
+	}
+	if strings.ContainsRune(advanced.ExtraParams, 0) || strings.ContainsRune(advanced.PostArgs, 0) {
+		return errors.New("extra parameters and post arguments must not contain NUL bytes")
+	}
 	return nil
 }
 
@@ -401,6 +407,143 @@ func containerAdvancedFromExtraParams(extra string) model.ContainerAdvanced {
 		}
 	}
 	return advanced
+}
+
+// mergeContainerAdvanced overlays flags parsed from ExtraParams on top of the
+// structured fields. List values are appended and scalar values are overridden.
+func mergeContainerAdvanced(base, extra model.ContainerAdvanced) model.ContainerAdvanced {
+	for _, device := range extra.Devices {
+		exists := false
+		for _, current := range base.Devices {
+			if current.HostPath == device.HostPath && current.ContainerPath == device.ContainerPath && current.Permissions == device.Permissions {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			base.Devices = append(base.Devices, device)
+		}
+	}
+	base.CapAdd = appendUniqueStrings(base.CapAdd, extra.CapAdd...)
+	base.CapDrop = appendUniqueStrings(base.CapDrop, extra.CapDrop...)
+	base.ExtraHosts = appendUniqueStrings(base.ExtraHosts, extra.ExtraHosts...)
+	base.Tmpfs = appendUniqueStrings(base.Tmpfs, extra.Tmpfs...)
+	base.DNS = appendUniqueStrings(base.DNS, extra.DNS...)
+	base.DNSSearch = appendUniqueStrings(base.DNSSearch, extra.DNSSearch...)
+	for _, ulimit := range extra.Ulimits {
+		exists := false
+		for _, current := range base.Ulimits {
+			if current.Name == ulimit.Name && current.Soft == ulimit.Soft && current.Hard == ulimit.Hard {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			base.Ulimits = append(base.Ulimits, ulimit)
+		}
+	}
+	if base.Sysctls == nil {
+		base.Sysctls = map[string]string{}
+	}
+	for key, value := range extra.Sysctls {
+		base.Sysctls[key] = value
+	}
+	if base.Labels == nil {
+		base.Labels = map[string]string{}
+	}
+	for key, value := range extra.Labels {
+		base.Labels[key] = value
+	}
+	if extra.MacAddress != "" {
+		base.MacAddress = extra.MacAddress
+	}
+	if extra.Hostname != "" {
+		base.Hostname = extra.Hostname
+	}
+	if extra.MemoryLimit > 0 {
+		base.MemoryLimit = extra.MemoryLimit
+	}
+	if extra.NanoCPUs > 0 {
+		base.NanoCPUs = extra.NanoCPUs
+	}
+	if extra.CPUSet != "" {
+		base.CPUSet = extra.CPUSet
+	}
+	if extra.PidsLimit > 0 {
+		base.PidsLimit = extra.PidsLimit
+	}
+	if extra.ReadOnlyRootfs {
+		base.ReadOnlyRootfs = true
+	}
+	return base
+}
+
+func appendUniqueStrings(values []string, additions ...string) []string {
+	for _, addition := range additions {
+		addition = strings.TrimSpace(addition)
+		if addition == "" {
+			continue
+		}
+		found := false
+		for _, value := range values {
+			if value == addition {
+				found = true
+				break
+			}
+		}
+		if !found {
+			values = append(values, addition)
+		}
+	}
+	return values
+}
+
+// parseShellArgs tokenizes Unraid PostArgs without invoking a shell.
+func parseShellArgs(input string) []string {
+	var args []string
+	var current strings.Builder
+	var quote rune
+	escaped := false
+	started := false
+	for _, char := range input {
+		if escaped {
+			current.WriteRune(char)
+			escaped = false
+			started = true
+			continue
+		}
+		if char == '\\' && quote != '\'' {
+			escaped = true
+			continue
+		}
+		if quote != 0 {
+			if char == quote {
+				quote = 0
+			} else {
+				current.WriteRune(char)
+			}
+			started = true
+			continue
+		}
+		switch char {
+		case '\'', '"':
+			quote = char
+			started = true
+		case ' ', '\t', '\n', '\r':
+			if started {
+				args = append(args, current.String())
+				current.Reset()
+				started = false
+			}
+		default:
+			current.WriteRune(char)
+			started = true
+		}
+	}
+	if started {
+		args = append(args, current.String())
+	}
+	return args
 }
 
 func needsSeparateValue(token string) bool {

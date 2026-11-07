@@ -20,6 +20,7 @@ const inspectFixture = `{
   "State": {"Running": true},
   "Config": {
     "Image": "plexinc/pms-docker:latest",
+    "Cmd": ["serve"],
     "Env": ["PUID=99", "TZ=Europe/Paris"],
     "ExposedPorts": {"32400/tcp": {}},
     "Labels": {"net.unraid.docker.icon": "https://example.com/plex.png"}
@@ -138,7 +139,8 @@ func TestUpdateContainerConfigRecreates(t *testing.T) {
 			{Source: "/mnt/user/media", Destination: "/data", ReadOnly: true},
 			{Source: "/mnt/user/recordings", Destination: "/recordings"},
 		},
-		Env: []model.ContainerEnv{{Key: "PUID", Value: "99"}, {Key: "NEW_VAR", Value: "yes"}},
+		Env:        []model.ContainerEnv{{Key: "PUID", Value: "99"}, {Key: "NEW_VAR", Value: "yes"}},
+		Privileged: true,
 	}
 	if err := live.UpdateContainerConfig(context.Background(), "old-container", cfg); err != nil {
 		t.Fatalf("update: %v", err)

@@ -365,6 +365,8 @@ export type ContainerAdvanced = {
   cpuSet: string;
   pidsLimit: number;
   readOnlyRootfs: boolean;
+  extraParams: string;
+  postArgs: string;
 };
 
 export type ContainerTemplate = {
@@ -422,6 +424,7 @@ export type ContainerConfig = {
   ports: Port[];
   volumes: ContainerVolume[];
   env: ContainerEnv[];
+  privileged: boolean;
   advanced: ContainerAdvanced;
 };
 

@@ -190,11 +190,18 @@ func buildContainerCreateBody(opts model.ContainerCreateOptions) map[string]any 
 		"Privileged":    opts.Privileged,
 		"RestartPolicy": map[string]any{"Name": opts.RestartPolicy, "MaximumRetryCount": 0},
 	}
-	applyContainerAdvanced(config, host, opts.Advanced)
-	if opts.Advanced.MacAddress != "" && network != "host" && network != "none" && !strings.HasPrefix(network, "container:") {
+	advanced := opts.Advanced
+	if strings.TrimSpace(advanced.ExtraParams) != "" {
+		advanced = mergeContainerAdvanced(advanced, containerAdvancedFromExtraParams(advanced.ExtraParams))
+	}
+	applyContainerAdvanced(config, host, advanced)
+	if tokens := parseShellArgs(advanced.PostArgs); len(tokens) > 0 {
+		config["Cmd"] = tokens
+	}
+	if advanced.MacAddress != "" && network != "host" && network != "none" && !strings.HasPrefix(network, "container:") {
 		config["NetworkingConfig"] = map[string]any{
 			"EndpointsConfig": map[string]any{
-				network: map[string]any{"MacAddress": opts.Advanced.MacAddress},
+				network: map[string]any{"MacAddress": advanced.MacAddress},
 			},
 		}
 	}
@@ -231,7 +238,7 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	}
 	recreateCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	if err := l.updateContainerConfig(recreateCtx, id, cfg, report, false); err != nil {
+	if err := l.updateContainerConfig(recreateCtx, id, cfg, report, false, false); err != nil {
 		return err
 	}
 	if oldImageID != "" {

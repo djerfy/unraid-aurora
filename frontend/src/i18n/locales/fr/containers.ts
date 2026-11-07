@@ -23,9 +23,16 @@ const containers: Record<string, string> = {
   "Icon URL": "URL de l'icône",
   "Web UI": "Interface web",
   "Privileged mode": "Mode privilégié",
+  "Privileged": "Privilégié",
+  "Full host access.": "Accès complet à l'hôte.",
+  "Extra parameters": "Paramètres supplémentaires",
+  "Post arguments": "Arguments postérieurs",
+  "Devices, capabilities, resource limits and raw Docker options. Empty fields keep Docker defaults.":
+    "Périphériques, capacités, limites de ressources et options Docker brutes. Les champs vides conservent les valeurs par défaut de Docker.",
+  "Extra parameters are passed to the Docker create request for supported flags and kept in the Unraid template. Post arguments are appended to the image command.":
+    "Les paramètres supplémentaires sont transmis à la requête de création Docker pour les options prises en charge et conservés dans le template Unraid. Les arguments postérieurs sont ajoutés à la commande de l'image.",
   "Grant the container full host device access.":
     "Accorder au conteneur un accès complet aux périphériques de l'hôte.",
-  "Privileged": "Privilégié",
   "Paths": "Chemins",
   "Bind mounts, host path to container path": "Montages, chemin de l'hôte vers le chemin du conteneur",
   "Add path": "Ajouter un chemin",

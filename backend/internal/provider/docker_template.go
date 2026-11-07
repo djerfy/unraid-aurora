@@ -47,9 +47,11 @@ type containerTemplateData struct {
 	Privileged    bool
 	Advanced      model.ContainerAdvanced
 	AdvancedSet   bool
-	// PreserveMeta keeps the icon, WebUI and privilege flag from the existing
-	// template when the caller cannot know them (container settings edit).
+	// PreserveMeta keeps the icon and WebUI from the existing template when the
+	// caller cannot know them.
 	PreserveMeta bool
+	// UpdatePrivileged writes the privilege flag without touching icon/WebUI.
+	UpdatePrivileged bool
 	// PreserveExtraParams leaves the template's ExtraParams untouched apart
 	// from the restart policy. Docker inspect exposes image labels, generated
 	// MAC addresses and other runtime defaults that must not leak into it.
@@ -239,6 +241,8 @@ func templateFromXML(root *xmlElement) model.ContainerTemplate {
 		Icon:          root.text("Icon"),
 		WebUI:         root.text("WebUI"),
 		Privileged:    strings.EqualFold(root.text("Privileged"), "true"),
+		ExtraParams:   root.text("ExtraParams"),
+		PostArgs:      root.text("PostArgs"),
 		Ports:         []model.Port{},
 		Volumes:       []model.ContainerVolume{},
 		Env:           []model.ContainerEnv{},
@@ -283,6 +287,8 @@ func templateFromXML(root *xmlElement) model.ContainerTemplate {
 
 func containerAdvancedFromTemplate(root *xmlElement) model.ContainerAdvanced {
 	advanced := containerAdvancedFromExtraParams(root.text("ExtraParams"))
+	advanced.ExtraParams = root.text("ExtraParams")
+	advanced.PostArgs = root.text("PostArgs")
 	advanced.MemoryLimit = parseDockerMemory(root.text("Memory"))
 	advanced.CPUSet = strings.TrimSpace(root.text("CPUset"))
 	for _, node := range root.Children {
@@ -360,10 +366,18 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 		} else {
 			// Unraid has no dedicated restart policy field; keeping the flag in
 			// ExtraParams makes the setting survive a recreation from its own webGUI.
-			root.setText("ExtraParams", mergeExtraParams(root.text("ExtraParams"), data.Advanced, data.RestartPolicy))
+			advanced := data.Advanced
+			if strings.TrimSpace(advanced.ExtraParams) != "" {
+				advanced = mergeContainerAdvanced(advanced, containerAdvancedFromExtraParams(advanced.ExtraParams))
+			}
+			root.setText("ExtraParams", mergeExtraParams(advanced.ExtraParams, advanced, data.RestartPolicy))
+			root.setText("PostArgs", advanced.PostArgs)
 		}
 	} else {
 		root.setText("ExtraParams", applyRestartPolicy(root.text("ExtraParams"), data.RestartPolicy))
+	}
+	if data.UpdatePrivileged {
+		root.setText("Privileged", strconv.FormatBool(data.Privileged))
 	}
 	if !data.PreserveMeta {
 		root.setText("Privileged", strconv.FormatBool(data.Privileged))
@@ -401,6 +415,26 @@ func (l *Live) syncContainerTemplate(ctx context.Context, data containerTemplate
 		return fmt.Errorf("write template: %w", err)
 	}
 	return nil
+}
+
+func (l *Live) containerTemplateFor(name string) (model.ContainerTemplate, bool) {
+	if l.bootDir == "" {
+		return model.ContainerTemplate{}, false
+	}
+	path, exists := l.userTemplatePath(name)
+	if !exists {
+		return model.ContainerTemplate{}, false
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return model.ContainerTemplate{}, false
+	}
+	root, err := parseXMLTree(raw)
+	if err != nil {
+		return model.ContainerTemplate{}, false
+	}
+	template := templateFromXML(root)
+	return template, template.Name != ""
 }
 
 func (l *Live) userTemplatePath(name string) (string, bool) {
@@ -651,7 +685,7 @@ func (l *Live) isBridgeNetwork(ctx context.Context, network string) bool {
 
 // syncTemplateAfterUpdate is best-effort: the container has already been
 // recreated, so a template write failure must not mask a successful update.
-func (l *Live) syncTemplateAfterUpdate(ctx context.Context, cfg model.ContainerConfig) {
+func (l *Live) syncTemplateAfterUpdate(ctx context.Context, cfg model.ContainerConfig, syncExtra bool) {
 	if l.bootDir == "" {
 		return
 	}
@@ -670,8 +704,10 @@ func (l *Live) syncTemplateAfterUpdate(ctx context.Context, cfg model.ContainerC
 		Env:                 cfg.Env,
 		Advanced:            cfg.Advanced,
 		AdvancedSet:         true,
+		Privileged:          cfg.Privileged,
+		UpdatePrivileged:    syncExtra,
 		PreserveMeta:        true,
-		PreserveExtraParams: true,
+		PreserveExtraParams: !syncExtra,
 	})
 	if err != nil {
 		slog.Error("sync container template", "container", cfg.Name, "error", err)

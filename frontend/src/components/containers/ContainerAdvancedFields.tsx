@@ -26,6 +26,8 @@ export function normalizeContainerAdvanced(value?: Partial<ContainerAdvanced> | 
     macAddress: value?.macAddress ?? "",
     hostname: value?.hostname ?? "",
     cpuSet: value?.cpuSet ?? "",
+    extraParams: value?.extraParams ?? "",
+    postArgs: value?.postArgs ?? "",
   };
 }
 
@@ -47,6 +49,8 @@ export const emptyContainerAdvanced: ContainerAdvanced = {
   cpuSet: "",
   pidsLimit: 0,
   readOnlyRootfs: false,
+  extraParams: "",
+  postArgs: "",
 };
 
 function listText(values: string[]): string {
@@ -77,10 +81,12 @@ export function ContainerAdvancedFields({
   value: input,
   onChange,
   privileged,
+  onPrivilegedChange,
 }: {
   value?: Partial<ContainerAdvanced> | null;
   onChange: (value: ContainerAdvanced) => void;
   privileged?: boolean;
+  onPrivilegedChange?: (value: boolean) => void;
 }) {
   const { t } = useI18n();
   const value = normalizeContainerAdvanced(input);
@@ -95,7 +101,7 @@ export function ContainerAdvancedFields({
     <section>
       <SectionHeader
         title={t("Advanced")}
-        hint={t("Devices, capabilities and resource limits. Empty fields keep Docker defaults.")}
+        hint={t("Devices, capabilities, resource limits and raw Docker options. Empty fields keep Docker defaults.")}
       />
       {dangerous ? (
         <div className="mb-3 flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-soft)] p-3 text-[10.5px] leading-relaxed text-muted">
@@ -150,7 +156,24 @@ export function ContainerAdvancedFields({
             className="h-9 w-full rounded-lg border border-line bg-[var(--surface-2)] px-2.5 font-mono text-[10.5px] text-ink outline-none transition focus:border-[var(--accent-line)]"
           />
         </label>
+        {onPrivilegedChange ? (
+          <div className="space-y-1">
+            <span className="block text-[9.5px] uppercase tracking-[0.08em] text-subtle">{t("Privileged")}</span>
+            <div className="flex h-9 items-center justify-between gap-2 rounded-lg border border-line bg-[var(--surface-2)]/45 px-2.5">
+              <span className="truncate text-[9px] text-subtle">{t("Full host access.")}</span>
+              <Switch checked={Boolean(privileged)} onChange={onPrivilegedChange} label={t("Privileged")} />
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <TextArea label={t("Extra parameters")} value={value.extraParams} placeholder="--device=/dev/dri --cap-add=NET_ADMIN" onChange={(extraParams) => update({ extraParams })} />
+        <TextArea label={t("Post arguments")} value={value.postArgs} placeholder="--log-level debug" onChange={(postArgs) => update({ postArgs })} />
+      </div>
+      <p className="mt-1 text-[9.5px] leading-relaxed text-subtle">
+        {t("Extra parameters are passed to the Docker create request for supported flags and kept in the Unraid template. Post arguments are appended to the image command.")}
+      </p>
 
       <div className="mt-2">
         <CPUPinning value={value.cpuSet} onChange={(cpuSet) => update({ cpuSet })} />

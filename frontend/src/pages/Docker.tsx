@@ -988,13 +988,11 @@ function ContainerCard({
           items={[
             { label: t("Details & logs"), icon: <InfoIcon className="size-3.5" />, onSelect: onOpen },
             { label: t("Edit settings"), icon: <Settings2 className="size-3.5" />, onSelect: onEdit },
-            ...(container.updateAvailable
-              ? [{
-                  label: t("Update image & restart"),
-                  icon: <ArrowDownToLine className="size-3.5" />,
-                  onSelect: onUpdate,
-                }]
-              : []),
+            {
+              label: t("Force update"),
+              icon: <ArrowDownToLine className="size-3.5" />,
+              onSelect: onUpdate,
+            },
             {
               label: running ? t("Restart") : t("Start"),
               icon: running ? <RotateCw className="size-3.5" /> : <Play className="size-3.5" />,
@@ -1034,7 +1032,19 @@ function ContainerCard({
         </Badge>
         <ContainerHealthBadge health={container.health} />
         <span className="text-[10px] text-subtle">{running ? t("Up {time}", { time: formatUptime(container.uptime) }) : container.status}</span>
-        {container.updateAvailable ? <Badge tone="warning" className="ml-auto">{t("Update")}</Badge> : null}
+        <div className="ml-auto flex items-center gap-2">
+          {container.updateAvailable ? <Badge tone="warning">{t("Update")}</Badge> : null}
+          <Button
+            size="sm"
+            variant="secondary"
+            className="!border-white/20 !bg-white !text-[#101116] hover:!bg-white/90"
+            icon={<ArrowDownToLine className="size-3" />}
+            disabled={busy}
+            onClick={onUpdate}
+          >
+            {t("Force update")}
+          </Button>
+        </div>
       </div>
 
       <div className="relative mt-4 grid grid-cols-2 gap-3">
@@ -1125,18 +1135,14 @@ function ContainerCard({
 
       <div className="relative mt-4 flex items-center justify-end gap-2 border-t border-line pt-3">
         <div className="flex items-center gap-1">
-          {container.updateAvailable ? (
-            <IconButton
-              label={t("Update image and restart")}
-              size="sm"
-              disabled={busy}
-              onClick={onUpdate}
-            >
-              <ArrowDownToLine className="size-3.5 text-[var(--warning)]" />
-            </IconButton>
-          ) : (
-            <span className="size-8" aria-hidden="true" />
-          )}
+          <IconButton
+            label={t("Force update")}
+            size="sm"
+            disabled={busy}
+            onClick={onUpdate}
+          >
+            <ArrowDownToLine className="size-3.5 text-soft" />
+          </IconButton>
           <IconButton
             label={running ? t("Restart container") : t("Start container")}
             size="sm"
@@ -1432,7 +1438,7 @@ function ContainerDrawer({
       }
     >
       <div className="space-y-5">
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           <Button
             variant="secondary"
             icon={<Settings2 className="size-3.5" />}
@@ -1446,6 +1452,14 @@ function ContainerDrawer({
             onClick={() => window.open(`/docker/terminal/${encodeURIComponent(container.id)}`, "_blank", "noopener")}
           >
             {t("Open terminal")}
+          </Button>
+          <Button
+            variant="secondary"
+            className="!border-white/20 !bg-white !text-[#101116] hover:!bg-white/90"
+            icon={<ArrowDownToLine className="size-3.5" />}
+            onClick={() => onUpdate(container)}
+          >
+            {t("Force update")}
           </Button>
         </div>
         <div className="grid grid-cols-2 gap-3">

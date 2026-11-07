@@ -110,6 +110,7 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 		Volumes:       []model.ContainerVolume{},
 		Env:           []model.ContainerEnv{},
 		Advanced:      parseContainerAdvanced(config, host),
+		Privileged:    boolValue(host["Privileged"]),
 	}
 	if cfg.Advanced.MacAddress == "" {
 		if settings := childMap(inspect, "NetworkSettings"); settings != nil {
@@ -122,6 +123,10 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 				}
 			}
 		}
+	}
+	if template, ok := l.containerTemplateFor(name); ok {
+		cfg.Advanced.ExtraParams = template.ExtraParams
+		cfg.Advanced.PostArgs = template.PostArgs
 	}
 	if policy := childMap(host, "RestartPolicy"); policy != nil {
 		cfg.RestartPolicy = stringValue(policy["Name"])
@@ -162,14 +167,14 @@ func (l *Live) ContainerConfig(ctx context.Context, id string) (model.ContainerC
 // environment and restart policy. The original container is stopped, renamed as
 // a backup and restored if any step fails.
 func (l *Live) UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error {
-	return l.updateContainerConfig(ctx, id, cfg, nil, true)
+	return l.updateContainerConfig(ctx, id, cfg, nil, true, true)
 }
 
 // updateContainerConfig recreates a container with new settings. syncTemplate
 // is false for image updates: the template already describes the container and
 // must not be rewritten from Docker inspect data, which includes image labels,
 // generated MAC addresses and other runtime defaults.
-func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig, report func(model.ContainerUpdateEvent), syncTemplate bool) error {
+func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig, report func(model.ContainerUpdateEvent), syncTemplate, syncExtra bool) error {
 	emit := func(step, message string) {
 		if report != nil {
 			report(model.ContainerUpdateEvent{Step: step, Message: message})
@@ -232,7 +237,17 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 			}
 		}
 	}
-	applyContainerAdvanced(config, host, cfg.Advanced)
+	advanced := cfg.Advanced
+	if syncExtra && strings.TrimSpace(advanced.ExtraParams) != "" {
+		advanced = mergeContainerAdvanced(advanced, containerAdvancedFromExtraParams(advanced.ExtraParams))
+	}
+	applyContainerAdvanced(config, host, advanced)
+	host["Privileged"] = cfg.Privileged
+	previousPostArgs := ""
+	if template, ok := l.containerTemplateFor(name); ok {
+		previousPostArgs = template.PostArgs
+	}
+	applyPostArgs(config, previousPostArgs, advanced.PostArgs)
 
 	body := map[string]any{}
 	for key, value := range config {
@@ -299,10 +314,41 @@ func (l *Live) updateContainerConfig(ctx context.Context, id string, cfg model.C
 	// this: Docker inspect carries image labels and generated values that do
 	// not belong in the template.
 	if syncTemplate {
-		l.syncTemplateAfterUpdate(ctx, cfg)
+		l.syncTemplateAfterUpdate(ctx, cfg, syncExtra)
 	}
 	l.queueContainerScan(createdInfo.ID)
 	return nil
+}
+
+func applyPostArgs(config map[string]any, previous, next string) {
+	previousTokens := parseShellArgs(previous)
+	current := stringSlice(config["Cmd"])
+	base := append([]string(nil), current...)
+	if len(previousTokens) > 0 && len(base) >= len(previousTokens) {
+		match := true
+		offset := len(base) - len(previousTokens)
+		for index := range previousTokens {
+			if base[offset+index] != previousTokens[index] {
+				match = false
+				break
+			}
+		}
+		if match {
+			base = base[:offset]
+		}
+	}
+	nextTokens := parseShellArgs(next)
+	if len(nextTokens) > 0 {
+		config["Cmd"] = append(append([]string{}, base...), nextTokens...)
+		return
+	}
+	if len(previousTokens) > 0 {
+		if len(base) == 0 {
+			delete(config, "Cmd")
+		} else {
+			config["Cmd"] = base
+		}
+	}
 }
 
 func (l *Live) restartIfRunning(ctx context.Context, id string, running bool) {

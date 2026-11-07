@@ -393,6 +393,8 @@ type ContainerAdvanced struct {
 	CPUSet         string            `json:"cpuSet,omitempty"`
 	PidsLimit      int64             `json:"pidsLimit,omitempty"`
 	ReadOnlyRootfs bool              `json:"readOnlyRootfs,omitempty"`
+	ExtraParams    string            `json:"extraParams,omitempty"`
+	PostArgs       string            `json:"postArgs,omitempty"`
 }
 
 type ContainerTemplate struct {
@@ -404,6 +406,8 @@ type ContainerTemplate struct {
 	Icon          string            `json:"icon"`
 	WebUI         string            `json:"webUi"`
 	Privileged    bool              `json:"privileged"`
+	ExtraParams   string            `json:"extraParams,omitempty"`
+	PostArgs      string            `json:"postArgs,omitempty"`
 	Ports         []Port            `json:"ports"`
 	Volumes       []ContainerVolume `json:"volumes"`
 	Env           []ContainerEnv    `json:"env"`
@@ -492,6 +496,7 @@ type ContainerConfig struct {
 	Ports         []Port            `json:"ports"`
 	Volumes       []ContainerVolume `json:"volumes"`
 	Env           []ContainerEnv    `json:"env"`
+	Privileged    bool              `json:"privileged"`
 	Advanced      ContainerAdvanced `json:"advanced"`
 }
 
