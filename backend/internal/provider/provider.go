@@ -29,6 +29,8 @@ type Provider interface {
 	ContainerImages(ctx context.Context) ([]model.ContainerImage, error)
 	RemoveContainerImage(ctx context.Context, id string) error
 	RemoveUnusedContainerImages(ctx context.Context) (model.ContainerImageCleanup, error)
+	DockerSettings(ctx context.Context) (model.DockerSettings, error)
+	SaveDockerSettings(ctx context.Context, settings model.DockerSettings) error
 	ContainerIcon(ctx context.Context, id string) ([]byte, string, error)
 	ContainerConfig(ctx context.Context, id string) (model.ContainerConfig, error)
 	UpdateContainerConfig(ctx context.Context, id string, cfg model.ContainerConfig) error

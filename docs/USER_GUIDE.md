@@ -742,6 +742,11 @@ can itself be reverted.
   forwarded after Aurora starts.
 - **MCP server**: enables the integrated HTTP endpoint at `/api/v1/mcp`. Disabled by default; the
   local `aurora mcp` stdio mode is unaffected.
+- **Docker**: enable the Docker service, stop timeout, PID limit, vDisk type/size/location,
+  appdata path, log rotation/size/files, template authoring mode, custom network type, host access
+  and user-network preservation. The running Docker version and storage driver are read-only. Values
+  are written to `/boot/config/docker.cfg`; restart Docker or the array to apply storage or service
+  changes.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Unscoped tokens
   can also authenticate the MCP endpoint (`/api/v1/mcp`); scoped tokens only reach the matching MCP
   tools. See [`MCP.md`](MCP.md). Viewers can only

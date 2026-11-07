@@ -545,6 +545,12 @@
       "tools": [
         "remove_unused_images"
       ]
+    },
+    "GET /api/v1/docker/settings": {
+      "excluded": "Unraid Docker daemon configuration; UI-specific."
+    },
+    "PUT /api/v1/docker/settings": {
+      "excluded": "Unraid Docker daemon configuration; UI-specific."
     }
   }
 }

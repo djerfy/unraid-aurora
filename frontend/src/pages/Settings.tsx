@@ -5,6 +5,7 @@ import {
   Activity,
   Bot,
   Check,
+  Container,
   Cpu,
   Download,
   ExternalLink,
@@ -44,6 +45,7 @@ import { UPSView } from "./UPS";
 import { OSUpdatePanel } from "../components/system/OSUpdatePanel";
 import { UnraidAPIPanel } from "../components/system/UnraidAPIPanel";
 import { TrivyPanel } from "../components/system/TrivyPanel";
+import { DockerSettingsPanel } from "../components/system/DockerSettingsPanel";
 import { api } from "../lib/api";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -56,6 +58,7 @@ const SECTIONS = [
   { id: "ups", label: "UPS", icon: BatteryCharging },
   { id: "os", label: "Unraid OS", icon: Download },
   { id: "unraid-api", label: "Unraid API", icon: Activity },
+  { id: "docker", label: "Docker", icon: Container },
   { id: "api", label: "API tokens", icon: KeyRound },
   { id: "mcp", label: "MCP", icon: Bot },
   { id: "security", label: "Security", icon: ShieldCheck },
@@ -717,6 +720,8 @@ export function SettingsPage() {
           {section === "os" ? <OSUpdatePanel /> : null}
 
           {section === "unraid-api" ? <UnraidAPIPanel /> : null}
+
+          {section === "docker" ? <DockerSettingsPanel /> : null}
 
           {section === "mcp" ? (
             <Card className="card-pad">

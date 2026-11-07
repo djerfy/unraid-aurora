@@ -178,6 +178,12 @@ export const api = {
     request<import("./types").ContainerNetworkMap>(
       `/api/v1/docker/network-map${containerId ? `?container=${encodeURIComponent(containerId)}` : ""}`,
     ),
+  dockerSettings: () => request<import("./types").DockerSettings>("/api/v1/docker/settings"),
+  saveDockerSettings: (settings: import("./types").DockerSettings) =>
+    request<import("./types").DockerSettings>("/api/v1/docker/settings", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
   containerImages: () => request<import("./types").ContainerImage[]>("/api/v1/docker/images"),
   removeContainerImage: (id: string) =>
     request<{ ok: boolean }>(`/api/v1/docker/images/${encodeURIComponent(id)}`, { method: "DELETE" }),

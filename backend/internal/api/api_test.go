@@ -79,6 +79,19 @@ func (f *fakeProvider) ContainerNetworkMap(ctx context.Context, containerID stri
 	}, nil
 }
 
+func (f *fakeProvider) DockerSettings(ctx context.Context) (model.DockerSettings, error) {
+	return model.DockerSettings{
+		Enabled: true, Running: true, Version: "27.0.0", StorageDriver: "overlay2",
+		StopTimeout: 10, ImageSize: 20, ImageFile: "/mnt/user/system/docker/",
+		AppConfigPath: "/mnt/user/appdata/", BackingFS: "overlay2",
+		LogRotation: true, LogSize: "50m", LogFiles: 1, ReadMore: true,
+	}, nil
+}
+
+func (f *fakeProvider) SaveDockerSettings(ctx context.Context, settings model.DockerSettings) error {
+	return nil
+}
+
 func (f *fakeProvider) ContainerImages(ctx context.Context) ([]model.ContainerImage, error) {
 	return []model.ContainerImage{{ID: "sha256:abc", RepoTags: []string{"plex:latest"}, InUse: true, UsedBy: []string{"plex"}}}, nil
 }
@@ -728,6 +741,34 @@ func TestMCPEndpointDisabledByDefault(t *testing.T) {
 	if body.Error.Code != "mcp_disabled" {
 		t.Fatalf("unexpected error code: %+v", body)
 	}
+}
+
+func TestDockerSettingsEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/docker/settings", nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var settings model.DockerSettings
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if !settings.Enabled || settings.Version != "27.0.0" {
+		t.Fatalf("unexpected settings: %+v", settings)
+	}
+
+	settings.StopTimeout = 20
+	resp = env.request(t, http.MethodPut, "/api/v1/docker/settings", settings, headers)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
 }
 
 func TestContainerImagesEndpoints(t *testing.T) {

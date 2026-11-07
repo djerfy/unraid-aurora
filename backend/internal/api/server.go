@@ -96,6 +96,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/docker/images", s.containerImages)
 	api.HandleFunc("DELETE /api/v1/docker/images/{id}", s.removeContainerImage)
 	api.HandleFunc("POST /api/v1/docker/images/prune", s.pruneContainerImages)
+	api.HandleFunc("GET /api/v1/docker/settings", s.dockerSettings)
+	api.HandleFunc("PUT /api/v1/docker/settings", s.saveDockerSettings)
 	api.HandleFunc("POST /api/v1/docker/containers/{id}/update", s.updateContainerImage)
 	api.HandleFunc("PUT /api/v1/docker/containers/{id}/autostart", s.containerAutostart)
 	api.HandleFunc("DELETE /api/v1/docker/containers/{id}", s.removeContainer)

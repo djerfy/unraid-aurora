@@ -1070,6 +1070,29 @@ export type AuditEntry = {
 
 export type LogLine = { time: string; level: string; source: string; message: string };
 
+export type DockerSettings = {
+  enabled: boolean;
+  running: boolean;
+  version: string;
+  storageDriver: string;
+  stopTimeout: number;
+  pidLimit: number;
+  imageType: string;
+  imageSize: number;
+  imageFile: string;
+  appConfigPath: string;
+  appUnraidPath: string;
+  backingFs: string;
+  logRotation: boolean;
+  logSize: string;
+  logFiles: number;
+  readMore: boolean;
+  authoringMode: boolean;
+  networkType: string;
+  allowAccess: boolean;
+  preserveUserNetworks: boolean;
+};
+
 export type VisualFolder = {
   id: string;
   name: string;

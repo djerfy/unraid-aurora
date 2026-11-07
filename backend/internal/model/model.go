@@ -990,6 +990,29 @@ type Settings struct {
 	MCPEnabled          bool              `json:"mcpEnabled"`
 }
 
+type DockerSettings struct {
+	Enabled              bool   `json:"enabled"`
+	Running              bool   `json:"running"`
+	Version              string `json:"version,omitempty"`
+	StorageDriver        string `json:"storageDriver,omitempty"`
+	StopTimeout          int    `json:"stopTimeout"`
+	PIDLimit             int    `json:"pidLimit"`
+	ImageType            string `json:"imageType"`
+	ImageSize            int    `json:"imageSize"`
+	ImageFile            string `json:"imageFile"`
+	AppConfigPath        string `json:"appConfigPath"`
+	AppUnraidPath        string `json:"appUnraidPath"`
+	BackingFS            string `json:"backingFs"`
+	LogRotation          bool   `json:"logRotation"`
+	LogSize              string `json:"logSize"`
+	LogFiles             int    `json:"logFiles"`
+	ReadMore             bool   `json:"readMore"`
+	AuthoringMode        bool   `json:"authoringMode"`
+	NetworkType          string `json:"networkType"`
+	AllowAccess          bool   `json:"allowAccess"`
+	PreserveUserNetworks bool   `json:"preserveUserNetworks"`
+}
+
 type Task struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`

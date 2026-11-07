@@ -162,6 +162,8 @@ are gzip-compressed when the client sends `Accept-Encoding: gzip`.
 | GET | `/docker/images` | viewer+ | Docker images with container usage |
 | DELETE | `/docker/images/{id}` | operator | Remove an unused image without force |
 | POST | `/docker/images/prune` | operator | Remove every image not used by a container |
+| GET | `/docker/settings` | viewer+ | Unraid Docker daemon settings and live version |
+| PUT | `/docker/settings` | operator | Save Docker daemon settings to `/boot/config/docker.cfg` |
 | PUT | `/docker/containers/{id}/autostart` | operator | Toggle Unraid autostart |
 | GET | `/docker/containers/{id}/logs?lines=` | viewer+ | Log tail |
 | GET | `/docker/containers/{id}/connections` | viewer+ | Observed network sockets |
