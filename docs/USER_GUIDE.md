@@ -431,6 +431,8 @@ and the containers using it.
   recreates the container even when no newer digest is flagged. The yellow **Update** badge remains
   the update indicator.
 - **Update all** processes every outdated container sequentially.
+- Each successful update adds a `container.image.update` entry to **History** with the previous and
+  new image digest and image ID. The entry is informational and cannot be rolled back from History.
 
 ### Image security
 
@@ -711,6 +713,11 @@ Every file-backed configuration change made by Aurora is snapshotted before writ
 Each entry shows the action, description, affected files, previous size and a **Difference** view.
 **Rollback** restores the previous contents; the current state is snapshotted first, so a rollback
 can itself be reverted.
+
+Successful container image updates are also recorded. Their entry uses the virtual path
+`docker://<container>/image` and diffs the resolved image digest (`sha256:...`) and image ID before
+and after the pull. These entries are informational: they have no file backup and cannot be rolled
+back from History. Deploy the previous image tag to revert.
 
 - Storage: `$AURORA_CONFIG_DIR/config-history/<id>/` (`meta.json`, `files/`).
 - Limit: 200 entries.

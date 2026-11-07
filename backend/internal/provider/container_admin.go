@@ -231,6 +231,10 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 		return err
 	}
 	oldImageID := l.containerImageID(ctx, id)
+	var oldDigests []string
+	if oldImageID != "" {
+		oldDigests, _ = l.localImageDigests(ctx, oldImageID)
+	}
 	emit(model.ContainerUpdateEvent{Step: "pull", Message: "Pulling " + cfg.Image})
 	if err := l.pullImageWithProgress(ctx, cfg.Image, func(message string, percent float64) {
 		emit(model.ContainerUpdateEvent{Step: "pull", Message: message, Progress: percent})
@@ -241,6 +245,14 @@ func (l *Live) UpdateContainerImage(ctx context.Context, id string, report func(
 	defer cancel()
 	if err := l.updateContainerConfig(recreateCtx, id, cfg, report, false, false); err != nil {
 		return err
+	}
+	newImageID := l.containerImageID(ctx, cfg.Name)
+	var newDigests []string
+	if newImageID != "" {
+		newDigests, _ = l.localImageDigests(ctx, newImageID)
+	}
+	if err := l.recordContainerImageChange(cfg.Name, cfg.Image, oldImageID, newImageID, oldDigests, newDigests); err != nil {
+		slog.Warn("record container image history", "container", cfg.Name, "error", err)
 	}
 	if oldImageID != "" {
 		cleanupCtx, cancelCleanup := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)

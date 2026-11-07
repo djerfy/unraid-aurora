@@ -859,6 +859,7 @@ export type ConfigFileChange = {
   existed: boolean;
   size: number;
   diff: string;
+  virtual?: boolean;
 };
 
 export type ConfigHistory = {

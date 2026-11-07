@@ -310,6 +310,10 @@ Aurora snapshots file-backed changes under `$AURORA_CONFIG_DIR/config-history` b
 (`writeConfigFile`). Each entry stores the previous bytes, a unified diff and file metadata. Rollback
 snapshots the current state first, then restores the backup, so it is reversible.
 
+Container image updates append a virtual entry (`docker://<container>/image`) that diffs the resolved
+registry digest and image ID before and after the pull. Virtual files carry a diff but no backup, and
+rollback rejects entries that contain no restorable files.
+
 Rebalancing (`internal/provider/balance.go`) scans selected paths, chooses destinations by free
 space, copies with `io.Copy`, verifies sizes, preserves metadata/hardlinks and only then removes the
 source. Jobs run in a detached goroutine with a mutex-protected snapshot consumed by

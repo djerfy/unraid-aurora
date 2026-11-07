@@ -48,6 +48,9 @@ type historyFile struct {
 	Diff    string `json:"diff"`
 	Size    int64  `json:"size"`
 	Mode    uint32 `json:"mode"`
+	// Virtual entries document a change that has no file backup, such as a
+	// resolved container image digest. Rollback skips them.
+	Virtual bool `json:"virtual,omitempty"`
 }
 
 // writeConfigFile snapshots the current file then writes the new content,
@@ -295,7 +298,12 @@ func (l *Live) RollbackConfig(_ context.Context, id string) error {
 		return err
 	}
 	current := make([]configChange, 0, len(meta.Files))
+	restorable := 0
 	for _, file := range meta.Files {
+		if file.Virtual {
+			continue
+		}
+		restorable++
 		data, readErr := os.ReadFile(file.Path)
 		if readErr != nil {
 			if !os.IsNotExist(readErr) {
@@ -306,11 +314,17 @@ func (l *Live) RollbackConfig(_ context.Context, id string) error {
 		}
 		current = append(current, configChange{Path: file.Path, Data: data})
 	}
+	if restorable == 0 {
+		return errors.New("this history entry has no restorable files")
+	}
 	if err := l.writeConfigChanges("rollback", "Before rollback of "+id, current); err != nil {
 		return fmt.Errorf("snapshot before rollback: %w", err)
 	}
 
 	for _, file := range meta.Files {
+		if file.Virtual {
+			continue
+		}
 		if !file.Existed {
 			if err := os.Remove(file.Path); err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("remove %s: %w", file.Path, err)
@@ -356,7 +370,7 @@ func historyToModel(meta historyMeta) model.ConfigHistory {
 	files := make([]model.ConfigFileChange, 0, len(meta.Files))
 	for _, file := range meta.Files {
 		files = append(files, model.ConfigFileChange{
-			Path: file.Path, Existed: file.Existed, Size: file.Size, Diff: file.Diff,
+			Path: file.Path, Existed: file.Existed, Size: file.Size, Diff: file.Diff, Virtual: file.Virtual,
 		})
 	}
 	return model.ConfigHistory{
@@ -368,19 +382,30 @@ func historyToModel(meta historyMeta) model.ConfigHistory {
 // recordConfigEvent writes a history entry without file changes. Used for
 // operations whose artifacts live outside the configuration tree (VM backups).
 func (l *Live) recordConfigEvent(action, description string) {
+	_ = l.recordHistoryEvent(action, description, nil)
+}
+
+// recordHistoryEvent stores a history entry as-is. Virtual files carry a diff
+// without a backup so image digests stay visible in the timeline.
+func (l *Live) recordHistoryEvent(action, description string, files []historyFile) error {
 	if l.configDir() == "" {
-		return
+		return nil
 	}
 	id := newHistoryID()
 	dir := filepath.Join(l.configDir(), configHistoryDir, id)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return
+		return err
 	}
-	meta := historyMeta{ID: id, Created: time.Now().UTC(), Action: action, Description: description}
-	if raw, err := json.MarshalIndent(meta, "", "  "); err == nil {
-		_ = os.WriteFile(filepath.Join(dir, "meta.json"), raw, 0o600)
+	meta := historyMeta{ID: id, Created: time.Now().UTC(), Action: action, Description: description, Files: files}
+	raw, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "meta.json"), raw, 0o600); err != nil {
+		return err
 	}
 	l.pruneConfigHistory()
+	return nil
 }
 
 func (l *Live) pruneConfigHistory() {

@@ -787,6 +787,7 @@ type ConfigFileChange struct {
 	Existed bool   `json:"existed"`
 	Size    int64  `json:"size"`
 	Diff    string `json:"diff"`
+	Virtual bool   `json:"virtual,omitempty"`
 }
 
 type ConfigHistory struct {

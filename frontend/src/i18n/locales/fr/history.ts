@@ -6,16 +6,19 @@ const history: Record<string, string> = {
   "Rollback failed": "Échec de la restauration",
   "System": "Système",
   "History": "Historique",
-  "Every configuration file written by Aurora is snapshotted first. Review the diff, then roll back in one click.":
-    "Chaque fichier de configuration écrit par Aurora est d'abord sauvegardé. Vérifiez le diff, puis restaurez en un clic.",
+  "Configuration and container image changes are recorded here. File-backed entries can be rolled back; image digest changes are informational.":
+    "Les modifications de configuration et d'images de conteneurs sont enregistrées ici. Les entrées basées sur des fichiers peuvent être restaurées ; les changements de digest d'image sont informatifs.",
+  "Container image updates are informational. Deploy the previous image tag to roll back.":
+    "Les mises à jour d'images de conteneurs sont informatives. Redéployez le tag d'image précédent pour revenir en arrière.",
+  "image": "image",
   "{count} entry": "{count} entrée",
   "{count} entries": "{count} entrées",
   "last {time}": "dernière activité : {time}",
   "Search actions or files…": "Rechercher des actions ou des fichiers…",
   "No configuration changes yet":
     "Aucune modification de configuration pour le moment",
-  "Editing a container template, toggling autostart or any other file-backed setting will create a restorable entry here.":
-    "Modifier un modèle de conteneur, activer ou désactiver le démarrage automatique ou changer tout autre paramètre stocké dans un fichier créera ici une entrée restaurable.",
+  "Editing a container template, toggling autostart, updating a container image or any other setting will create an entry here.":
+    "Modifier un modèle de conteneur, activer ou désactiver le démarrage automatique, mettre à jour une image de conteneur ou changer tout autre paramètre créera ici une entrée.",
   "no files": "aucun fichier",
   "{count} file": "{count} fichier",
   "{count} files": "{count} fichiers",
