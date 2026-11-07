@@ -988,6 +988,17 @@ type Settings struct {
 	TrivyVersion        string            `json:"trivyVersion"`
 	TrivyDBUpdateHour   int               `json:"trivyDbUpdateHour"`
 	MCPEnabled          bool              `json:"mcpEnabled"`
+	ProxyEnabled        bool              `json:"proxyEnabled"`
+	ProxyActiveID       string            `json:"proxyActiveId"`
+	Proxies             []ProxyConfig     `json:"proxies"`
+}
+
+type ProxyConfig struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 type DockerSettings struct {

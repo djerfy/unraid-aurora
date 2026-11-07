@@ -9,6 +9,7 @@ import {
   Cpu,
   Download,
   ExternalLink,
+  Globe,
   Info,
   KeyRound,
   LogOut,
@@ -47,6 +48,7 @@ import { UnraidAPIPanel } from "../components/system/UnraidAPIPanel";
 import { TrivyPanel } from "../components/system/TrivyPanel";
 import { DockerSettingsPanel } from "../components/system/DockerSettingsPanel";
 import { VMSettingsPanel } from "../components/system/VMSettingsPanel";
+import { ProxySettingsPanel } from "../components/system/ProxySettingsPanel";
 import { api } from "../lib/api";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -61,6 +63,7 @@ const SECTIONS = [
   { id: "unraid-api", label: "Unraid API", icon: Activity },
   { id: "docker", label: "Docker", icon: Container },
   { id: "vm", label: "VM Manager", icon: Monitor },
+  { id: "proxy", label: "Outbound proxy", icon: Globe },
   { id: "api", label: "API tokens", icon: KeyRound },
   { id: "mcp", label: "MCP", icon: Bot },
   { id: "security", label: "Security", icon: ShieldCheck },
@@ -726,6 +729,17 @@ export function SettingsPage() {
           {section === "docker" ? <DockerSettingsPanel /> : null}
 
           {section === "vm" ? <VMSettingsPanel /> : null}
+
+          {section === "proxy" ? (
+            <ProxySettingsPanel
+              enabled={settings.proxyEnabled ?? false}
+              proxies={settings.proxies ?? []}
+              activeId={settings.proxyActiveId ?? ""}
+              onEnabledChange={(value) => update("proxyEnabled", value)}
+              onProxiesChange={(value) => update("proxies", value)}
+              onActiveChange={(value) => update("proxyActiveId", value)}
+            />
+          ) : null}
 
           {section === "mcp" ? (
             <Card className="card-pad">

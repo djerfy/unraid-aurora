@@ -980,6 +980,9 @@ export type Settings = {
   trivyVersion: string;
   trivyDbUpdateHour: number;
   mcpEnabled: boolean;
+  proxyEnabled: boolean;
+  proxyActiveId: string;
+  proxies: ProxyConfig[];
 };
 
 export type UPSSettings = {
@@ -1091,6 +1094,14 @@ export type DockerSettings = {
   networkType: string;
   allowAccess: boolean;
   preserveUserNetworks: boolean;
+};
+
+export type ProxyConfig = {
+  id: string;
+  name: string;
+  url: string;
+  username: string;
+  password: string;
 };
 
 export type VMSettings = {

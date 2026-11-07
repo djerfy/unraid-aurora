@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 )
 
 // Overridden by tests to point at a local fixture server.
@@ -273,7 +274,7 @@ func (l *Live) fetchOSJSON(ctx context.Context, endpoint string, headers map[str
 	req.Header.Set("Accept", "application/json")
 	client := l.webClient
 	if client == nil {
-		client = &http.Client{Timeout: 20 * time.Second}
+		client = outbound.Client(20 * time.Second)
 	}
 	resp, err := client.Do(req)
 	if err != nil {

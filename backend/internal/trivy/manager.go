@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 )
 
 const (
@@ -95,7 +96,7 @@ func New(dir string) *Manager {
 		cacheDir:      filepath.Join(dir, "cache"),
 		scansDir:      filepath.Join(dir, "scans"),
 		statePath:     filepath.Join(dir, "state.json"),
-		client:        &http.Client{Timeout: 20 * time.Minute},
+		client:        outbound.Client(20 * time.Minute),
 		scanning:      map[string]scanActivity{},
 		queue:         make(chan scanJob, 64),
 		closed:        make(chan struct{}),
@@ -682,7 +683,7 @@ func (m *Manager) updateDBNow(ctx context.Context) error {
 	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	command := exec.CommandContext(runCtx, executable, "image", "--download-db-only", "--cache-dir", m.cacheDir, "--quiet", "--timeout", "20m")
-	command.Env = append(os.Environ(), "TRIVY_NO_PROGRESS=true")
+	command.Env = append(append(os.Environ(), "TRIVY_NO_PROGRESS=true"), outbound.Env()...)
 	output, err := command.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("download Trivy database: %w (%s)", err, strings.TrimSpace(string(output)))
@@ -695,7 +696,7 @@ func (m *Manager) updateDBNow(ctx context.Context) error {
 	m.setStage("Downloading Java vulnerability database")
 	// #nosec G204 -- executable is the managed Trivy binary under m.dir.
 	javaCommand := exec.CommandContext(runCtx, executable, "image", "--download-java-db-only", "--cache-dir", m.cacheDir, "--quiet", "--timeout", "20m")
-	javaCommand.Env = append(os.Environ(), "TRIVY_NO_PROGRESS=true")
+	javaCommand.Env = append(append(os.Environ(), "TRIVY_NO_PROGRESS=true"), outbound.Env()...)
 	javaOutput, err := javaCommand.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("download Trivy Java database: %w (%s)", err, strings.TrimSpace(string(javaOutput)))
@@ -754,7 +755,7 @@ func (m *Manager) scan(ctx context.Context, image, imageID string, onStart func(
 	m.mu.Lock()
 	dockerSocket := m.dockerSocket
 	m.mu.Unlock()
-	env := append(os.Environ(), "TRIVY_NO_PROGRESS=true", "TRIVY_CACHE_DIR="+m.cacheDir)
+	env := append(append(os.Environ(), "TRIVY_NO_PROGRESS=true", "TRIVY_CACHE_DIR="+m.cacheDir), outbound.Env()...)
 	if dockerSocket != "" {
 		env = append(env, "DOCKER_HOST=unix://"+dockerSocket)
 	}

@@ -2060,6 +2060,9 @@ func validateSettings(s *model.Settings) error {
 			return fmt.Errorf("unknown notification event %q", event)
 		}
 	}
+	if err := normalizeProxySettings(s); err != nil {
+		return err
+	}
 	return nil
 }
 

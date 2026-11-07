@@ -374,6 +374,10 @@ func redactSettings(settings model.Settings) model.Settings {
 	settings.WebhookURL = ""
 	settings.WebhookHeaders = nil
 	settings.WebhookBody = ""
+	settings.Proxies = append([]model.ProxyConfig(nil), settings.Proxies...)
+	for index := range settings.Proxies {
+		settings.Proxies[index].Password = ""
+	}
 	return settings
 }
 

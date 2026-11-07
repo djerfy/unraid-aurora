@@ -750,6 +750,11 @@ can itself be reverted.
 - **VM Manager**: enable VMs, hide the autostart/start options for every VM, and set the optional
   default Windows VirtIO driver ISO. Values are written to `/boot/config/domain.cfg`; restart the
   array to apply service changes. The libvirt running state is read-only.
+- **Outbound proxy**: enable a global proxy and store up to four named configurations (URL plus
+  optional username/password). Only one configuration is active at a time. The proxy applies to
+  Aurora's internet traffic: Docker registry digest checks, the Community Applications catalog,
+  plugin and Unraid OS updates, Trivy downloads and outbound notifications. Docker and VM API calls
+  over the local socket are never proxied. Saved in Aurora's settings file; no restart is needed.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Unscoped tokens
   can also authenticate the MCP endpoint (`/api/v1/mcp`); scoped tokens only reach the matching MCP
   tools. See [`MCP.md`](MCP.md). Viewers can only

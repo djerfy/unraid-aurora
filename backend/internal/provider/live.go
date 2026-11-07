@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 	trivymanager "aurora/internal/trivy"
 )
 
@@ -207,7 +208,7 @@ func NewLive(stateDir, bootDir, dockerSocket, dataDir, configDir string) (*Live,
 	if strings.TrimSpace(l.settings.ServerName) == "" {
 		l.settings.ServerName = l.defaultServerName()
 	}
-	l.webClient = &http.Client{Timeout: 20 * time.Second}
+	l.webClient = outbound.Client(20 * time.Second)
 	l.lastCPU = readCPU()
 	initialNet := readNetStats()
 	l.lastNet = sumNetStats(initialNet)
@@ -971,6 +972,7 @@ func (l *Live) SaveSettings(ctx context.Context, s model.Settings) error {
 		return err
 	}
 	l.applyTrivySettings(s)
+	l.applyProxySettings(s)
 	return nil
 }
 
@@ -995,6 +997,7 @@ func (l *Live) loadSettings() {
 	if s.Theme != "" {
 		l.settings = s
 	}
+	l.applyProxySettings(l.settings)
 }
 
 func (l *Live) defaultServerName() string {

@@ -90,6 +90,7 @@ Reads the same sources as the original webGUI:
 | Temperatures | `/sys/class/hwmon/hwmon*/temp1_input` |
 | CPU power | RAPL `energy_uj` deltas (`/sys/class/powercap/intel-rapl:*/`), with `hwmon` `energy1_input`/`power1_input` fallback |
 | Docker | HTTP over `unix:/var/run/docker.sock`; image updates use registry v2 manifest digests, with credentials from `~/.docker/config.json` |
+| Outbound HTTP | Shares the `outbound` transport; an optional user proxy from Settings is resolved per request, and Trivy subprocesses receive `HTTP(S)_PROXY` |
 | VM inventory | `virsh list --all`, `virsh domstate`, `virsh dumpxml` (graphics websocket for the console) |
 | Notifications | `/tmp/notifications/{unread,archive}/*.notify` |
 | Parity history | `/boot/config/parity-checks.log` |

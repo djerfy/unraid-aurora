@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 )
 
 type Message struct {
@@ -173,7 +174,7 @@ func postJSON(ctx context.Context, endpoint string, payload any) error {
 }
 
 func doRequest(req *http.Request) error {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := outbound.Client(10 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

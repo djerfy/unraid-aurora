@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 )
 
 var containerNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
@@ -705,7 +706,7 @@ func (l *Live) webHTTPClient() *http.Client {
 	if l.webClient != nil {
 		return l.webClient
 	}
-	return &http.Client{Timeout: 20 * time.Second}
+	return outbound.Client(20 * time.Second)
 }
 
 type imageRef struct {

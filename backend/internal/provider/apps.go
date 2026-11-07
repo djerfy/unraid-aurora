@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"aurora/internal/model"
+	"aurora/internal/outbound"
 )
 
 const (
@@ -239,7 +240,7 @@ func (l *Live) fetchCABytes(ctx context.Context, target string, limit int64) ([]
 	request.Header.Set("User-Agent", "Aurora")
 	client := l.webHTTPClient()
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+		client = outbound.Client(30 * time.Second)
 	}
 	clone := *client
 	clone.CheckRedirect = func(req *http.Request, via []*http.Request) error {
