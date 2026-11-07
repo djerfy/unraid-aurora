@@ -1486,6 +1486,40 @@ func (s *Server) saveDockerSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, settings)
 }
 
+func (s *Server) vmSettings(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	settings, err := s.provider.VMSettings(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "vm_settings", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, settings)
+}
+
+func (s *Server) saveVMSettings(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.ReadOnly {
+		writeError(w, http.StatusForbidden, "read_only", "server is in read-only mode")
+		return
+	}
+	var body model.VMSettings
+	if !s.decode(w, r, &body) {
+		return
+	}
+	ctx, cancel := s.serverContext()
+	defer cancel()
+	if err := s.provider.SaveVMSettings(ctx, body); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, "vm_settings", err.Error())
+		return
+	}
+	settings, err := s.provider.VMSettings(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "vm_settings", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, settings)
+}
+
 func (s *Server) containerImages(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := s.serverContext()
 	defer cancel()

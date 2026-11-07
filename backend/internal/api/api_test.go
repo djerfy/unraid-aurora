@@ -92,6 +92,20 @@ func (f *fakeProvider) SaveDockerSettings(ctx context.Context, settings model.Do
 	return nil
 }
 
+func (f *fakeProvider) VMSettings(ctx context.Context) (model.VMSettings, error) {
+	return model.VMSettings{
+		Enabled: true, Running: true, DisableAutostart: false,
+		VirtioISO: "/mnt/user/isos/virtio-win.iso",
+	}, nil
+}
+
+func (f *fakeProvider) SaveVMSettings(ctx context.Context, settings model.VMSettings) error {
+	if settings.VirtioISO != "" && settings.VirtioISO != "/mnt/user/isos/virtio-win.iso" {
+		return errors.New("invalid VirtIO ISO")
+	}
+	return nil
+}
+
 func (f *fakeProvider) ContainerImages(ctx context.Context) ([]model.ContainerImage, error) {
 	return []model.ContainerImage{{ID: "sha256:abc", RepoTags: []string{"plex:latest"}, InUse: true, UsedBy: []string{"plex"}}}, nil
 }
@@ -765,6 +779,34 @@ func TestDockerSettingsEndpoints(t *testing.T) {
 
 	settings.StopTimeout = 20
 	resp = env.request(t, http.MethodPut, "/api/v1/docker/settings", settings, headers)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+}
+
+func TestVMSettingsEndpoints(t *testing.T) {
+	env := newTestEnv(t, false)
+	headers := map[string]string{"X-Aurora-Request": "aurora"}
+	resp := env.request(t, http.MethodPost, "/api/v1/auth/login",
+		map[string]string{"username": "root", "password": "secret"}, headers)
+	resp.Body.Close()
+
+	resp = env.request(t, http.MethodGet, "/api/v1/vms/settings", nil, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var settings model.VMSettings
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if !settings.Enabled || settings.VirtioISO != "/mnt/user/isos/virtio-win.iso" {
+		t.Fatalf("unexpected settings: %+v", settings)
+	}
+
+	settings.DisableAutostart = true
+	resp = env.request(t, http.MethodPut, "/api/v1/vms/settings", settings, headers)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}

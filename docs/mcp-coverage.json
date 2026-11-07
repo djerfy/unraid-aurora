@@ -551,6 +551,12 @@
     },
     "PUT /api/v1/docker/settings": {
       "excluded": "Unraid Docker daemon configuration; UI-specific."
+    },
+    "GET /api/v1/vms/settings": {
+      "excluded": "Unraid VM manager daemon configuration; UI-specific."
+    },
+    "PUT /api/v1/vms/settings": {
+      "excluded": "Unraid VM manager daemon configuration; UI-specific."
     }
   }
 }

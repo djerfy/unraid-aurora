@@ -747,6 +747,9 @@ can itself be reverted.
   and user-network preservation. The running Docker version and storage driver are read-only. Values
   are written to `/boot/config/docker.cfg`; restart Docker or the array to apply storage or service
   changes.
+- **VM Manager**: enable VMs, hide the autostart/start options for every VM, and set the optional
+  default Windows VirtIO driver ISO. Values are written to `/boot/config/domain.cfg`; restart the
+  array to apply service changes. The libvirt running state is read-only.
 - **API tokens**: create named **Viewer**, **Operator** or **Admin** bearer tokens. Unscoped tokens
   can also authenticate the MCP endpoint (`/api/v1/mcp`); scoped tokens only reach the matching MCP
   tools. See [`MCP.md`](MCP.md). Viewers can only

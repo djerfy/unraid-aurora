@@ -1013,6 +1013,13 @@ type DockerSettings struct {
 	PreserveUserNetworks bool   `json:"preserveUserNetworks"`
 }
 
+type VMSettings struct {
+	Enabled          bool   `json:"enabled"`
+	Running          bool   `json:"running"`
+	DisableAutostart bool   `json:"disableAutostart"`
+	VirtioISO        string `json:"virtioIso"`
+}
+
 type Task struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`

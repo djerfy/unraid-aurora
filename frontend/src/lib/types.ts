@@ -1093,6 +1093,13 @@ export type DockerSettings = {
   preserveUserNetworks: boolean;
 };
 
+export type VMSettings = {
+  enabled: boolean;
+  running: boolean;
+  disableAutostart: boolean;
+  virtioIso: string;
+};
+
 export type VisualFolder = {
   id: string;
   name: string;

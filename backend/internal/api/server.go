@@ -109,6 +109,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/v1/vms", s.vms)
 	api.HandleFunc("POST /api/v1/vms", s.createVM)
 	api.HandleFunc("GET /api/v1/vms/host-devices", s.vmHostDevices)
+	api.HandleFunc("GET /api/v1/vms/settings", s.vmSettings)
+	api.HandleFunc("PUT /api/v1/vms/settings", s.saveVMSettings)
 	api.HandleFunc("GET /api/v1/vms/{id}/icon", s.vmIcon)
 	api.HandleFunc("GET /api/v1/vms/{id}/advanced", s.vmAdvanced)
 	api.HandleFunc("PUT /api/v1/vms/{id}/advanced", s.updateVMAdvanced)

@@ -184,6 +184,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(settings),
     }),
+  vmSettings: () => request<import("./types").VMSettings>("/api/v1/vms/settings"),
+  saveVMSettings: (settings: import("./types").VMSettings) =>
+    request<import("./types").VMSettings>("/api/v1/vms/settings", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
   containerImages: () => request<import("./types").ContainerImage[]>("/api/v1/docker/images"),
   removeContainerImage: (id: string) =>
     request<{ ok: boolean }>(`/api/v1/docker/images/${encodeURIComponent(id)}`, { method: "DELETE" }),

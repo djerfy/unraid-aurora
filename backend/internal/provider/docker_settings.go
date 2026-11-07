@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -22,33 +21,6 @@ func (l *Live) dockerConfigPath() string {
 	return filepath.Join(l.bootDir, "config", "docker.cfg")
 }
 
-func dockerConfigValue(values map[string]string, key, fallback string) string {
-	if value, ok := values[key]; ok && strings.TrimSpace(value) != "" {
-		return strings.TrimSpace(value)
-	}
-	return fallback
-}
-
-func dockerConfigBool(values map[string]string, key string, fallback bool) bool {
-	value, ok := values[key]
-	if !ok || strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	return strings.EqualFold(strings.TrimSpace(value), "yes")
-}
-
-func dockerConfigInt(values map[string]string, key string, fallback int) int {
-	value, ok := values[key]
-	if !ok || strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	number, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil {
-		return fallback
-	}
-	return number
-}
-
 func (l *Live) DockerSettings(ctx context.Context) (model.DockerSettings, error) {
 	values := map[string]string{}
 	if path := l.dockerConfigPath(); path != "" {
@@ -59,23 +31,23 @@ func (l *Live) DockerSettings(ctx context.Context) (model.DockerSettings, error)
 		}
 	}
 	settings := model.DockerSettings{
-		Enabled:              dockerConfigBool(values, "DOCKER_ENABLED", false),
-		StopTimeout:          dockerConfigInt(values, "DOCKER_TIMEOUT", 10),
-		PIDLimit:             dockerConfigInt(values, "DOCKER_PID_LIMIT", 0),
-		ImageType:            dockerConfigValue(values, "DOCKER_IMAGE_TYPE", ""),
-		ImageSize:            dockerConfigInt(values, "DOCKER_IMAGE_SIZE", 20),
-		ImageFile:            dockerConfigValue(values, "DOCKER_IMAGE_FILE", ""),
-		AppConfigPath:        dockerConfigValue(values, "DOCKER_APP_CONFIG_PATH", ""),
-		AppUnraidPath:        dockerConfigValue(values, "DOCKER_APP_UNRAID_PATH", ""),
-		BackingFS:            dockerConfigValue(values, "DOCKER_BACKINGFS", "overlay2"),
-		LogRotation:          dockerConfigBool(values, "DOCKER_LOG_ROTATION", true),
-		LogSize:              dockerConfigValue(values, "DOCKER_LOG_SIZE", "50m"),
-		LogFiles:             dockerConfigInt(values, "DOCKER_LOG_FILES", 1),
-		ReadMore:             dockerConfigBool(values, "DOCKER_READMORE", true),
-		AuthoringMode:        dockerConfigBool(values, "DOCKER_AUTHORING_MODE", false),
-		NetworkType:          dockerConfigValue(values, "DOCKER_NETWORK_TYPE", ""),
-		AllowAccess:          dockerConfigBool(values, "DOCKER_ALLOW_ACCESS", false),
-		PreserveUserNetworks: strings.EqualFold(dockerConfigValue(values, "DOCKER_USER_NETWORKS", "remove"), "preserve"),
+		Enabled:              configBool(values, "DOCKER_ENABLED", false),
+		StopTimeout:          configInt(values, "DOCKER_TIMEOUT", 10),
+		PIDLimit:             configInt(values, "DOCKER_PID_LIMIT", 0),
+		ImageType:            configValue(values, "DOCKER_IMAGE_TYPE", ""),
+		ImageSize:            configInt(values, "DOCKER_IMAGE_SIZE", 20),
+		ImageFile:            configValue(values, "DOCKER_IMAGE_FILE", ""),
+		AppConfigPath:        configValue(values, "DOCKER_APP_CONFIG_PATH", ""),
+		AppUnraidPath:        configValue(values, "DOCKER_APP_UNRAID_PATH", ""),
+		BackingFS:            configValue(values, "DOCKER_BACKINGFS", "overlay2"),
+		LogRotation:          configBool(values, "DOCKER_LOG_ROTATION", true),
+		LogSize:              configValue(values, "DOCKER_LOG_SIZE", "50m"),
+		LogFiles:             configInt(values, "DOCKER_LOG_FILES", 1),
+		ReadMore:             configBool(values, "DOCKER_READMORE", true),
+		AuthoringMode:        configBool(values, "DOCKER_AUTHORING_MODE", false),
+		NetworkType:          configValue(values, "DOCKER_NETWORK_TYPE", ""),
+		AllowAccess:          configBool(values, "DOCKER_ALLOW_ACCESS", false),
+		PreserveUserNetworks: strings.EqualFold(configValue(values, "DOCKER_USER_NETWORKS", "remove"), "preserve"),
 	}
 	if info, err := l.dockerInfo(ctx); err == nil {
 		settings.Running = true
@@ -188,69 +160,9 @@ func (l *Live) SaveDockerSettings(ctx context.Context, settings model.DockerSett
 	if path == "" {
 		return errors.New("boot directory is unavailable")
 	}
-	raw, err := updateDockerConfig(path, updates)
+	raw, err := updateConfigValues(path, updates)
 	if err != nil {
 		return err
 	}
 	return l.writeConfigFile("docker.settings", "Updated Docker settings", path, raw)
-}
-
-func dockerYesEmpty(value bool) string {
-	if value {
-		return "yes"
-	}
-	return ""
-}
-
-func intOrEmpty(value int) string {
-	if value <= 0 {
-		return ""
-	}
-	return strconv.Itoa(value)
-}
-
-func updateDockerConfig(path string, updates map[string]string) ([]byte, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("read docker.cfg: %w", err)
-	}
-	remaining := map[string]string{}
-	for key, value := range updates {
-		remaining[key] = value
-	}
-	lines := []string{}
-	for _, line := range strings.Split(strings.TrimRight(string(raw), "\n"), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
-			lines = append(lines, line)
-			continue
-		}
-		key, _, ok := strings.Cut(trimmed, "=")
-		if !ok {
-			lines = append(lines, line)
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value, exists := remaining[key]
-		if !exists {
-			lines = append(lines, line)
-			continue
-		}
-		lines = append(lines, key+"=\""+strings.ReplaceAll(value, "\"", "\\\"")+"\"")
-		delete(remaining, key)
-	}
-	if len(remaining) > 0 {
-		keys := make([]string, 0, len(remaining))
-		for key := range remaining {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			lines = append(lines, key+"=\""+strings.ReplaceAll(remaining[key], "\"", "\\\"")+"\"")
-		}
-	}
-	if len(lines) == 0 {
-		lines = []string{""}
-	}
-	return []byte(strings.Join(lines, "\n") + "\n"), nil
 }

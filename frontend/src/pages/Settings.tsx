@@ -46,6 +46,7 @@ import { OSUpdatePanel } from "../components/system/OSUpdatePanel";
 import { UnraidAPIPanel } from "../components/system/UnraidAPIPanel";
 import { TrivyPanel } from "../components/system/TrivyPanel";
 import { DockerSettingsPanel } from "../components/system/DockerSettingsPanel";
+import { VMSettingsPanel } from "../components/system/VMSettingsPanel";
 import { api } from "../lib/api";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
@@ -59,6 +60,7 @@ const SECTIONS = [
   { id: "os", label: "Unraid OS", icon: Download },
   { id: "unraid-api", label: "Unraid API", icon: Activity },
   { id: "docker", label: "Docker", icon: Container },
+  { id: "vm", label: "VM Manager", icon: Monitor },
   { id: "api", label: "API tokens", icon: KeyRound },
   { id: "mcp", label: "MCP", icon: Bot },
   { id: "security", label: "Security", icon: ShieldCheck },
@@ -722,6 +724,8 @@ export function SettingsPage() {
           {section === "unraid-api" ? <UnraidAPIPanel /> : null}
 
           {section === "docker" ? <DockerSettingsPanel /> : null}
+
+          {section === "vm" ? <VMSettingsPanel /> : null}
 
           {section === "mcp" ? (
             <Card className="card-pad">
