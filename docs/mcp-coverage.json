@@ -101,7 +101,9 @@
       "excluded": "Mutation or UI-specific operation; not exposed through MCP."
     },
     "POST /api/v1/docker/check-updates": {
-      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+      "tools": [
+        "check_container_updates"
+      ]
     },
     "GET /api/v1/docker/containers": {
       "tools": [
@@ -144,7 +146,10 @@
       "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."
     },
     "POST /api/v1/docker/containers/{id}/update": {
-      "excluded": "Mutation or UI-specific operation; not exposed through MCP."
+      "tools": [
+        "update_container",
+        "update_all_containers"
+      ]
     },
     "GET /api/v1/docker/networks": {
       "excluded": "Read endpoint not exposed yet; add a tool and update this manifest when needed."

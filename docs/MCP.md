@@ -177,6 +177,7 @@ Read tools are available to every allowed session:
 | `list_pools` | Storage pools and devices |
 | `list_containers` | Docker containers with state, live resources and startup priority |
 | `list_images` | Docker images, tags, size and the containers using them |
+| `check_container_updates` | Compare registry digests and flag containers with an available update |
 | `get_network_map` | Container-to-peer connections with inbound/outbound direction |
 | `container_logs` | Tail a container log |
 | `list_vms` | libvirt virtual machines |
@@ -194,7 +195,14 @@ Read tools are available to every allowed session:
 Lifecycle actions require an operator/admin session with `AllowActions`:
 
 `start_container`, `stop_container`, `restart_container`, `set_container_priority`,
-`remove_image`, `remove_unused_images`, `start_vm`, `shutdown_vm`, `pause_vm`, `resume_vm`.
+`remove_image`, `remove_unused_images`, `update_container`, `update_all_containers`,
+`start_vm`, `shutdown_vm`, `pause_vm`, `resume_vm`.
+
+Container updates mirror the Docker page: `check_container_updates` reports the local and remote
+digest for every image and maps them to containers. `update_container` pulls the image again and
+recreates that container with its current settings, returning the pull/recreate events. The container
+restarts if it was running. `update_all_containers` checks first, updates only containers with an
+available update in name order, and stops at the first failure so a broken image cannot cascade.
 
 Image removal never forces Docker. `remove_image` fails cleanly when a container still uses the
 image; `remove_unused_images` skips those images and reports them.

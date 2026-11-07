@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -160,6 +162,60 @@ type imageArgs struct {
 	ID string `json:"id" jsonschema:"Docker image ID"`
 }
 
+type containerUpdateCheck struct {
+	Container string `json:"container"`
+	ID        string `json:"id"`
+	Image     string `json:"image"`
+	State     string `json:"state"`
+	Update    bool   `json:"update"`
+	Local     string `json:"local,omitempty"`
+	Remote    string `json:"remote,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type containerUpdateOutcome struct {
+	Container string                       `json:"container"`
+	ID        string                       `json:"id"`
+	Image     string                       `json:"image"`
+	OK        bool                         `json:"ok"`
+	Error     string                       `json:"error,omitempty"`
+	Events    []model.ContainerUpdateEvent `json:"events,omitempty"`
+}
+
+type containerUpdateReport struct {
+	OK         bool                     `json:"ok"`
+	Checked    int                      `json:"checked"`
+	Updates    int                      `json:"updates"`
+	Updated    int                      `json:"updated"`
+	Error      string                   `json:"error,omitempty"`
+	Containers []containerUpdateOutcome `json:"containers"`
+}
+
+// updateOneContainer collects the pull/recreate stages so the MCP client gets
+// the same progress trail as the Docker page.
+func (s *service) updateOneContainer(ctx context.Context, container model.Container) (containerUpdateOutcome, error) {
+	outcome := containerUpdateOutcome{Container: container.Name, ID: container.ID, Image: container.Image}
+	var mu sync.Mutex
+	events := make([]model.ContainerUpdateEvent, 0, 16)
+	err := s.opts.Provider.UpdateContainerImage(ctx, container.ID, func(event model.ContainerUpdateEvent) {
+		mu.Lock()
+		events = append(events, event)
+		if len(events) > 40 {
+			events = events[len(events)-40:]
+		}
+		mu.Unlock()
+	})
+	mu.Lock()
+	outcome.Events = append([]model.ContainerUpdateEvent(nil), events...)
+	mu.Unlock()
+	if err != nil {
+		outcome.Error = err.Error()
+		return outcome, err
+	}
+	outcome.OK = true
+	return outcome, nil
+}
+
 func (s *service) findContainer(ctx context.Context, target string) (model.Container, error) {
 	target = strings.TrimSpace(target)
 	if target == "" {
@@ -248,6 +304,45 @@ func addReadTools(s *service, server *mcp.Server) {
 				return s.fail("list containers", err)
 			}
 			return s.text(containers)
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "check_container_updates", Description: "Check registry digests for every container image and report which containers have an update.", Annotations: readOnly},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			checks, err := s.opts.Provider.CheckContainerUpdates(ctx)
+			if err != nil {
+				return s.fail("check container updates", err)
+			}
+			containers, err := s.opts.Provider.Containers(ctx)
+			if err != nil {
+				return s.fail("list containers", err)
+			}
+			byImage := make(map[string]model.ImageCheck, len(checks))
+			for _, check := range checks {
+				byImage[check.Image] = check
+			}
+			rows := make([]containerUpdateCheck, 0, len(containers))
+			updates := 0
+			for _, container := range containers {
+				check, ok := byImage[container.Image]
+				row := containerUpdateCheck{
+					Container: container.Name, ID: container.ID, Image: container.Image,
+					State: container.State, Update: ok && check.Update,
+				}
+				if ok {
+					row.Local, row.Remote, row.Error = check.Local, check.Remote, check.Error
+				}
+				if row.Update {
+					updates++
+				}
+				rows = append(rows, row)
+			}
+			sort.Slice(rows, func(i, j int) bool { return rows[i].Container < rows[j].Container })
+			return s.text(map[string]any{
+				"checkedAt": time.Now().UTC(), "updates": updates, "containers": rows,
+			})
 		})
 
 	mcp.AddTool(server, &mcp.Tool{Name: "list_images", Description: "Docker images with tags, size and the containers using them.", Annotations: readOnly},
@@ -493,6 +588,86 @@ func addActionTools(s *service, server *mcp.Server) {
 				return s.text(map[string]any{"ok": true, "action": action.name, "target": target})
 			})
 	}
+
+	mcp.AddTool(server, &mcp.Tool{Name: "update_container", Description: "Pull the latest image and recreate a container with its current settings; the container may restart (operator+)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, args targetArgs) (*mcp.CallToolResult, any, error) {
+			if s.opts.ReadOnly || !s.opts.AllowActions {
+				return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+			}
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			container, err := s.findContainer(ctx, args.Target)
+			if err != nil {
+				return s.fail("update container", err)
+			}
+			outcome, updateErr := s.updateOneContainer(context.WithoutCancel(ctx), container)
+			if s.opts.OnAction != nil {
+				s.opts.OnAction("update_container", container.Name, updateErr)
+			}
+			result, structured, err := s.text(outcome)
+			if err != nil {
+				return nil, nil, err
+			}
+			if updateErr != nil {
+				result.IsError = true
+			}
+			return result, structured, nil
+		})
+
+	mcp.AddTool(server, &mcp.Tool{Name: "update_all_containers", Description: "Check for updates, then pull and recreate every container that has one, stopping at the first failure (operator+)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ emptyArgs) (*mcp.CallToolResult, any, error) {
+			if s.opts.ReadOnly || !s.opts.AllowActions {
+				return nil, nil, errors.New("actions are disabled: this MCP session is read-only")
+			}
+			if err := s.require("docker"); err != nil {
+				return nil, nil, err
+			}
+			checks, err := s.opts.Provider.CheckContainerUpdates(ctx)
+			if err != nil {
+				return s.fail("check container updates", err)
+			}
+			containers, err := s.opts.Provider.Containers(ctx)
+			if err != nil {
+				return s.fail("list containers", err)
+			}
+			updateImages := make(map[string]bool, len(checks))
+			for _, check := range checks {
+				if check.Update {
+					updateImages[check.Image] = true
+				}
+			}
+			targets := make([]model.Container, 0, len(containers))
+			for _, container := range containers {
+				if updateImages[container.Image] {
+					targets = append(targets, container)
+				}
+			}
+			sort.Slice(targets, func(i, j int) bool { return targets[i].Name < targets[j].Name })
+			report := containerUpdateReport{OK: true, Checked: len(containers), Updates: len(targets)}
+			updateCtx := context.WithoutCancel(ctx)
+			for _, container := range targets {
+				outcome, updateErr := s.updateOneContainer(updateCtx, container)
+				report.Containers = append(report.Containers, outcome)
+				if s.opts.OnAction != nil {
+					s.opts.OnAction("update_all_containers", container.Name, updateErr)
+				}
+				if updateErr != nil {
+					report.OK = false
+					report.Error = updateErr.Error()
+					break
+				}
+				report.Updated++
+			}
+			result, structured, err := s.text(report)
+			if err != nil {
+				return nil, nil, err
+			}
+			if !report.OK {
+				result.IsError = true
+			}
+			return result, structured, nil
+		})
 
 	mcp.AddTool(server, &mcp.Tool{Name: "set_container_priority", Description: "Set a container startup priority from 0 (first) to 100 (last)."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, args priorityArgs) (*mcp.CallToolResult, any, error) {
