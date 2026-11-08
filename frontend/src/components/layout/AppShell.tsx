@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Boxes,
@@ -152,6 +152,16 @@ function buildCveCommands(findings: CveFinding[], query: string, t: Translate, n
       run: () => navigate(`${base}&securityGroup=package`),
     })),
   ];
+}
+
+function PageFallback() {
+  return (
+    <div className="grid min-h-[40vh] place-items-center">
+      <div className="h-px w-32 overflow-hidden bg-[var(--surface-3)]">
+        <div className="h-px w-1/2 animate-[shimmer_1.4s_infinite] bg-[var(--accent)]" />
+      </div>
+    </div>
+  );
 }
 
 function BootScreen({ message }: { message?: string }) {
@@ -499,7 +509,9 @@ export function AppShell() {
 
         <main id="main-content" className={isTerminal ? "flex min-h-0 w-full flex-1 flex-col" : "w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8"}>
           <div key={location.pathname} className={isTerminal ? "flex min-h-0 flex-1 flex-col" : "animate-fade-up"}>
-            <Outlet />
+            <Suspense fallback={<PageFallback />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
 
