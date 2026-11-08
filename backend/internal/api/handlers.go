@@ -171,7 +171,11 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		snap.UPS = s.hub.LatestUPS()
 	}
 	snap.Settings = settingsForRequest(r, snap.Settings)
-	snap.History = s.hub.History()
+	// The live UI gets history from /api/v1/metrics/history once and then from
+	// the SSE stream. Sending it again on every bootstrap is pure waste.
+	if r.URL.Query().Get("history") == "1" {
+		snap.History = s.hub.History()
+	}
 	elapsed := time.Since(started)
 	w.Header().Set("Server-Timing", fmt.Sprintf("bootstrap;dur=%.1f", float64(elapsed.Microseconds())/1000))
 	s.log.Debug("bootstrap snapshot", "duration", elapsed, "containers", len(snap.Containers), "vms", len(snap.VMs), "disks", len(snap.Disks))

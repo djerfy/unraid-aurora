@@ -52,8 +52,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     queryKey: ["bootstrap", "light"],
     queryFn: () => api.bootstrap(true),
     enabled: authenticated,
-    refetchInterval: 12_000,
-    staleTime: 4_000,
+    refetchInterval: 20_000,
+    staleTime: 8_000,
     placeholderData: (previous) => previous,
   });
   const pluginsQuery = useQuery({
@@ -71,6 +71,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     staleTime: 10_000,
   });
 
+  const historyQuery = useQuery({
+    queryKey: ["metrics-history", "live"],
+    queryFn: () => api.metricsHistory("1h"),
+    enabled: authenticated,
+    staleTime: 5 * 60_000,
+  });
+
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [history, setHistory] = useState<MetricPoint[]>([]);
   const [live, setLive] = useState(false);
@@ -78,9 +85,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (bootstrapQuery.data) {
       setMetrics(bootstrapQuery.data.metrics);
-      setHistory((prev) => mergeHistory(prev, bootstrapQuery.data.history));
     }
   }, [bootstrapQuery.data]);
+
+  useEffect(() => {
+    if (historyQuery.data) {
+      setHistory((prev) => mergeHistory(prev, historyQuery.data));
+    }
+  }, [historyQuery.data]);
 
   useEffect(() => {
     if (!authenticated) return;
@@ -132,6 +144,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
     void queryClient.invalidateQueries({ queryKey: ["plugins"] });
     void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    void queryClient.invalidateQueries({ queryKey: ["metrics-history", "live"] });
   }, [queryClient]);
 
   const value = useMemo<AppDataValue>(
