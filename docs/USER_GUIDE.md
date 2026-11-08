@@ -616,6 +616,8 @@ until you explicitly acknowledge the lockout risk. VLAN and WireGuard editing re
 - Per GPU: utilisation, VRAM used/total, temperature, power draw, power limit, fan, core and memory
   clocks.
 - Active compute processes with PID and memory.
+- Telemetry is sampled every 30 seconds so an idle GPU is not woken unnecessarily. Aurora never uses
+  the GPU itself: the dashboard is rendered by your browser, and this page only reads host telemetry.
 - Vendor logo and neutral icon frame.
 - Empty state explains how to install the Nvidia Driver plugin.
 
@@ -743,6 +745,9 @@ back from History. Deploy the previous image tag to revert.
 - **Wallpaper**: choose a PNG, JPEG or WebP image displayed behind the cards. The image is darkened by
   50 % for contrast and stored on the current device (resized to 2560 px and compressed when needed).
   Use the trash button to remove it.
+- **Performance mode**: disables wallpaper, backdrop blur, background effects and most animations on
+  this device. Use it when the dashboard's visual effects keep a GPU busy; the live metrics stream
+  also pauses while the browser tab is hidden.
 - **Temperature unit**: Celsius or Fahrenheit.
 - **Server display name**.
 - **Refresh interval**.
