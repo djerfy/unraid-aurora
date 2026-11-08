@@ -1592,7 +1592,7 @@
           "System"
         ],
         "summary": "Load the full application snapshot",
-        "description": "Full snapshot, hub metrics and history; `?light=1` skips plugins/notifications",
+        "description": "Snapshot and hub metrics; `?light=1` skips plugins/notifications, `?history=1` adds the hub history",
         "operationId": "get_bootstrap",
         "security": [
           {
@@ -1773,6 +1773,57 @@
         "summary": "Redacted configuration ZIP",
         "description": "Redacted configuration ZIP",
         "operationId": "get_config_export",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or read-only mode denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-aurora-role": "admin"
+      }
+    },
+    "/api/v1/debug/pprof/": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Go profiler when `AURORA_PPROF=1` (index, profile, trace, heap, goroutine)",
+        "description": "Go profiler when `AURORA_PPROF=1` (index, profile, trace, heap, goroutine)",
+        "operationId": "get_debug_pprof",
         "security": [
           {
             "sessionCookie": []
