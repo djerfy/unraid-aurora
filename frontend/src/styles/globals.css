@@ -863,6 +863,37 @@ input[type="range"] {
   background: var(--bg) !important;
 }
 
+/* Pre-blurred wallpaper: the background is already soft, so no element needs
+   its own backdrop-filter. This is the cheapest way to keep a glass look. */
+[data-glass="on"][data-wallpaper-preblur="on"] .card,
+[data-glass="on"][data-wallpaper-preblur="on"] .glass,
+[data-glass="on"][data-wallpaper-preblur="on"] button[data-variant="secondary"],
+[data-glass="on"][data-wallpaper-preblur="on"] select,
+[data-glass="on"][data-wallpaper-preblur="on"] main input[type="text"],
+[data-glass="on"][data-wallpaper-preblur="on"] main input[type="search"],
+[data-glass="on"][data-wallpaper-preblur="on"] main input[type="email"],
+[data-glass="on"][data-wallpaper-preblur="on"] main input[type="password"],
+[data-glass="on"][data-wallpaper-preblur="on"] main input[type="number"],
+[data-glass="on"][data-wallpaper-preblur="on"] main textarea,
+[data-glass="on"][data-wallpaper-preblur="on"] [data-glass-control],
+[data-glass="on"][data-wallpaper-preblur="on"] aside.fixed,
+[data-glass="on"][data-wallpaper-preblur="on"] header.sticky {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-glass="on"][data-wallpaper-preblur="on"] aside.fixed {
+  background: var(--surface) !important;
+}
+
+[data-glass="on"][data-wallpaper-preblur="on"] header.sticky {
+  background: var(--bg) !important;
+}
+
+[data-glass="on"][data-wallpaper-preblur="on"] .card {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
 /* Performance mode: opt out of GPU-heavy decorative effects. */
 [data-performance="on"] .app-atmosphere,
 [data-performance="on"] .app-wallpaper,

@@ -51,6 +51,7 @@ import { VMSettingsPanel } from "../components/system/VMSettingsPanel";
 import { ProxySettingsPanel } from "../components/system/ProxySettingsPanel";
 import { NvidiaDriverPanel } from "../components/system/NvidiaDriverPanel";
 import { api } from "../lib/api";
+import { blurWallpaper } from "../lib/wallpaper";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
 
@@ -99,7 +100,7 @@ async function wallpaperDataURL(file: File): Promise<string> {
     element.onerror = () => reject(new Error("decode failed"));
     element.src = source;
   });
-  const maxDimension = 2560;
+  const maxDimension = 1920;
   const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
   if (scale === 1 && source.length <= 2_500_000) return source;
   const canvas = document.createElement("canvas");
@@ -132,6 +133,7 @@ export function SettingsPage() {
 
   if (!snapshot) return null;
   const settings = draft ?? snapshot.settings;
+  const preblurredWallpaper = theme.glass && Boolean(theme.wallpaper && theme.wallpaperBlur);
   const dirty = JSON.stringify(settings) !== JSON.stringify(snapshot.settings);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
@@ -160,7 +162,16 @@ export function SettingsPage() {
     }
     setWallpaperBusy(true);
     try {
-      theme.setWallpaper(await wallpaperDataURL(file));
+      const source = await wallpaperDataURL(file);
+      let blurred = "";
+      if (theme.glass) {
+        try {
+          blurred = await blurWallpaper(source);
+        } catch {
+          // The original still works; glass falls back to runtime backdrop blur.
+        }
+      }
+      theme.setWallpaper(source, blurred);
       toast({ kind: "success", title: t("Wallpaper updated"), description: t("The image is stored on this device.") });
     } catch {
       toast({ kind: "error", title: t("Could not load the wallpaper"), description: t("Choose a valid image file.") });
@@ -446,27 +457,36 @@ export function SettingsPage() {
                 </SettingsRow>
 
                 {theme.glass ? (
-                  <SettingsRow
-                    label={t("Glass quality")}
-                    description={t("Lite keeps blur on cards, the sidebar and the topbar but uses solid controls. Full blurs every control. Stored on this device.")}
-                  >
-                    <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
-                      {(["lite", "full"] as const).map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          aria-pressed={theme.glassQuality === value}
-                          onClick={() => theme.setGlassQuality(value)}
-                          className={cn(
-                            "rounded-md px-3 py-1 text-[11px] font-medium transition",
-                            theme.glassQuality === value ? "bg-[var(--surface)] text-ink shadow-sm" : "text-muted hover:text-ink",
-                          )}
-                        >
-                          {t(value === "lite" ? "Lite" : "Full")}
-                        </button>
-                      ))}
-                    </div>
-                  </SettingsRow>
+                  preblurredWallpaper ? (
+                    <SettingsRow
+                      label={t("Glass quality")}
+                      description={t("Pre-blurred wallpaper is active: cards and controls use the stored blurred image with no runtime backdrop blur.")}
+                    >
+                      <Badge tone="success" dot>{t("Pre-blurred")}</Badge>
+                    </SettingsRow>
+                  ) : (
+                    <SettingsRow
+                      label={t("Glass quality")}
+                      description={t("Lite keeps blur on cards, the sidebar and the topbar but uses solid controls. Full blurs every control. Stored on this device.")}
+                    >
+                      <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+                        {(["lite", "full"] as const).map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={theme.glassQuality === value}
+                            onClick={() => theme.setGlassQuality(value)}
+                            className={cn(
+                              "rounded-md px-3 py-1 text-[11px] font-medium transition",
+                              theme.glassQuality === value ? "bg-[var(--surface)] text-ink shadow-sm" : "text-muted hover:text-ink",
+                            )}
+                          >
+                            {t(value === "lite" ? "Lite" : "Full")}
+                          </button>
+                        ))}
+                      </div>
+                    </SettingsRow>
+                  )
                 ) : null}
 
                 <SettingsRow
@@ -478,7 +498,7 @@ export function SettingsPage() {
 
                 <SettingsRow
                   label={t("Wallpaper")}
-                  description={t("Image displayed behind cards, darkened by 50%. Stored on this device.")}
+                  description={t("Image displayed behind cards, darkened by 50%. In glass mode a pre-blurred copy is generated. Stored on this device.")}
                 >
                   <div className="flex items-center gap-2">
                     {theme.wallpaper ? (

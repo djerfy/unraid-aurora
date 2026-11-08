@@ -64,6 +64,10 @@ const settings: Record<string, string> = {
   "Could not load the wallpaper": "Impossible de charger le fond d'écran",
   "Choose a valid image file.": "Choisissez un fichier image valide.",
   "MCP": "MCP",
+  "Pre-blurred": "Pré-flouté",
+  "Pre-blurred wallpaper is active: cards and controls use the stored blurred image with no runtime backdrop blur.": "Le fond d'écran pré-flouté est actif : les cartes et les contrôles utilisent l'image floutée stockée, sans flou d'arrière-plan à l'exécution.",
+  "Image displayed behind cards, darkened by 50%. In glass mode a pre-blurred copy is generated. Stored on this device.": "Image affichée derrière les cartes, assombrie à 50 %. En mode verre, une copie pré-floutée est générée. Stockée sur cet appareil.",
+
   "Glass quality": "Qualité du verre",
   "Lite keeps blur on cards, the sidebar and the topbar but uses solid controls. Full blurs every control. Stored on this device.": "Le mode Léger conserve le flou sur les cartes, la barre latérale et la barre supérieure mais utilise des contrôles opaques. Le mode Complet applique le flou à chaque contrôle. Stocké sur cet appareil.",
 
