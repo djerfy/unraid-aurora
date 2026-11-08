@@ -311,3 +311,26 @@ func TestRecentScansIncludesFinished(t *testing.T) {
 		t.Fatalf("finished scans must not be active: %+v", active)
 	}
 }
+
+func TestScanCachesFollowFileChanges(t *testing.T) {
+	manager := New(t.TempDir())
+	key := scanKey("repo:tag", "sha256:abc")
+	manager.saveScan(key, "repo:tag", "sha256:abc", model.ContainerSecurityDetail{
+		ContainerSecurity: model.ContainerSecurity{Enabled: true, Available: true},
+		Vulnerabilities:   []model.ContainerVulnerability{{ID: "CVE-1", Package: "openssl"}},
+	})
+	if got := manager.Detail("repo:tag", "sha256:abc", true).Vulnerabilities; len(got) != 1 {
+		t.Fatalf("unexpected cached findings: %+v", got)
+	}
+
+	// Simulate an external rewrite (for example a crash-safe replacement):
+	// the size changes, so the next read must bypass the cache.
+	replacement := []byte(`{"vulnerabilities":[{"id":"CVE-2","package":"curl","severity":"HIGH"}]}`)
+	if err := os.WriteFile(manager.detailPath(key), replacement, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got := manager.Detail("repo:tag", "sha256:abc", true).Vulnerabilities
+	if len(got) != 1 || got[0].ID != "CVE-2" {
+		t.Fatalf("detail cache was not invalidated: %+v", got)
+	}
+}

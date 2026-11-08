@@ -28,9 +28,11 @@ import (
 )
 
 const (
-	fallbackVersion = "0.76.1"
-	maxDownload     = 250 << 20
-	maxScanOutput   = 64 << 20
+	fallbackVersion   = "0.76.1"
+	maxDownload       = 250 << 20
+	maxScanOutput     = 64 << 20
+	summaryCacheLimit = 256
+	detailCacheLimit  = 32
 )
 
 var (
@@ -52,6 +54,18 @@ type scanJob struct {
 	key     string
 	image   string
 	imageID string
+}
+
+type cachedSummary struct {
+	modTime time.Time
+	size    int64
+	value   model.ContainerSecurity
+}
+
+type cachedDetail struct {
+	modTime time.Time
+	size    int64
+	value   []model.ContainerVulnerability
 }
 
 // Manager owns the persistent Trivy binary, its database and scan results.
@@ -82,6 +96,11 @@ type Manager struct {
 	scanning           map[string]scanActivity
 	recentScans        []scanRecord
 
+	summaryMu    sync.Mutex
+	summaryCache map[string]cachedSummary
+	detailMu     sync.Mutex
+	detailCache  map[string]cachedDetail
+
 	queue      chan scanJob
 	workerOnce sync.Once
 	closed     chan struct{}
@@ -98,6 +117,8 @@ func New(dir string) *Manager {
 		statePath:     filepath.Join(dir, "state.json"),
 		client:        outbound.Client(20 * time.Minute),
 		scanning:      map[string]scanActivity{},
+		summaryCache:  map[string]cachedSummary{},
+		detailCache:   map[string]cachedDetail{},
 		queue:         make(chan scanJob, 64),
 		closed:        make(chan struct{}),
 	}
@@ -406,15 +427,8 @@ func (m *Manager) Detail(image, imageID string, enabled bool) model.ContainerSec
 	if !summary.Enabled || !summary.Available {
 		return detail
 	}
-	raw, err := os.ReadFile(m.detailPath(scanKey(image, imageID)))
-	if err != nil {
-		return detail
-	}
-	var payload struct {
-		Vulnerabilities []model.ContainerVulnerability `json:"vulnerabilities"`
-	}
-	if json.Unmarshal(raw, &payload) == nil {
-		detail.Vulnerabilities = payload.Vulnerabilities
+	if vulnerabilities, ok := m.readDetail(scanKey(image, imageID)); ok {
+		detail.Vulnerabilities = vulnerabilities
 	}
 	if detail.Vulnerabilities == nil {
 		detail.Vulnerabilities = []model.ContainerVulnerability{}
@@ -951,11 +965,24 @@ func (m *Manager) saveScan(key, image, imageID string, detail model.ContainerSec
 		slog.Warn("write Trivy summary", "error", err)
 		return
 	}
+	m.invalidateScanCache(key)
 	m.pruneScans()
 }
 
 func (m *Manager) readSummary(key string) (model.ContainerSecurity, bool) {
-	raw, err := os.ReadFile(m.summaryPath(key))
+	path := m.summaryPath(key)
+	info, err := os.Stat(path)
+	if err != nil {
+		m.forgetSummary(key)
+		return model.ContainerSecurity{}, false
+	}
+	m.summaryMu.Lock()
+	cached, ok := m.summaryCache[key]
+	m.summaryMu.Unlock()
+	if ok && cached.modTime.Equal(info.ModTime()) && cached.size == info.Size() {
+		return cached.value, true
+	}
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return model.ContainerSecurity{}, false
 	}
@@ -963,7 +990,71 @@ func (m *Manager) readSummary(key string) (model.ContainerSecurity, bool) {
 	if err := json.Unmarshal(raw, &summary); err != nil {
 		return model.ContainerSecurity{}, false
 	}
+	m.summaryMu.Lock()
+	if len(m.summaryCache) >= summaryCacheLimit {
+		for stale := range m.summaryCache {
+			delete(m.summaryCache, stale)
+			break
+		}
+	}
+	m.summaryCache[key] = cachedSummary{modTime: info.ModTime(), size: info.Size(), value: summary}
+	m.summaryMu.Unlock()
 	return summary, true
+}
+
+func (m *Manager) readDetail(key string) ([]model.ContainerVulnerability, bool) {
+	path := m.detailPath(key)
+	info, err := os.Stat(path)
+	if err != nil {
+		m.forgetDetail(key)
+		return nil, false
+	}
+	m.detailMu.Lock()
+	cached, ok := m.detailCache[key]
+	m.detailMu.Unlock()
+	if ok && cached.modTime.Equal(info.ModTime()) && cached.size == info.Size() {
+		return cached.value, true
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, false
+	}
+	var payload struct {
+		Vulnerabilities []model.ContainerVulnerability `json:"vulnerabilities"`
+	}
+	if json.Unmarshal(raw, &payload) != nil {
+		return nil, false
+	}
+	if payload.Vulnerabilities == nil {
+		payload.Vulnerabilities = []model.ContainerVulnerability{}
+	}
+	m.detailMu.Lock()
+	if len(m.detailCache) >= detailCacheLimit {
+		for stale := range m.detailCache {
+			delete(m.detailCache, stale)
+			break
+		}
+	}
+	m.detailCache[key] = cachedDetail{modTime: info.ModTime(), size: info.Size(), value: payload.Vulnerabilities}
+	m.detailMu.Unlock()
+	return payload.Vulnerabilities, true
+}
+
+func (m *Manager) forgetSummary(key string) {
+	m.summaryMu.Lock()
+	delete(m.summaryCache, key)
+	m.summaryMu.Unlock()
+}
+
+func (m *Manager) forgetDetail(key string) {
+	m.detailMu.Lock()
+	delete(m.detailCache, key)
+	m.detailMu.Unlock()
+}
+
+func (m *Manager) invalidateScanCache(key string) {
+	m.forgetSummary(key)
+	m.forgetDetail(key)
 }
 
 func (m *Manager) stale(summary model.ContainerSecurity) bool {
