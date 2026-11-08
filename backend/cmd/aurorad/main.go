@@ -142,7 +142,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	hub := metrics.NewHub(p, filepath.Join(cfg.ConfigDir, "metrics-archive.json"))
+	// The archive is volatile: rewriting it on the flash drive every minute
+	// caused unnecessary USB wear and blocked the metrics sampler.
+	archivePath := ""
+	if cfg.DataDir != "" {
+		archivePath = filepath.Join(cfg.DataDir, "metrics-archive.json")
+	}
+	hub := metrics.NewHub(p, archivePath)
 	go hub.Run(ctx, 2*time.Second)
 	go notify.Run(ctx, p, log)
 	go p.Start(ctx)

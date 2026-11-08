@@ -13,6 +13,8 @@ import (
 	"aurora/internal/provider"
 )
 
+const archiveInterval = 5 * time.Minute
+
 type Hub struct {
 	provider provider.Provider
 
@@ -118,7 +120,8 @@ func (h *Hub) sample(ctx context.Context) {
 	if len(h.history) > 1800 {
 		h.history = h.history[len(h.history)-1800:]
 	}
-	if h.archivePath != "" && (h.lastArchive.IsZero() || time.Since(h.lastArchive) >= time.Minute) {
+	archive := false
+	if h.archivePath != "" && (h.lastArchive.IsZero() || time.Since(h.lastArchive) >= archiveInterval) {
 		// Long-term archives stay compact: per-interface rates are only
 		// meaningful for the live window.
 		archivePoint := point
@@ -128,7 +131,7 @@ func (h *Hub) sample(ctx context.Context) {
 			h.archive = h.archive[len(h.archive)-44640:]
 		}
 		h.lastArchive = time.Now()
-		h.saveArchive()
+		archive = true
 	}
 	subs := make([]chan model.Metrics, 0, len(h.subs))
 	for ch := range h.subs {
@@ -136,6 +139,9 @@ func (h *Hub) sample(ctx context.Context) {
 	}
 	h.mu.Unlock()
 
+	if archive {
+		h.saveArchive()
+	}
 	for _, ch := range subs {
 		select {
 		case ch <- m:
@@ -209,7 +215,10 @@ func (h *Hub) saveArchive() {
 	if h.archivePath == "" {
 		return
 	}
-	raw, err := json.Marshal(h.archive)
+	h.mu.RLock()
+	snapshot := append([]model.MetricPoint(nil), h.archive...)
+	h.mu.RUnlock()
+	raw, err := json.Marshal(snapshot)
 	if err != nil {
 		return
 	}
