@@ -91,8 +91,8 @@ activity 3.
 - `.card` — surface gradient, hairline, top highlight, radius 22 px.
 - `.glass` — 72% surface + 20 px blur, used by the sidebar/topbar and popovers.
 - **Glass surface mode** (opt-in, `data-glass="on"`) — cards, neutral `secondary` buttons, selects,
-  text inputs, tab tracks and segmented controls use the same 72 % surface and 24 px backdrop blur as
-  the sidebar, so the wallpaper shows through consistently. Enabled from Settings → Appearance →
+  text inputs, tab tracks, segmented controls, the sidebar and the topbar all use the same 72 %
+  surface and 24 px backdrop blur. With `data-glass="off"` none of them blur, including the shell. Enabled from Settings → Appearance →
   Surfaces; stored per device. Falls back to opaque surfaces when `prefers-reduced-transparency` is
   set. When a wallpaper is set, a pre-blurred copy is generated once and used as the glass
   background; runtime blur remains active on top.

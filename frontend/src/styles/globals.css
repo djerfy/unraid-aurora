@@ -468,6 +468,22 @@
   background-color: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
+/* The glass toggle is authoritative: standard mode is blur-free on the shell
+   as well as on cards and controls. */
+[data-glass="off"] aside.fixed,
+[data-glass="off"] header.sticky {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-glass="off"] aside.fixed {
+  background: var(--surface) !important;
+}
+
+[data-glass="off"] header.sticky {
+  background: var(--bg) !important;
+}
+
 /* A stronger atmosphere gives the glass something to refract. */
 [data-glass="on"] .app-atmosphere::before {
   opacity: 1;

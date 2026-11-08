@@ -740,8 +740,9 @@ back from History. Deploy the previous image tag to revert.
 - **Theme**: dark, light, or automatic.
 - **Accent**: five palettes.
 - **Density**: comfortable or compact.
-- **Surfaces**: Standard (default) or Glass, a frosted, translucent material applied to cards, panels and
-  popovers. The preference is stored on the current device and respects reduced-transparency settings.
+- **Surfaces**: Standard (default) or Glass. Standard is completely blur-free, including the cards,
+  menu and navbar. Glass applies the frosted material to cards, panels, popovers, the menu and the
+  navbar. The preference is stored on the current device and respects reduced-transparency settings.
 - **Wallpaper**: choose a PNG, JPEG or WebP image displayed behind the cards. The image is darkened by
   50 % for contrast and stored on the current device (resized to 2560 px and compressed when needed).
   In glass mode, a pre-blurred copy is generated once and used as the background. Use the trash button
