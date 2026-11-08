@@ -96,6 +96,8 @@ type Live struct {
 	vmCPU          map[string]vmCPUSample
 	vmCache        []model.VM
 	vmCacheAt      time.Time
+	vmDiskMu       sync.Mutex
+	vmDiskCache    map[string]cachedVMDisk
 	gpuMu          sync.Mutex
 	gpuCache       []model.GPU
 	gpuCacheAt     time.Time
@@ -784,7 +786,7 @@ func (l *Live) ContainerLogs(ctx context.Context, id string, lines int) ([]model
 
 func (l *Live) VMs(ctx context.Context) ([]model.VM, error) {
 	l.statsMu.Lock()
-	if len(l.vmCache) > 0 && time.Since(l.vmCacheAt) < 5*time.Second {
+	if len(l.vmCache) > 0 && time.Since(l.vmCacheAt) < vmCacheTTL {
 		cached := append([]model.VM(nil), l.vmCache...)
 		l.statsMu.Unlock()
 		return cached, nil
@@ -796,14 +798,27 @@ func (l *Live) VMs(ctx context.Context) ([]model.VM, error) {
 	if err != nil {
 		return nil, nil // libvirt is optional
 	}
-	var vms []model.VM
+	names := make([]string, 0, 8)
 	for _, name := range strings.Split(strings.TrimSpace(string(outBytes)), "\n") {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
+		if name = strings.TrimSpace(name); name != "" {
+			names = append(names, name)
 		}
-		vms = append(vms, l.vmDetails(ctx, name))
 	}
+	// Each virsh probe is independent; a small worker pool keeps a large VM
+	// inventory from serialising dozens of processes.
+	vms := make([]model.VM, len(names))
+	sem := make(chan struct{}, 4)
+	var wg sync.WaitGroup
+	for index, name := range names {
+		wg.Add(1)
+		go func(index int, name string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			vms[index] = l.vmDetails(ctx, name)
+		}(index, name)
+	}
+	wg.Wait()
 	l.statsMu.Lock()
 	l.vmCache = append([]model.VM(nil), vms...)
 	l.vmCacheAt = time.Now()

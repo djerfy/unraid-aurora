@@ -19,6 +19,17 @@ type vmCPUSample struct {
 	cpuTime uint64 // nanoseconds
 }
 
+const (
+	vmCacheTTL = 30 * time.Second
+	vmDiskTTL  = 5 * time.Minute
+)
+
+type cachedVMDisk struct {
+	at   time.Time
+	size uint64
+	used uint64
+}
+
 func (l *Live) vmDetails(ctx context.Context, name string) model.VM {
 	vm := model.VM{
 		ID: "vm-" + slug(name), Name: name, State: "stopped", OS: name,
@@ -59,7 +70,7 @@ func (l *Live) vmDetails(ctx context.Context, name string) model.VM {
 		}
 		l.applyVMRuntime(ctx, &vm)
 	}
-	vm.DiskSize, vm.DiskUsed = vmDiskUsage(ctx, name)
+	vm.DiskSize, vm.DiskUsed = l.vmDiskUsage(ctx, name)
 	return vm
 }
 
@@ -261,17 +272,26 @@ func (l *Live) applyVMRuntime(ctx context.Context, vm *model.VM) {
 	}
 }
 
-func vmDiskUsage(ctx context.Context, name string) (uint64, uint64) {
+func (l *Live) vmDiskUsage(ctx context.Context, name string) (uint64, uint64) {
+	l.vmDiskMu.Lock()
+	if cached, ok := l.vmDiskCache[name]; ok && time.Since(cached.at) < vmDiskTTL {
+		l.vmDiskMu.Unlock()
+		return cached.size, cached.used
+	}
+	l.vmDiskMu.Unlock()
+
 	out, err := exec.CommandContext(ctx, "virsh", "domblklist", name, "--details").Output()
 	if err != nil {
 		return 0, 0
 	}
 	var total, used uint64
+	found := false
 	for _, line := range strings.Split(string(out), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 4 || fields[1] != "disk" {
 			continue
 		}
+		found = true
 		target := fields[2]
 		if target == "" {
 			continue
@@ -283,6 +303,14 @@ func vmDiskUsage(ctx context.Context, name string) (uint64, uint64) {
 		info := virshColonInfoFrom(string(infoOut))
 		total += safeUint64Int(firstInt(info["Capacity"]))
 		used += safeUint64Int(firstInt(info["Allocation"]))
+	}
+	if found {
+		l.vmDiskMu.Lock()
+		if l.vmDiskCache == nil {
+			l.vmDiskCache = map[string]cachedVMDisk{}
+		}
+		l.vmDiskCache[name] = cachedVMDisk{at: time.Now(), size: total, used: used}
+		l.vmDiskMu.Unlock()
 	}
 	return total, used
 }
