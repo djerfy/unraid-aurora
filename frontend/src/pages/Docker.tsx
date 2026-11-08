@@ -957,7 +957,7 @@ function ContainerCard({
             : t("{count} findings", { count: security.total });
 
   return (
-    <Card hover className="card-pad group relative overflow-hidden">
+    <Card hover className="card-pad group relative overflow-hidden cv-card">
       <div
         className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full blur-3xl"
         style={{ background: hexToRgba(container.color, 0.14) }}
@@ -1227,7 +1227,7 @@ function ContainerRow({
   const running = container.state === "running";
   const mounts = container.mounts ?? [];
   return (
-    <div className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
+    <div className="cv-row flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/50">
       {selectable ? (
         <input
           type="checkbox"

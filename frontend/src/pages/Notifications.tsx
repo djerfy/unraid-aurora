@@ -189,7 +189,7 @@ export function NotificationsPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    "group flex cursor-pointer gap-3.5 px-5 py-4 transition hover:bg-[var(--surface-2)]/50",
+                    "cv-notice group flex cursor-pointer gap-3.5 px-5 py-4 transition hover:bg-[var(--surface-2)]/50",
                     !item.read && !item.archived && "bg-[var(--accent-softer)]/40",
                   )}
                   onClick={() => setSelected(item)}

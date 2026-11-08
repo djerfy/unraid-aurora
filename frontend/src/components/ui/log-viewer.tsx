@@ -100,7 +100,7 @@ export function LogViewer({
           <p className="text-[#6b7280]">{t("Loading logs…")}</p>
         ) : filtered.length ? (
           filtered.map((line, index) => (
-            <div key={`${line.time}-${index}`} className="flex gap-2">
+            <div key={`${line.time}-${index}`} className="cv-line flex gap-2">
               <span className="shrink-0 text-[#4b5563]">
                 {new Date(line.time).toLocaleTimeString([], { hour12: false })}
               </span>

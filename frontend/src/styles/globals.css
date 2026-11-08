@@ -376,6 +376,28 @@
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
+/* Browser-native offscreen rendering for long, variable-height lists. This
+   keeps the DOM intact for search and keyboard access without painting every
+   row of a 1000-line log or a large container grid. */
+.cv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
+.cv-notice {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 104px;
+}
+
+.cv-line {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 18px;
+}
 /* Glass material: opt-in from Settings > Appearance. Cards use the same
    72% surface + 24px blur as the sidebar so the wallpaper reads identically. */
 [data-glass="on"] .card {
