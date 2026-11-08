@@ -114,7 +114,7 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 | POST | `/auth/revoke-all` | session | Invalidate every session |
 | GET | `/auth/sessions` | session | List active sessions and the current device |
 | DELETE | `/auth/sessions/{nonce}` | session | Revoke one session by nonce |
-| GET | `/bootstrap` | viewer+ | Full snapshot, hub metrics and history; `?light=1` skips plugins/notifications |
+| GET | `/bootstrap` | viewer+ | Snapshot and hub metrics; `?light=1` skips plugins/notifications, `?history=1` adds the hub history |
 | GET | `/events` | viewer+ | SSE metrics stream |
 | GET | `/system` | viewer+ | System identity, CPU, memory, sensors |
 | GET | `/settings` | admin | UI and integration settings (secrets redacted for tokens) |
@@ -122,11 +122,13 @@ Unless marked public, every endpoint requires a valid session or bearer token.
 
 `GET /bootstrap` returns `Snapshot`: system, array, disks, shares, pools,
 containers, VMs, network, users, plugins, notifications, GPUs, UPS, settings,
-metrics, history and `serverTime`. Collections are always arrays, never `null`.
+metrics and `serverTime`. Collections are always arrays, never `null`.
 `?light=1` omits plugins, notifications, GPUs, UPS and history. The UI loads
-plugins/notifications from their dedicated endpoints and the remaining fields
-from the SSE hub, so first paint is cheaper without extra host probes. JSON reads
-are gzip-compressed when the client sends `Accept-Encoding: gzip`.
+plugins/notifications from their dedicated endpoints, the remaining fields from
+the SSE hub and backfills the chart once from `GET /metrics/history`. Periodically
+polling the full history is unnecessary: add `?history=1` only when a one-off
+snapshot needs it. JSON reads are gzip-compressed when the client sends
+`Accept-Encoding: gzip`.
 
 ### Array, disks, shares and pools
 
