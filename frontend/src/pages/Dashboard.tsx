@@ -94,6 +94,7 @@ export function DashboardPage() {
 
   const primaryShare = [...shares].sort((a, b) => b.used - a.used).slice(0, 4);
   const issueCount = system.health.issues.length;
+  const perfectHealth = system.health.score >= 100;
   const arrayDisks = disks
     .filter((disk) => disk.type === "Data" || disk.type === "Parity")
     .sort((a, b) => {
@@ -180,7 +181,13 @@ export function DashboardPage() {
             trailing={<Badge tone={system.health.status === "healthy" ? "success" : "warning"}>{system.health.status === "healthy" ? t("Nominal") : t("Attention")}</Badge>}
           />
           <div className="mt-4 flex items-start gap-5">
-            <Ring value={system.health.score} size={118} stroke={8}>
+            <Ring
+              value={system.health.score}
+              size={118}
+              stroke={8}
+              color={perfectHealth ? "var(--success)" : undefined}
+              color2={perfectHealth ? "var(--success)" : undefined}
+            >
               <div className="text-center">
                 <p className="num text-[27px] font-semibold leading-none text-ink">{system.health.score}</p>
                 <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.14em] text-subtle">Aurora</p>
@@ -208,10 +215,11 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-          <div className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-3.5">
-            <MiniStat label={t("Uptime")} value={formatUptime(system.uptime)} />
-            <MiniStat label={t("Version")} value={system.version} />
-            <MiniStat label={t("Package")} value={`${Math.round(system.cpu.temp)}°C`} tone={system.cpu.temp > 75 ? "warning" : undefined} />
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3.5">
+            <MiniStat padded={false} label={t("Uptime")} value={formatUptime(system.uptime)} />
+            <MiniStat padded={false} label={t("Version")} value={system.version} />
+            <MiniStat padded={false} label={t("Kernel")} value={system.kernel} />
+            <MiniStat padded={false} label={t("Temp")} value={`${Math.round(system.cpu.temp)}°C`} tone={system.cpu.temp > 75 ? "warning" : undefined} />
           </div>
         </Card>
 
@@ -722,14 +730,16 @@ function MiniStat({
   value,
   icon,
   tone,
+  padded = true,
 }: {
   label: string;
   value: string;
   icon?: ReactNode;
   tone?: "warning";
+  padded?: boolean;
 }) {
   return (
-    <div className="px-3 first:pl-0 last:pr-0">
+    <div className={padded ? "px-3 first:pl-0 last:pr-0" : undefined}>
       <p className="flex items-center gap-1 text-[9px] uppercase tracking-[0.1em] text-subtle">
         {icon}
         {label}

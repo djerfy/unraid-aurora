@@ -23,6 +23,7 @@ const dashboard: Record<string, string> = {
   "Operational, with notes": "Opérationnel, avec des remarques",
   "No issues detected": "Aucun problème détecté",
   "Package": "Package",
+  "Temp": "Temp",
   "Processor": "Processeur",
   "load": "charge",
   "Package power": "Puissance du processeur",
