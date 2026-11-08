@@ -65,7 +65,11 @@ files and commands as the official webGUI.
 - The **command palette** (`⌘K` / `Ctrl+K`, or `/`) searches:
   - pages and global actions,
   - containers: name, state, image, network and IP,
-  - virtual machines: name, state and operating system.
+  - virtual machines: name, state and operating system,
+  - CVE IDs when Trivy scans are available.
+- Typing a CVE (for example `CVE-2024-1234`) shows **Affected containers** and **Affected packages**.
+  Selecting a container or package opens the Docker **Security** tab filtered by that CVE, grouped by
+  container or package. The scan overview is loaded on demand and cached for 30 seconds.
 - Selecting a container opens its details drawer; selecting a VM opens its drawer.
 - **Container actions** and **VM actions** groups expose start/restart/stop shortcuts.
 

@@ -27,7 +27,8 @@ import type {
   SecurityOverview,
 } from "../../lib/types";
 
-type GroupBy = "image" | "container" | "cve" | "package" | "severity";
+export type SecurityGroupBy = "image" | "container" | "cve" | "package" | "severity";
+type GroupBy = SecurityGroupBy;
 type SeverityFilter = "all" | SeverityKey;
 type Translate = (key: string, params?: TranslationParams) => string;
 
@@ -311,9 +312,13 @@ function stateTone(state: string): "success" | "warning" | "neutral" {
 export function ContainerSecurityOverview({
   containers,
   onOpenContainer,
+  initialQuery,
+  initialGroup,
 }: {
   containers: Container[];
   onOpenContainer: (container: Container) => void;
+  initialQuery?: string;
+  initialGroup?: SecurityGroupBy;
 }) {
   const { t } = useI18n();
   const overview = useQuery<SecurityOverview>({
@@ -321,9 +326,9 @@ export function ContainerSecurityOverview({
     queryFn: api.securityOverview,
     refetchInterval: (query) => (query.state.data?.images.some((image) => image.security.scanning) ? 4000 : 20_000),
   });
-  const [groupBy, setGroupBy] = useState<GroupBy>("image");
+  const [groupBy, setGroupBy] = useState<GroupBy>(initialGroup ?? "image");
   const [severity, setSeverity] = useState<SeverityFilter>("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const containerById = useMemo(
     () => new Map(containers.map((container) => [container.id, container])),
@@ -333,6 +338,14 @@ export function ContainerSecurityOverview({
   useEffect(() => {
     setExpanded({});
   }, [groupBy]);
+
+  useEffect(() => {
+    if (initialGroup) setGroupBy(initialGroup);
+  }, [initialGroup]);
+
+  useEffect(() => {
+    if (initialQuery !== undefined) setQuery(initialQuery);
+  }, [initialQuery]);
 
   const groups = useMemo(() => {
     const data = overview.data;

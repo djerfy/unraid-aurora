@@ -46,7 +46,7 @@ import { ContainerConnections } from "../components/containers/ContainerConnecti
 import { ContainerNetworkMap } from "../components/containers/ContainerNetworkMap";
 import { ContainerPriorityModal } from "../components/containers/ContainerPriorityModal";
 import { ContainerImages } from "../components/containers/ContainerImages";
-import { ContainerSecurityOverview } from "../components/containers/ContainerSecurityOverview";
+import { ContainerSecurityOverview, type SecurityGroupBy } from "../components/containers/ContainerSecurityOverview";
 import { SecurityCounts, SEVERITY_STYLES } from "../components/containers/security";
 import { EntityIcon, containerIconURL } from "../components/ui/entity-icon";
 import { LogViewer } from "../components/ui/log-viewer";
@@ -149,6 +149,15 @@ export function DockerPage() {
     }
     setParams(next, { replace: true });
   };
+  const securityGroupParam = params.get("securityGroup");
+  const securityGroup: SecurityGroupBy | undefined =
+    securityGroupParam === "image" ||
+    securityGroupParam === "container" ||
+    securityGroupParam === "cve" ||
+    securityGroupParam === "package" ||
+    securityGroupParam === "severity"
+      ? securityGroupParam
+      : undefined;
   const networkView = params.get("sub") === "map" ? "map" : "calls";
   const setNetworkView = (value: string) => {
     const next = new URLSearchParams(params);
@@ -599,7 +608,12 @@ export function DockerPage() {
       ) : tab === "images" ? (
         <ContainerImages />
       ) : tab === "security" ? (
-        <ContainerSecurityOverview containers={containers} onOpenContainer={openContainer} />
+        <ContainerSecurityOverview
+          containers={containers}
+          onOpenContainer={openContainer}
+          initialQuery={params.get("securityQuery") ?? ""}
+          initialGroup={securityGroup}
+        />
       ) : (
         <>
       <div className="mb-5 flex flex-wrap items-center gap-3">

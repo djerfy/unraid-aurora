@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -271,10 +272,14 @@ export function CommandPalette({
   open,
   onClose,
   commands,
+  resolveExtra,
+  onQueryChange,
 }: {
   open: boolean;
   onClose: () => void;
   commands: Command[];
+  resolveExtra?: (query: string) => Command[];
+  onQueryChange?: (query: string) => void;
 }) {
   useBodyScrollLock(open);
   const { t } = useI18n();
@@ -287,10 +292,13 @@ export function CommandPalette({
     if (!open) return;
     setQuery("");
     setCursor(0);
+    onQueryChange?.("");
     window.setTimeout(() => inputRef.current?.focus(), 20);
-  }, [open]);
+  }, [open, onQueryChange]);
 
-  const filtered = commands.filter((command) => {
+  const extraCommands = useMemo(() => (resolveExtra ? resolveExtra(query) : []), [resolveExtra, query]);
+  const allCommands = useMemo(() => [...commands, ...extraCommands], [commands, extraCommands]);
+  const filtered = allCommands.filter((command) => {
     if (!query.trim()) return true;
     const haystack = `${command.label} ${command.hint ?? ""} ${command.group} ${command.keywords ?? ""}`.toLowerCase();
     return query
@@ -358,8 +366,11 @@ export function CommandPalette({
           <input
             ref={inputRef}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("Search pages, containers, VMs, actions…")}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              onQueryChange?.(event.target.value);
+            }}
+            placeholder={t("Search pages, containers, VMs, actions, CVEs…")}
             className="h-6 w-full border-0 bg-transparent text-sm text-ink outline-none placeholder:text-subtle"
           />
           <Kbd>esc</Kbd>
