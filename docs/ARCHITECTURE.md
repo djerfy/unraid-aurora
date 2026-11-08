@@ -107,6 +107,7 @@ Reads the same sources as the original webGUI:
 | Trivy | `$AURORA_TRIVY_DIR` (default `$AURORA_CONFIG_DIR/trivy`): persistent binary, main/Java DB cache and `scans/*.json`; the binary is copied to `$AURORA_TRIVY_RUNTIME_DIR` (default `/usr/local/aurora/trivy`) before execution |
 | Storage location map | `$AURORA_CONFIG_DIR/storage-layout.json` (v2: grid panels, chassis sections, physical media; visual only, never written to Unraid) |
 | Image update status | `AURORA_DATA_DIR/image-updates.json` (last check + per-image result) |
+| Metrics archive | `AURORA_DATA_DIR/metrics-archive.json`: best-effort 31-day samples, written every 5 minutes outside the sampler lock (volatile on the default tmpfs) |
 | Configuration history | `$AURORA_CONFIG_DIR/config-history/<id>/{meta.json,files/}` |
 | Balance history | `$AURORA_CONFIG_DIR/balance-history.json` |
 | Container templates | `/boot/config/plugins/dockerMan/templates-user/my-<name>.xml`, read and written like the official webGUI |

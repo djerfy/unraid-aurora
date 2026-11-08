@@ -202,7 +202,7 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_TRIVY_DIR` | `<AURORA_CONFIG_DIR>/trivy` | Persistent Trivy binary, vulnerability and Java DB cache, and scan results |
 | `AURORA_TRIVY_RUNTIME_DIR` | `/usr/local/aurora/trivy` then `/tmp/aurora-trivy` | Writable, executable directory used to run the persistent Trivy binary (the flash mount is often noexec) |
 | `AURORA_DOCKER_SOCKET` | `/var/run/docker.sock` | Docker Engine socket |
-| `AURORA_DATA_DIR` | `/var/lib/aurora` | Runtime cache and mover output (tmpfs on Unraid) |
+| `AURORA_DATA_DIR` | `/var/lib/aurora` | Runtime caches, volatile metrics archive and mover output (tmpfs on Unraid) |
 | `AURORA_TLS_CERT` | derived | Explicit PEM bundle path (default: `/boot/config/ssl/certs/<server>_unraid_bundle.pem`) |
 | `AURORA_TLS_CERT_DIR` | `/boot/config/ssl/certs` | Directory used for certificate lookup |
 | `AURORA_TLS_KEY` | same as the bundle | Optional separate private key path |
@@ -222,8 +222,9 @@ Flags override the environment: `-addr`, `-log-file`, `-log-format`, `-log-level
 the About page.
 
 Durable configuration and history are stored under `AURORA_CONFIG_DIR`, on the Unraid flash by
-default, so they survive a reboot. `AURORA_DATA_DIR` is intentionally tmpfs: it only holds runtime
-caches and the mover output log, which can be regenerated.
+default, so they survive a reboot. `AURORA_DATA_DIR` is intentionally tmpfs: it holds runtime caches,
+the best-effort long-term metrics archive and the mover output log. Point it to a persistent path if
+you want the metrics archive to survive a reboot.
 
 ```bash
 # Print the build version
