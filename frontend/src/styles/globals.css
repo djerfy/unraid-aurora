@@ -799,11 +799,42 @@ input[type="range"] {
   transform: translateY(0);
 }
 
+/* Standard mode is blur-free: backdrop blur stays a glass-only effect. */
+[data-glass="off"] aside.fixed,
+[data-glass="off"] header.sticky {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-glass="off"] aside.fixed {
+  background: var(--surface) !important;
+}
+
+[data-glass="off"] header.sticky {
+  background: var(--bg) !important;
+}
+
 /* Performance mode: opt out of GPU-heavy decorative effects. */
 [data-performance="on"] .app-atmosphere,
 [data-performance="on"] .app-wallpaper,
-[data-performance="on"] .grain {
+[data-performance="on"] .grain,
+[data-performance="on"] .blur-3xl,
+[data-performance="on"] .blur-2xl,
+[data-performance="on"] .blur-xl {
   display: none !important;
+}
+
+[data-performance="on"] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-performance="on"] aside.fixed {
+  background: var(--surface) !important;
+}
+
+[data-performance="on"] header.sticky {
+  background: var(--bg) !important;
 }
 
 [data-performance="on"] .card,
