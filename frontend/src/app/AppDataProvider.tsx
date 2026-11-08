@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useTheme } from "./ThemeProvider";
 import type {
   MetricPoint,
   Metrics,
@@ -42,6 +44,9 @@ function mergeHistory(previous: MetricPoint[], incoming: MetricPoint[]): MetricP
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const { performance } = useTheme();
+  const performanceRef = useRef(performance);
+  const lastMetricsAt = useRef(0);
 
   const sessionQuery = useQuery({
     queryKey: ["session"],
@@ -88,6 +93,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(() => !document.hidden);
 
   useEffect(() => {
+    performanceRef.current = performance;
+  }, [performance]);
+
+  useEffect(() => {
     if (bootstrapQuery.data) {
       setMetrics(bootstrapQuery.data.metrics);
     }
@@ -115,6 +124,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     source.addEventListener("hello", () => setLive(true));
     source.addEventListener("metrics", (event) => {
       try {
+        if (performanceRef.current && Date.now() - lastMetricsAt.current < 5_000) return;
+        lastMetricsAt.current = Date.now();
         const next = JSON.parse((event as MessageEvent<string>).data) as Metrics;
         setMetrics(next);
         setHistory((prev) =>
