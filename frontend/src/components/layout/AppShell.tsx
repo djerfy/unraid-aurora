@@ -222,7 +222,7 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
 
 export function AppShell() {
   const { snapshot, session, error, live, refresh } = useApp();
-  const { resolvedTheme, setTheme, setPreferences, wallpaper, wallpaperBlur, glass } = useTheme();
+  const { resolvedTheme, setTheme, setPreferences, wallpaper } = useTheme();
   const { t } = useI18n();
   const action = useAction();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -491,7 +491,7 @@ export function AppShell() {
       {wallpaper ? (
         <div
           className="app-wallpaper"
-          style={{ backgroundImage: `url("${glass && wallpaperBlur ? wallpaperBlur : wallpaper}")` }}
+          style={{ backgroundImage: `url("${wallpaper}")` }}
           aria-hidden="true"
         />
       ) : null}

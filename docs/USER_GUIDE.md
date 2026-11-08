@@ -742,12 +742,8 @@ back from History. Deploy the previous image tag to revert.
 - **Density**: comfortable or compact.
 - **Surfaces**: Standard (default) or Glass, a frosted, translucent material applied to cards, panels and
   popovers. The preference is stored on the current device and respects reduced-transparency settings.
-- **Glass quality**: shown when **Glass** is enabled. **Lite** (default) keeps blur on cards and the
-  topbar, uses a near-solid sidebar and solid controls; **Full** applies the 24 px blur to every
-  surface. Stored on the current device.
 - **Wallpaper**: choose a PNG, JPEG or WebP image displayed behind the cards. The image is darkened by
-  50 % for contrast and stored on the current device (resized to 1920 px and compressed when needed). In glass mode, a
-pre-blurred copy is generated once so cards and controls no longer need runtime backdrop blur.
+  50 % for contrast and stored on the current device (resized to 2560 px and compressed when needed).
   Use the trash button to remove it.
 - **Performance mode**: disables wallpaper, backdrop blur, background effects and most animations on
   this device. Use it when the dashboard's visual effects keep a GPU busy; the live metrics stream
