@@ -4,9 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { blurWallpaper } from "../lib/wallpaper";
 
 export type ThemeMode = "dark" | "light" | "system";
 export type Accent = "ember" | "violet" | "cyan" | "emerald" | "amber" | "blue";
@@ -18,6 +20,7 @@ type Preferences = {
   density: Density;
   glass: boolean;
   wallpaper: string;
+  wallpaperBlur: string;
   performance: boolean;
 };
 
@@ -27,7 +30,7 @@ type ThemeContextValue = Preferences & {
   setAccent: (accent: Accent) => void;
   setDensity: (density: Density) => void;
   setGlass: (glass: boolean) => void;
-  setWallpaper: (wallpaper: string) => void;
+  setWallpaper: (wallpaper: string, wallpaperBlur?: string) => void;
   setPerformance: (performance: boolean) => void;
   setPreferences: (prefs: Partial<Preferences>) => void;
 };
@@ -37,7 +40,7 @@ const STORAGE_KEY = "aurora.theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStored(): Preferences {
-  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false, wallpaper: "", performance: false };
+  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false, wallpaper: "", wallpaperBlur: "", performance: false };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
@@ -48,6 +51,7 @@ function readStored(): Preferences {
       density: parsed.density ?? fallback.density,
       glass: parsed.glass === true,
       wallpaper: typeof parsed.wallpaper === "string" ? parsed.wallpaper : "",
+      wallpaperBlur: typeof parsed.wallpaperBlur === "string" ? parsed.wallpaperBlur : "",
       performance: parsed.performance === true,
     };
   } catch {
@@ -89,11 +93,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [prefs, resolvedTheme]);
 
+  const blurAttempt = useRef("");
+  useEffect(() => {
+    if (!prefs.glass || !prefs.wallpaper || prefs.wallpaperBlur) return;
+    if (blurAttempt.current === prefs.wallpaper) return;
+    blurAttempt.current = prefs.wallpaper;
+    const source = prefs.wallpaper;
+    void blurWallpaper(source)
+      .then((blurred) => {
+        if (!blurred || blurred === source) return;
+        setPrefs((current) => (current.wallpaper === source ? { ...current, wallpaperBlur: blurred } : current));
+      })
+      .catch(() => {
+        // Keep the original wallpaper; runtime glass blur still applies.
+      });
+  }, [prefs.glass, prefs.wallpaper, prefs.wallpaperBlur]);
+
   const setTheme = useCallback((theme: ThemeMode) => setPrefs((p) => ({ ...p, theme })), []);
   const setAccent = useCallback((accent: Accent) => setPrefs((p) => ({ ...p, accent })), []);
   const setDensity = useCallback((density: Density) => setPrefs((p) => ({ ...p, density })), []);
   const setGlass = useCallback((glass: boolean) => setPrefs((p) => ({ ...p, glass })), []);
-  const setWallpaper = useCallback((wallpaper: string) => setPrefs((p) => ({ ...p, wallpaper })), []);
+  const setWallpaper = useCallback(
+    (wallpaper: string, wallpaperBlur = "") => setPrefs((p) => ({ ...p, wallpaper, wallpaperBlur })),
+    [],
+  );
   const setPerformance = useCallback((performance: boolean) => setPrefs((p) => ({ ...p, performance })), []);
   const setPreferences = useCallback(
     (next: Partial<Preferences>) => setPrefs((p) => ({ ...p, ...next })),

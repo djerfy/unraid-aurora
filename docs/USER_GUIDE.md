@@ -744,7 +744,8 @@ back from History. Deploy the previous image tag to revert.
   popovers. The preference is stored on the current device and respects reduced-transparency settings.
 - **Wallpaper**: choose a PNG, JPEG or WebP image displayed behind the cards. The image is darkened by
   50 % for contrast and stored on the current device (resized to 2560 px and compressed when needed).
-  Use the trash button to remove it.
+  In glass mode, a pre-blurred copy is generated once and used as the background. Use the trash button
+  to remove it.
 - **Performance mode**: disables wallpaper, backdrop blur, background effects and most animations on
   this device. Use it when the dashboard's visual effects keep a GPU busy; the live metrics stream
   also pauses while the browser tab is hidden.

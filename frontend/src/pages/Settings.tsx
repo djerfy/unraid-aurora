@@ -51,6 +51,7 @@ import { VMSettingsPanel } from "../components/system/VMSettingsPanel";
 import { ProxySettingsPanel } from "../components/system/ProxySettingsPanel";
 import { NvidiaDriverPanel } from "../components/system/NvidiaDriverPanel";
 import { api } from "../lib/api";
+import { blurWallpaper } from "../lib/wallpaper";
 import { formatDateTime, formatMemory, formatUptime } from "../lib/format";
 import type { Settings } from "../lib/types";
 
@@ -160,7 +161,16 @@ export function SettingsPage() {
     }
     setWallpaperBusy(true);
     try {
-      theme.setWallpaper(await wallpaperDataURL(file));
+      const source = await wallpaperDataURL(file);
+      let blurred = "";
+      if (theme.glass) {
+        try {
+          blurred = await blurWallpaper(source);
+        } catch {
+          // The original still works; runtime glass blur remains active.
+        }
+      }
+      theme.setWallpaper(source, blurred);
       toast({ kind: "success", title: t("Wallpaper updated"), description: t("The image is stored on this device.") });
     } catch {
       toast({ kind: "error", title: t("Could not load the wallpaper"), description: t("Choose a valid image file.") });
