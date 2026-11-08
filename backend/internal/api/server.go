@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	httppprof "net/http/pprof"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"aurora/internal/audit"
@@ -31,6 +33,8 @@ type Server struct {
 	started  time.Time
 	audit    *audit.Log
 	tokens   *tokenStore
+
+	bootstrapNanos atomic.Int64
 }
 
 func New(cfg config.Config, p provider.Provider, hub *metrics.Hub, authManager *auth.Manager, log *slog.Logger) *Server {
@@ -222,6 +226,18 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("POST /api/v1/actions", s.action)
 
 	root := http.NewServeMux()
+	if s.cfg.Pprof {
+		debugMux := http.NewServeMux()
+		debugMux.HandleFunc("/debug/pprof/", httppprof.Index)
+		debugMux.HandleFunc("/debug/pprof/cmdline", httppprof.Cmdline)
+		debugMux.HandleFunc("/debug/pprof/profile", httppprof.Profile)
+		debugMux.HandleFunc("/debug/pprof/symbol", httppprof.Symbol)
+		debugMux.HandleFunc("/debug/pprof/trace", httppprof.Trace)
+		pprofHandler := http.StripPrefix("/api/v1", debugMux)
+		api.HandleFunc("GET /api/v1/debug/pprof/", func(w http.ResponseWriter, r *http.Request) {
+			pprofHandler.ServeHTTP(w, r)
+		})
+	}
 	root.HandleFunc("GET /metrics", s.prometheus)
 	root.Handle("/api/", api)
 	root.HandleFunc("GET /api", func(w http.ResponseWriter, r *http.Request) {
@@ -355,6 +371,8 @@ func sensitiveReadAllows(role, path string) (bool, bool) {
 	case strings.HasPrefix(path, "/api/v1/config-history"):
 		return adminOnly()
 	case path == "/api/v1/settings", path == "/api/v1/audit", path == "/api/v1/ups/settings", path == "/api/v1/logs", path == "/api/v1/unraid-api/logs":
+		return adminOnly()
+	case strings.HasPrefix(path, "/api/v1/debug/pprof"):
 		return adminOnly()
 	case strings.HasPrefix(path, "/api/v1/config/export"), path == "/api/v1/tools/flash-backup", path == "/api/v1/tools/diagnostics":
 		return adminOnly()
@@ -582,6 +600,10 @@ func (s *Server) prometheus(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "# TYPE aurora_disk_read_bytes_per_second gauge\naurora_disk_read_bytes_per_second %.0f\n", metrics.DiskRead)
 	fmt.Fprintf(w, "# HELP aurora_disk_write_bytes_per_second Disk write rate.\n")
 	fmt.Fprintf(w, "# TYPE aurora_disk_write_bytes_per_second gauge\naurora_disk_write_bytes_per_second %.0f\n", metrics.DiskWrite)
+	if nanos := s.bootstrapNanos.Load(); nanos > 0 {
+		fmt.Fprintf(w, "# HELP aurora_bootstrap_duration_seconds Duration of the last bootstrap snapshot.\n")
+		fmt.Fprintf(w, "# TYPE aurora_bootstrap_duration_seconds gauge\naurora_bootstrap_duration_seconds %.4f\n", float64(nanos)/1e9)
+	}
 	if ups, err := s.provider.UPS(ctx); err == nil && ups.Present {
 		onBattery := 0
 		if ups.OnBattery {

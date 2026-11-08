@@ -571,6 +571,9 @@
     },
     "POST /api/v1/nvidia/driver/download": {
       "excluded": "Stages a host kernel package for the next boot; UI-specific."
+    },
+    "GET /api/v1/debug/pprof/": {
+      "excluded": "Opt-in Go profiler behind AURORA_PPROF, admin-only; diagnostics only."
     }
   }
 }

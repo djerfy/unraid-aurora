@@ -343,6 +343,7 @@ rows as CSV client-side.
 | GET | `/tools/diagnostics` | admin | Diagnostics ZIP with secrets redacted |
 | GET | `/tools/flash-backup` | admin | Streaming `/boot` ZIP |
 | GET | `/metrics/history?range=` | viewer+ | `1h`, `24h`, `7d`, `30d` history |
+| GET | `/debug/pprof/` | admin | Go profiler when `AURORA_PPROF=1` (index, profile, trace, heap, goroutine) |
 | GET | `/logs?source=&lines=` | admin | `syslog`, `docker`, `nginx`, `libvirt`, `maillog`, `parity`, `tasks` |
 | GET | `/terminal` | session | WebSocket root shell |
 | POST | `/actions` | operator | Enumerated mutation |

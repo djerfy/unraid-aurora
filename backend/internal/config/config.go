@@ -23,6 +23,7 @@ type Config struct {
 	Version      string
 	MetricsToken string
 	ReadOnly     bool
+	Pprof        bool
 }
 
 func Load(version string) (Config, error) {
@@ -40,6 +41,7 @@ func Load(version string) (Config, error) {
 		Version:      version,
 		MetricsToken: env("AURORA_METRICS_TOKEN", ""),
 		ReadOnly:     envBool("AURORA_READ_ONLY", false),
+		Pprof:        envBool("AURORA_PPROF", false),
 	}
 
 	if ttl := env("AURORA_SESSION_TTL", ""); ttl != "" {

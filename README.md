@@ -210,10 +210,11 @@ Unraid Connect SSO tokens are **not** implemented. Aurora is intentionally limit
 | `AURORA_SESSION_TTL` | `24h` | Session lifetime (`time.ParseDuration`) |
 | `AURORA_AUDIT_LIMIT` | `5000` | In-memory audit entries retained (100–50000) |
 | `AURORA_READ_ONLY` | `false` | Disable every mutation |
+| `AURORA_PPROF` | `false` | Enable the admin-only Go profiler at `/api/v1/debug/pprof/` |
 | `AURORA_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
 | `AURORA_LOG_FILE` | stdout | Append logs to this file |
 | `AURORA_LOG_FORMAT` | `text` | `text` or `json` |
-| `AURORA_METRICS_TOKEN` | empty | Dedicated bearer token for the Prometheus `/metrics` endpoint. Scoped API tokens also work; with no dedicated token, only a valid API token is accepted |
+| `AURORA_METRICS_TOKEN` | empty | Dedicated bearer token for the Prometheus `/metrics` endpoint. Scoped API tokens also work; with no dedicated token, only a valid API token is accepted. Includes `aurora_bootstrap_duration_seconds` |
 | `AURORA_DAEMON` | `false` | Detach and run in the background |
 | `AURORA_DOCKER_PULL_STALL` | `10m` | Abort an image pull after this much silence from Docker (`0` disables it). There is no total limit, so multi-GB images can finish on slow links |
 
