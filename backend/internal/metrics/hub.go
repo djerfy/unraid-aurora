@@ -13,7 +13,10 @@ import (
 	"aurora/internal/provider"
 )
 
-const archiveInterval = 5 * time.Minute
+const (
+	archiveInterval   = 5 * time.Minute
+	gpuSampleInterval = 30 * time.Second
+)
 
 type Hub struct {
 	provider provider.Provider
@@ -78,11 +81,18 @@ func (h *Hub) Run(ctx context.Context, interval time.Duration) {
 // sampleEvents refreshes the slower host inventories used by the light
 // bootstrap path. They are not part of the 2 s metrics frame.
 func (h *Hub) sampleEvents(ctx context.Context) {
-	if gpus, err := h.provider.GPUs(ctx); err == nil {
-		h.mu.Lock()
-		h.gpus = append([]model.GPU(nil), gpus...)
-		h.gpusAt = time.Now()
-		h.mu.Unlock()
+	// nvidia-smi can wake an idle GPU; the dashboard does not need a 10 s
+	// cadence, so keep the inventory on a slower clock.
+	h.mu.RLock()
+	gpusAt := h.gpusAt
+	h.mu.RUnlock()
+	if gpusAt.IsZero() || time.Since(gpusAt) >= gpuSampleInterval {
+		if gpus, err := h.provider.GPUs(ctx); err == nil {
+			h.mu.Lock()
+			h.gpus = append([]model.GPU(nil), gpus...)
+			h.gpusAt = time.Now()
+			h.mu.Unlock()
+		}
 	}
 	if ups, err := h.provider.UPS(ctx); err == nil {
 		h.mu.Lock()
