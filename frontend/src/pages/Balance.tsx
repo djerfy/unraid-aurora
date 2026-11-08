@@ -60,8 +60,15 @@ export function BalancePage() {
   const [historyJob, setHistoryJob] = useState<BalanceJob | null>(null);
 
   const disks = useQuery({ queryKey: ["balance", "disks"], queryFn: api.balanceDisks, refetchInterval: 10_000 });
-  const status = useQuery({ queryKey: ["balance", "status"], queryFn: api.balanceStatus, refetchInterval: 1500 });
-  const history = useQuery({ queryKey: ["balance", "history"], queryFn: api.balanceHistory, refetchInterval: 5000 });
+  const status = useQuery({
+    queryKey: ["balance", "status"],
+    queryFn: api.balanceStatus,
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      return state && ["scanning", "running", "cancelling"].includes(state) ? 1500 : 10_000;
+    },
+  });
+  const history = useQuery({ queryKey: ["balance", "history"], queryFn: api.balanceHistory, refetchInterval: 10_000 });
   const browse = useQuery({
     queryKey: ["balance", "browse", source, browsePath],
     queryFn: () => api.balanceBrowse(source, browsePath),

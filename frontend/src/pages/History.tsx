@@ -21,7 +21,7 @@ export function HistoryPage() {
   const history = useQuery({
     queryKey: ["config-history"],
     queryFn: api.configHistory,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
   });
 
   const detail = useQuery({

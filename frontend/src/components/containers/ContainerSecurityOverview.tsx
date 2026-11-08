@@ -324,7 +324,7 @@ export function ContainerSecurityOverview({
   const overview = useQuery<SecurityOverview>({
     queryKey: ["security-overview"],
     queryFn: api.securityOverview,
-    refetchInterval: (query) => (query.state.data?.images.some((image) => image.security.scanning) ? 4000 : 20_000),
+    refetchInterval: (query) => (query.state.data?.images.some((image) => image.security.scanning) ? 4000 : 60_000),
   });
   const [groupBy, setGroupBy] = useState<GroupBy>(initialGroup ?? "image");
   const [severity, setSeverity] = useState<SeverityFilter>("all");

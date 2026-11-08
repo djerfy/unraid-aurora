@@ -1498,7 +1498,7 @@ function MoverCard({ arrayRunning }: { arrayRunning: boolean }) {
   const statusQuery = useQuery({
     queryKey: ["mover"],
     queryFn: api.mover,
-    refetchInterval: 1500,
+    refetchInterval: (query) => (query.state.data?.running ? 1500 : 15_000),
   });
   const status = statusQuery.data;
   const running = Boolean(status?.running);
