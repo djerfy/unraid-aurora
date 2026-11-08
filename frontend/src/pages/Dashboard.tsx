@@ -185,8 +185,8 @@ export function DashboardPage() {
               value={system.health.score}
               size={118}
               stroke={8}
-              color={perfectHealth ? "var(--success)" : undefined}
-              color2={perfectHealth ? "var(--success)" : undefined}
+              color={perfectHealth ? batteryColor(100, 55) : undefined}
+              color2={perfectHealth ? batteryColor(100, 42) : undefined}
             >
               <div className="text-center">
                 <p className="num text-[27px] font-semibold leading-none text-ink">{system.health.score}</p>
@@ -217,7 +217,7 @@ export function DashboardPage() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3.5">
             <MiniStat padded={false} label={t("Uptime")} value={formatUptime(system.uptime)} />
-            <MiniStat padded={false} label={t("Version")} value={system.version} />
+            <MiniStat padded={false} label={t("Version")} value={`Unraid ${system.version}`} />
             <MiniStat padded={false} label={t("Kernel")} value={system.kernel} />
             <MiniStat padded={false} label={t("Temp")} value={`${Math.round(system.cpu.temp)}°C`} tone={system.cpu.temp > 75 ? "warning" : undefined} />
           </div>
