@@ -308,7 +308,7 @@ export function SettingsPage() {
               );
             })}
           </nav>
-          <div className="mt-3 hidden rounded-xl border border-line px-3 py-3 lg:block">
+          <div className="mt-3 hidden rounded-xl border border-line bg-[var(--surface-2)]/60 px-3 py-3 lg:block">
             <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-subtle">{t("Connected to")}</p>
             <p className="mt-1.5 text-[12px] font-medium text-ink">{settings.serverName || snapshot.system.name}</p>
             <p className="font-mono text-[9.5px] text-subtle">{snapshot.system.hostname} · {snapshot.system.version}</p>
