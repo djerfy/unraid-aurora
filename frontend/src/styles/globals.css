@@ -798,3 +798,39 @@ input[type="range"] {
 .skip-link:focus-visible {
   transform: translateY(0);
 }
+
+/* Performance mode: opt out of GPU-heavy decorative effects. */
+[data-performance="on"] .app-atmosphere,
+[data-performance="on"] .app-wallpaper,
+[data-performance="on"] .grain {
+  display: none !important;
+}
+
+[data-performance="on"] .card,
+[data-performance="on"] .glass,
+[data-performance="on"] button[data-variant="secondary"],
+[data-performance="on"] [data-glass-control],
+[data-performance="on"] select,
+[data-performance="on"] input,
+[data-performance="on"] textarea {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+[data-performance="on"] .card,
+[data-performance="on"] .glass {
+  background: var(--surface) !important;
+}
+
+[data-performance="on"] .ring-progress {
+  filter: none !important;
+}
+
+[data-performance="on"] *,
+[data-performance="on"] *::before,
+[data-performance="on"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}

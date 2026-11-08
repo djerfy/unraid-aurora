@@ -64,6 +64,9 @@ const settings: Record<string, string> = {
   "Could not load the wallpaper": "Impossible de charger le fond d'écran",
   "Choose a valid image file.": "Choisissez un fichier image valide.",
   "MCP": "MCP",
+  "Performance mode": "Mode performance",
+  "Disables blur, wallpaper, background effects and animations to reduce GPU and CPU usage. Stored on this device.": "Désactive le flou, le fond d'écran, les effets d'arrière-plan et les animations pour réduire l'utilisation du GPU et du CPU. Stocké sur cet appareil.",
+
   "Branch data unavailable": "Données de branche indisponibles",
   "Branch metadata could not be loaded: {error}": "Les métadonnées des branches n'ont pas pu être chargées : {error}",
   "Loading driver versions…": "Chargement des versions de pilotes…",

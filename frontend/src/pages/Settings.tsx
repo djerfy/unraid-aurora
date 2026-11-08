@@ -446,6 +446,13 @@ export function SettingsPage() {
                 </SettingsRow>
 
                 <SettingsRow
+                  label={t("Performance mode")}
+                  description={t("Disables blur, wallpaper, background effects and animations to reduce GPU and CPU usage. Stored on this device.")}
+                >
+                  <Switch checked={theme.performance} onChange={theme.setPerformance} label={t("Performance mode")} />
+                </SettingsRow>
+
+                <SettingsRow
                   label={t("Wallpaper")}
                   description={t("Image displayed behind cards, darkened by 50%. Stored on this device.")}
                 >

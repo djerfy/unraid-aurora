@@ -74,6 +74,7 @@ export function Ring({
           strokeWidth={stroke}
         />
         <circle
+          className="ring-progress"
           cx={center}
           cy={center}
           r={radius}
