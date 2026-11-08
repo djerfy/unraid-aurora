@@ -92,6 +92,10 @@ func (l *Live) writeDiagnosticsFiles(write func(string, []byte), prefix, directo
 		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), extension) {
 			continue
 		}
+		// The long-term metrics archive is regenerated and can be several MB.
+		if entry.Name() == "metrics-archive.json" {
+			continue
+		}
 		info, err := entry.Info()
 		if err != nil || info.Size() > diagnosticsFileLimit {
 			continue
