@@ -85,6 +85,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [history, setHistory] = useState<MetricPoint[]>([]);
   const [live, setLive] = useState(false);
+  const [visible, setVisible] = useState(() => !document.hidden);
 
   useEffect(() => {
     if (bootstrapQuery.data) {
@@ -99,7 +100,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [historyQuery.data]);
 
   useEffect(() => {
-    if (!authenticated) return;
+    const onVisibility = () => setVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated || !visible) {
+      setLive(false);
+      return;
+    }
     const source = new EventSource("/api/v1/events");
 
     source.addEventListener("hello", () => setLive(true));
@@ -131,7 +141,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       source.close();
       setLive(false);
     };
-  }, [authenticated]);
+  }, [authenticated, visible]);
 
   const snapshot = useMemo(() => {
     const base = bootstrapQuery.data;
