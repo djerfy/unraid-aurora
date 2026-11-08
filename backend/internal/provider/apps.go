@@ -190,8 +190,42 @@ func (l *Live) AppIcon(ctx context.Context, iconURL string) ([]byte, string, err
 
 func (l *Live) loadAppsCatalog(ctx context.Context, force bool) error {
 	l.appsMu.Lock()
-	defer l.appsMu.Unlock()
 	if !force && len(l.appsEntries) > 0 && time.Since(l.appsFetchedAt) < caFeedTTL {
+		l.appsMu.Unlock()
+		return nil
+	}
+	hasEntries := len(l.appsEntries) > 0
+	if !force && hasEntries {
+		// Serve the cached catalog immediately; refresh the 32 MB feed in the
+		// background instead of blocking catalog and icon reads.
+		if !l.appsRefreshing {
+			l.appsRefreshing = true
+			go func() {
+				defer func() {
+					l.appsMu.Lock()
+					l.appsRefreshing = false
+					l.appsMu.Unlock()
+				}()
+				if err := l.refreshAppsCatalog(context.WithoutCancel(ctx), false); err != nil {
+					slog.Warn("refresh Community Applications feed", "error", err)
+				}
+			}()
+		}
+		l.appsMu.Unlock()
+		return nil
+	}
+	l.appsMu.Unlock()
+	return l.refreshAppsCatalog(ctx, force)
+}
+
+func (l *Live) refreshAppsCatalog(ctx context.Context, force bool) error {
+	l.appsLoadMu.Lock()
+	defer l.appsLoadMu.Unlock()
+
+	l.appsMu.Lock()
+	fresh := !force && len(l.appsEntries) > 0 && time.Since(l.appsFetchedAt) < caFeedTTL
+	l.appsMu.Unlock()
+	if fresh {
 		return nil
 	}
 
@@ -202,8 +236,10 @@ func (l *Live) loadAppsCatalog(ctx context.Context, force bool) error {
 			if json.Unmarshal(raw, &cache) == nil && len(cache.Payload) > 0 && time.Since(cache.FetchedAt) < caFeedTTL {
 				entries, categories, feedAt, err := parseCAFeed(cache.Payload)
 				if err == nil {
+					l.appsMu.Lock()
 					l.appsEntries, l.appsCategories = entries, categories
 					l.appsFetchedAt, l.appsFeedAt = cache.FetchedAt, feedAt
+					l.appsMu.Unlock()
 					return nil
 				}
 			}
@@ -213,7 +249,10 @@ func (l *Live) loadAppsCatalog(ctx context.Context, force bool) error {
 	payload, err := l.fetchCABytes(ctx, caFeedURL, caFeedMaxSize)
 	if err != nil {
 		slog.Warn("download Community Applications feed", "error", err)
-		if len(l.appsEntries) > 0 {
+		l.appsMu.Lock()
+		hasEntries := len(l.appsEntries) > 0
+		l.appsMu.Unlock()
+		if hasEntries {
 			return nil
 		}
 		return fmt.Errorf("download Community Applications feed: %w", err)
@@ -223,8 +262,10 @@ func (l *Live) loadAppsCatalog(ctx context.Context, force bool) error {
 		return err
 	}
 	now := time.Now()
+	l.appsMu.Lock()
 	l.appsEntries, l.appsCategories = entries, categories
 	l.appsFetchedAt, l.appsFeedAt = now, feedAt
+	l.appsMu.Unlock()
 	cache := caCacheFile{FetchedAt: now, FeedAt: feedAt, Payload: payload}
 	if raw, err := json.Marshal(cache); err == nil {
 		_ = writeFileAtomic(cachePath, raw, 0o600)

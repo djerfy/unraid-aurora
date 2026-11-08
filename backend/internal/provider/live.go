@@ -63,6 +63,8 @@ type Live struct {
 	appsCategories []string
 	appsFetchedAt  time.Time
 	appsFeedAt     time.Time
+	appsLoadMu     sync.Mutex
+	appsRefreshing bool
 
 	osMu sync.Mutex
 
