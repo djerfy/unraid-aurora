@@ -55,3 +55,29 @@ func TestRecordContainerImageChangeSkipsUnchangedDigest(t *testing.T) {
 		t.Fatalf("unchanged image should not create history: %+v", history)
 	}
 }
+
+func TestConfigHistoryCacheInvalidatesOnWrite(t *testing.T) {
+	live := &Live{bootDir: t.TempDir()}
+	if err := live.recordContainerImageChange("plex", "plex:latest", "sha256:111", "sha256:222",
+		[]string{"sha256:aaa"}, []string{"sha256:bbb"}); err != nil {
+		t.Fatal(err)
+	}
+	first, err := live.ConfigHistory(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 1 {
+		t.Fatalf("unexpected history: %+v", first)
+	}
+	if err := live.recordContainerImageChange("sonarr", "sonarr:latest", "sha256:333", "sha256:444",
+		[]string{"sha256:ccc"}, []string{"sha256:ddd"}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := live.ConfigHistory(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second) != 2 {
+		t.Fatalf("history cache was not invalidated: %+v", second)
+	}
+}

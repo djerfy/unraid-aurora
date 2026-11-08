@@ -98,12 +98,16 @@ type Live struct {
 	vmCacheAt      time.Time
 	vmDiskMu       sync.Mutex
 	vmDiskCache    map[string]cachedVMDisk
-	gpuMu          sync.Mutex
-	gpuCache       []model.GPU
-	gpuCacheAt     time.Time
-	upsMu          sync.Mutex
-	upsCache       model.UPS
-	upsCacheAt     time.Time
+
+	configHistoryMu    sync.Mutex
+	configHistoryCache []model.ConfigHistory
+	configHistoryReady bool
+	gpuMu              sync.Mutex
+	gpuCache           []model.GPU
+	gpuCacheAt         time.Time
+	upsMu              sync.Mutex
+	upsCache           model.UPS
+	upsCacheAt         time.Time
 
 	moverMu              sync.Mutex
 	moverActive          bool

@@ -78,6 +78,7 @@ func (l *Live) writeConfigChanges(action, description string, changes []configCh
 		return nil
 	}
 
+	defer l.invalidateConfigHistory()
 	entryID := newHistoryID()
 	entryDir := filepath.Join(l.configDir(), configHistoryDir, entryID)
 	filesDir := filepath.Join(entryDir, "files")
@@ -221,6 +222,7 @@ func (l *Live) recordExternalConfigChanges(action, description string, changes [
 	if l.configDir() == "" || len(changes) == 0 {
 		return
 	}
+	defer l.invalidateConfigHistory()
 	entryID := newHistoryID()
 	entryDir := filepath.Join(l.configDir(), configHistoryDir, entryID)
 	filesDir := filepath.Join(entryDir, "files")
@@ -255,10 +257,19 @@ func (l *Live) recordExternalConfigChanges(action, description string, changes [
 }
 
 func (l *Live) ConfigHistory(_ context.Context) ([]model.ConfigHistory, error) {
+	l.configHistoryMu.Lock()
+	if l.configHistoryReady {
+		cached := append([]model.ConfigHistory(nil), l.configHistoryCache...)
+		l.configHistoryMu.Unlock()
+		return cached, nil
+	}
+	l.configHistoryMu.Unlock()
+
 	directory := filepath.Join(l.configDir(), configHistoryDir)
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		if os.IsNotExist(err) {
+			l.storeConfigHistory([]model.ConfigHistory{})
 			return []model.ConfigHistory{}, nil
 		}
 		return nil, err
@@ -279,7 +290,22 @@ func (l *Live) ConfigHistory(_ context.Context) ([]model.ConfigHistory, error) {
 		history = append(history, item)
 	}
 	sort.Slice(history, func(i, j int) bool { return history[i].Created.After(history[j].Created) })
+	l.storeConfigHistory(history)
 	return history, nil
+}
+
+func (l *Live) storeConfigHistory(history []model.ConfigHistory) {
+	l.configHistoryMu.Lock()
+	l.configHistoryCache = history
+	l.configHistoryReady = true
+	l.configHistoryMu.Unlock()
+}
+
+func (l *Live) invalidateConfigHistory() {
+	l.configHistoryMu.Lock()
+	l.configHistoryCache = nil
+	l.configHistoryReady = false
+	l.configHistoryMu.Unlock()
 }
 
 func (l *Live) ConfigHistoryDetail(_ context.Context, id string) (model.ConfigHistory, error) {
@@ -391,6 +417,7 @@ func (l *Live) recordHistoryEvent(action, description string, files []historyFil
 	if l.configDir() == "" {
 		return nil
 	}
+	defer l.invalidateConfigHistory()
 	id := newHistoryID()
 	dir := filepath.Join(l.configDir(), configHistoryDir, id)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
@@ -412,6 +439,7 @@ func (l *Live) pruneConfigHistory() {
 	if l.configDir() == "" {
 		return
 	}
+	defer l.invalidateConfigHistory()
 	directory := filepath.Join(l.configDir(), configHistoryDir)
 	entries, err := os.ReadDir(directory)
 	if err != nil {
