@@ -33,7 +33,7 @@ import {
   Progress,
   cn,
 } from "../components/ui/primitives";
-import { useApp } from "../app/AppDataProvider";
+import { useApp, useLiveMetrics } from "../app/AppDataProvider";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
 import { api } from "../lib/api";
@@ -49,7 +49,8 @@ import {
 import type { Disk } from "../lib/types";
 
 export function DashboardPage() {
-  const { snapshot, metrics, history, live, refresh } = useApp();
+  const { snapshot, live, refresh } = useApp();
+  const { metrics, history } = useLiveMetrics();
   const { toast } = useToast();
   const { t } = useI18n();
   const navigate = useNavigate();

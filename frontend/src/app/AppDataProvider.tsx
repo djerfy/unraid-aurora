@@ -21,13 +21,17 @@ type AppDataValue = {
   session: SessionInfo | null;
   isLoading: boolean;
   error: Error | null;
-  metrics: Metrics | null;
-  history: MetricPoint[];
   live: boolean;
   refresh: () => void;
 };
 
+type LiveMetricsValue = {
+  metrics: Metrics | null;
+  history: MetricPoint[];
+};
+
 const AppDataContext = createContext<AppDataValue | null>(null);
+const LiveMetricsContext = createContext<LiveMetricsValue | null>(null);
 
 function mergeHistory(previous: MetricPoint[], incoming: MetricPoint[]): MetricPoint[] {
   const byTime = new Map<number, MetricPoint>();
@@ -153,8 +157,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       session: sessionQuery.data ?? null,
       isLoading: sessionQuery.isLoading || (authenticated && bootstrapQuery.isLoading),
       error: (sessionQuery.error as Error | null) ?? (bootstrapQuery.error as Error | null),
-      metrics,
-      history,
       live,
       refresh,
     }),
@@ -165,20 +167,30 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       sessionQuery.data,
       sessionQuery.error,
       sessionQuery.isLoading,
-      metrics,
-      history,
       live,
       refresh,
       authenticated,
     ],
   );
+  const liveMetrics = useMemo<LiveMetricsValue>(() => ({ metrics, history }), [metrics, history]);
 
-  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
+  return (
+    <AppDataContext.Provider value={value}>
+      <LiveMetricsContext.Provider value={liveMetrics}>{children}</LiveMetricsContext.Provider>
+    </AppDataContext.Provider>
+  );
 }
 
 export function useApp() {
   const ctx = useContext(AppDataContext);
   if (!ctx) throw new Error("useApp must be used inside AppDataProvider");
+  return ctx;
+}
+
+/** Live dashboard metrics, separated so SSE frames do not re-render every page. */
+export function useLiveMetrics() {
+  const ctx = useContext(LiveMetricsContext);
+  if (!ctx) throw new Error("useLiveMetrics must be used inside AppDataProvider");
   return ctx;
 }
 

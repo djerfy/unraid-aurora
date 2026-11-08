@@ -40,7 +40,7 @@ import {
   cn,
 } from "../components/ui/primitives";
 import { Drawer, Menu, Modal } from "../components/ui/overlays";
-import { useApp } from "../app/AppDataProvider";
+import { useApp, useLiveMetrics } from "../app/AppDataProvider";
 import { useAction } from "../lib/useAction";
 import { useToast } from "../app/ToastProvider";
 import { useI18n } from "../i18n";
@@ -82,7 +82,8 @@ function cacheModeLabel(t: (key: string) => string, mode: string) {
 }
 
 export function StoragePage() {
-  const { snapshot, metrics, history, refresh } = useApp();
+  const { snapshot, refresh } = useApp();
+  const { metrics, history } = useLiveMetrics();
   const action = useAction();
   const { toast } = useToast();
   const queryClient = useQueryClient();

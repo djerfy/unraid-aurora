@@ -17,14 +17,15 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { AreaChart } from "../components/ui/charts";
 import { Badge, Button, Card, IconButton, cn } from "../components/ui/primitives";
-import { useApp } from "../app/AppDataProvider";
+import { useApp, useLiveMetrics } from "../app/AppDataProvider";
 import { useI18n } from "../i18n";
 import { formatBytes, formatSpeed, formatUptime, relativeTime } from "../lib/format";
 import { useNetworkInterface } from "../lib/use-network-interface";
 import { NetworkConfigModal } from "../components/system/NetworkConfigModal";
 
 export function NetworkPage() {
-  const { snapshot, metrics, history, refresh } = useApp();
+  const { snapshot, refresh } = useApp();
+  const { metrics, history } = useLiveMetrics();
   const { t } = useI18n();
   const [showConfig, setShowConfig] = useState(false);
   const [editingInterface, setEditingInterface] = useState<string | null>(null);
