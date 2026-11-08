@@ -373,8 +373,8 @@
 
 .glass {
   background: color-mix(in srgb, var(--surface) 72%, transparent);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
 }
 /* Browser-native offscreen rendering for long, variable-height lists. This
    keeps the DOM intact for search and keyboard access without painting every
@@ -398,13 +398,26 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 18px;
 }
-/* Glass material: opt-in from Settings > Appearance. Cards use the same
-   72% surface + 24px blur as the sidebar so the wallpaper reads identically. */
+/* Glass material: opt-in from Settings > Appearance. The blur radius scales
+   with the quality setting; Lite also removes blur from every small control,
+   because dozens of backdrop-filter layers are what make glass expensive. */
+[data-glass="on"] {
+  --glass-blur: 16px;
+}
+
+[data-glass="on"][data-glass-quality="full"] {
+  --glass-blur: 24px;
+}
+
+[data-glass="on"][data-glass-quality="lite"] {
+  --glass-blur: 10px;
+}
+
 [data-glass="on"] .card {
   border-color: var(--border);
   background: color-mix(in srgb, var(--surface) 72%, transparent);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
   box-shadow: var(--shadow-card);
 }
 
@@ -424,19 +437,39 @@
 
 [data-glass="on"] .glass {
   background: color-mix(in srgb, var(--surface) 72%, transparent);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* The topbar and sidebar use Tailwind's backdrop-blur-2xl utility; override it
+   with the selected quality instead of paying for a fixed 24px blur. */
+[data-glass="on"] aside.fixed,
+[data-glass="on"] header.sticky {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+  backdrop-filter: blur(var(--glass-blur)) !important;
 }
 
 /* Neutral buttons use the same material as the sidebar and glass cards. */
 [data-glass="on"] button[data-variant="secondary"] {
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 [data-glass="on"] button[data-variant="secondary"]:hover {
   background: color-mix(in srgb, var(--surface-3) 82%, transparent);
+}
+
+/* Lite: the full-height sidebar is the largest blur layer. Keep its glass
+   tint but drop the filter entirely; cards and the topbar stay frosted. */
+[data-glass="on"][data-glass-quality="lite"] aside.fixed {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: color-mix(in srgb, var(--surface) 94%, transparent) !important;
+}
+
+[data-glass="on"][data-glass-quality="lite"] .app-atmosphere::before {
+  filter: blur(4px);
 }
 
 /* Form controls and segmented tracks follow the same material. */
@@ -449,8 +482,24 @@
 [data-glass="on"] main textarea,
 [data-glass="on"] [data-glass-control] {
   background-color: color-mix(in srgb, var(--surface-2) 72%, transparent);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Lite: small controls stay translucent but do not create their own blur
+   layer. Cards, the sidebar and the topbar keep the frosted look. */
+[data-glass="on"][data-glass-quality="lite"] button[data-variant="secondary"],
+[data-glass="on"][data-glass-quality="lite"] select,
+[data-glass="on"][data-glass-quality="lite"] main input[type="text"],
+[data-glass="on"][data-glass-quality="lite"] main input[type="search"],
+[data-glass="on"][data-glass-quality="lite"] main input[type="email"],
+[data-glass="on"][data-glass-quality="lite"] main input[type="password"],
+[data-glass="on"][data-glass-quality="lite"] main input[type="number"],
+[data-glass="on"][data-glass-quality="lite"] main textarea,
+[data-glass="on"][data-glass-quality="lite"] [data-glass-control] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: color-mix(in srgb, var(--surface-2) 84%, transparent);
 }
 
 [data-glass="on"] main [data-glass-control="input"] input {

@@ -11,12 +11,14 @@ import {
 export type ThemeMode = "dark" | "light" | "system";
 export type Accent = "ember" | "violet" | "cyan" | "emerald" | "amber" | "blue";
 export type Density = "comfortable" | "compact";
+export type GlassQuality = "full" | "lite";
 
 type Preferences = {
   theme: ThemeMode;
   accent: Accent;
   density: Density;
   glass: boolean;
+  glassQuality: GlassQuality;
   wallpaper: string;
   performance: boolean;
 };
@@ -27,6 +29,7 @@ type ThemeContextValue = Preferences & {
   setAccent: (accent: Accent) => void;
   setDensity: (density: Density) => void;
   setGlass: (glass: boolean) => void;
+  setGlassQuality: (quality: GlassQuality) => void;
   setWallpaper: (wallpaper: string) => void;
   setPerformance: (performance: boolean) => void;
   setPreferences: (prefs: Partial<Preferences>) => void;
@@ -37,7 +40,7 @@ const STORAGE_KEY = "aurora.theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStored(): Preferences {
-  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false, wallpaper: "", performance: false };
+  const fallback: Preferences = { theme: "dark", accent: "ember", density: "comfortable", glass: false, glassQuality: "lite", wallpaper: "", performance: false };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
@@ -47,6 +50,7 @@ function readStored(): Preferences {
       accent: parsed.accent ?? fallback.accent,
       density: parsed.density ?? fallback.density,
       glass: parsed.glass === true,
+      glassQuality: parsed.glassQuality === "full" ? "full" : "lite",
       wallpaper: typeof parsed.wallpaper === "string" ? parsed.wallpaper : "",
       performance: parsed.performance === true,
     };
@@ -79,6 +83,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.dataset.accent = prefs.accent;
     root.dataset.density = prefs.density;
     root.dataset.glass = prefs.glass ? "on" : "off";
+    root.dataset.glassQuality = prefs.glassQuality;
     root.dataset.wallpaper = prefs.wallpaper ? "on" : "off";
     root.dataset.performance = prefs.performance ? "on" : "off";
     root.style.colorScheme = resolvedTheme;
@@ -93,6 +98,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setAccent = useCallback((accent: Accent) => setPrefs((p) => ({ ...p, accent })), []);
   const setDensity = useCallback((density: Density) => setPrefs((p) => ({ ...p, density })), []);
   const setGlass = useCallback((glass: boolean) => setPrefs((p) => ({ ...p, glass })), []);
+  const setGlassQuality = useCallback((glassQuality: GlassQuality) => setPrefs((p) => ({ ...p, glassQuality })), []);
   const setWallpaper = useCallback((wallpaper: string) => setPrefs((p) => ({ ...p, wallpaper })), []);
   const setPerformance = useCallback((performance: boolean) => setPrefs((p) => ({ ...p, performance })), []);
   const setPreferences = useCallback(
@@ -101,8 +107,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ ...prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setWallpaper, setPerformance, setPreferences }),
-    [prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setWallpaper, setPerformance, setPreferences],
+    () => ({ ...prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setGlassQuality, setWallpaper, setPerformance, setPreferences }),
+    [prefs, resolvedTheme, setTheme, setAccent, setDensity, setGlass, setGlassQuality, setWallpaper, setPerformance, setPreferences],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

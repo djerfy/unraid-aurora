@@ -445,6 +445,30 @@ export function SettingsPage() {
                   </div>
                 </SettingsRow>
 
+                {theme.glass ? (
+                  <SettingsRow
+                    label={t("Glass quality")}
+                    description={t("Lite keeps blur on cards, the sidebar and the topbar but uses solid controls. Full blurs every control. Stored on this device.")}
+                  >
+                    <div data-glass-control="segmented" className="flex rounded-lg border border-line bg-[var(--surface-2)] p-0.5">
+                      {(["lite", "full"] as const).map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={theme.glassQuality === value}
+                          onClick={() => theme.setGlassQuality(value)}
+                          className={cn(
+                            "rounded-md px-3 py-1 text-[11px] font-medium transition",
+                            theme.glassQuality === value ? "bg-[var(--surface)] text-ink shadow-sm" : "text-muted hover:text-ink",
+                          )}
+                        >
+                          {t(value === "lite" ? "Lite" : "Full")}
+                        </button>
+                      ))}
+                    </div>
+                  </SettingsRow>
+                ) : null}
+
                 <SettingsRow
                   label={t("Performance mode")}
                   description={t("Disables blur, wallpaper, background effects and animations to reduce GPU and CPU usage. Stored on this device.")}

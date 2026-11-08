@@ -44,8 +44,9 @@ function mergeHistory(previous: MetricPoint[], incoming: MetricPoint[]): MetricP
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const { performance } = useTheme();
+  const { performance, glass } = useTheme();
   const performanceRef = useRef(performance);
+  const glassRef = useRef(glass);
   const lastMetricsAt = useRef(0);
 
   const sessionQuery = useQuery({
@@ -94,7 +95,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     performanceRef.current = performance;
-  }, [performance]);
+    glassRef.current = glass;
+  }, [performance, glass]);
 
   useEffect(() => {
     if (bootstrapQuery.data) {
@@ -124,7 +126,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     source.addEventListener("hello", () => setLive(true));
     source.addEventListener("metrics", (event) => {
       try {
-        if (performanceRef.current && Date.now() - lastMetricsAt.current < 5_000) return;
+        const throttle = performanceRef.current ? 5_000 : glassRef.current ? 3_000 : 0;
+        if (throttle && Date.now() - lastMetricsAt.current < throttle) return;
         lastMetricsAt.current = Date.now();
         const next = JSON.parse((event as MessageEvent<string>).data) as Metrics;
         setMetrics(next);

@@ -64,6 +64,9 @@ const settings: Record<string, string> = {
   "Could not load the wallpaper": "Impossible de charger le fond d'écran",
   "Choose a valid image file.": "Choisissez un fichier image valide.",
   "MCP": "MCP",
+  "Glass quality": "Qualité du verre",
+  "Lite keeps blur on cards, the sidebar and the topbar but uses solid controls. Full blurs every control. Stored on this device.": "Le mode Léger conserve le flou sur les cartes, la barre latérale et la barre supérieure mais utilise des contrôles opaques. Le mode Complet applique le flou à chaque contrôle. Stocké sur cet appareil.",
+
   "Performance mode": "Mode performance",
   "Disables blur, wallpaper, background effects and animations to reduce GPU and CPU usage. Stored on this device.": "Désactive le flou, le fond d'écran, les effets d'arrière-plan et les animations pour réduire l'utilisation du GPU et du CPU. Stocké sur cet appareil.",
 
