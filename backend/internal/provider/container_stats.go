@@ -16,7 +16,9 @@ import (
 	"aurora/internal/model"
 )
 
-const containerStatsTTL = 10 * time.Second
+// Container stats are only used for per-row gauges. The Docker daemon call is
+// comparatively expensive, so keep them on a slower cadence than the snapshot.
+const containerStatsTTL = 30 * time.Second
 
 // dockerStatusUptime derives the running duration from Docker's human-readable
 // status ("Up 3 days"). The list endpoint does not expose StartedAt, and this
