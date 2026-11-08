@@ -64,15 +64,35 @@ type CvePackageHit = {
   containers: Set<string>;
 };
 
-function flattenCveFindings(overview?: SecurityOverview): CveFinding[] {
-  if (!overview?.enabled) return [];
-  const findings: CveFinding[] = [];
+type CveIndex = Map<string, CveFinding[]>;
+
+function indexCveFindings(overview?: SecurityOverview): CveIndex {
+  const index: CveIndex = new Map();
+  if (!overview?.enabled) return index;
   for (const image of overview.images ?? []) {
     for (const vulnerability of image.vulnerabilities ?? []) {
-      findings.push({ image, vulnerability });
+      const key = vulnerability.id.toUpperCase();
+      if (!key) continue;
+      const list = index.get(key);
+      if (list) {
+        list.push({ image, vulnerability });
+      } else {
+        index.set(key, [{ image, vulnerability }]);
+      }
     }
   }
-  return findings;
+  return index;
+}
+
+function findingsForCveQuery(index: CveIndex, query: string): CveFinding[] {
+  const needle = query.toUpperCase();
+  const exact = index.get(needle);
+  if (exact) return exact;
+  const matches: CveFinding[] = [];
+  for (const [id, findings] of index) {
+    if (id.includes(needle)) matches.push(...findings);
+  }
+  return matches;
 }
 
 function severityRank(value: string): number {
@@ -92,11 +112,9 @@ function severityRank(value: string): number {
 
 // Built from the same merged Trivy overview as the Docker Security tab.
 function buildCveCommands(findings: CveFinding[], query: string, t: Translate, navigate: Navigate): Command[] {
-  const needle = query.toLowerCase();
   const containers = new Map<string, CveContainerHit>();
   const packages = new Map<string, CvePackageHit>();
   for (const { image, vulnerability } of findings) {
-    if (!vulnerability.id.toLowerCase().includes(needle)) continue;
     for (const container of image.containers ?? []) {
       let hit = containers.get(container.id);
       if (!hit) {
@@ -233,7 +251,7 @@ export function AppShell() {
     staleTime: 30_000,
     retry: false,
   });
-  const cveFindings = useMemo(() => flattenCveFindings(securityOverview.data), [securityOverview.data]);
+  const cveIndex = useMemo(() => indexCveFindings(securityOverview.data), [securityOverview.data]);
 
   useHotkeys(
     useMemo(
@@ -452,9 +470,9 @@ export function AppShell() {
           run: () => navigate("/settings"),
         }];
       }
-      return buildCveCommands(cveFindings, query, t, navigate);
+      return buildCveCommands(findingsForCveQuery(cveIndex, query), query, t, navigate);
     },
-    [commandOpen, cveFindings, navigate, securityOverview.data, securityOverview.error, securityOverview.isError, securityOverview.isPending, t],
+    [commandOpen, cveIndex, navigate, securityOverview.data, securityOverview.error, securityOverview.isError, securityOverview.isPending, t],
   );
 
   if (error) return <ErrorScreen error={error} onRetry={() => refresh()} />;
